@@ -1,9 +1,8 @@
 //! Scheduling tests for `debt_collector_on_impact`.
 //!
 //! Production guarantee: `debt_collector_on_impact` is tagged
-//! `.after(BoltSystems::CellCollision).before(EffectV3Systems::Bridge)`,
-//! and `EffectV3Plugin` configures the transitive chain
-//! `Bridge → Tick → DmgSystems::EmitDamage`. These tests pin the functional
+//! `.after(BoltSystems::CellCollision).in_set(DmgSystems::EmitDamage)`,
+//! placing it ahead of `MutateDamage → ApplyDamage`. These tests pin the functional
 //! consequence: when the bolt carries `DamageBoostStack` and `DebtCashOut`,
 //! a single `tick(...)` applies the dealer's `DamageBoostStack` multiplier
 //! to the amplified `DamageDealt<Cell>` in the same tick as the emission.

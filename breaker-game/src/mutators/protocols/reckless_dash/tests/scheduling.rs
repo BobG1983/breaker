@@ -1,9 +1,8 @@
 //! Scheduling tests for `reckless_dash_amplify_damage`.
 //!
 //! Production guarantee: `reckless_dash_amplify_damage` is tagged
-//! `.after(BoltSystems::CellCollision).before(EffectV3Systems::Bridge)`,
-//! and `EffectV3Plugin` configures the transitive chain
-//! `Bridge → Tick → DmgSystems::EmitDamage`. These tests pin the functional
+//! `.after(BoltSystems::CellCollision).in_set(DmgSystems::EmitDamage)`,
+//! placing it ahead of `MutateDamage → ApplyDamage`. These tests pin the functional
 //! consequence: when the bolt carries `DamageBoostStack` and
 //! `RiskyDamageBoost`, a single `tick(...)` applies the dealer's
 //! `DamageBoostStack` multiplier to the amplified `DamageDealt<Cell>` in

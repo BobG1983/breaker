@@ -1,9 +1,8 @@
 //! Scheduling tests for `iron_curtain_on_bolt_lost`.
 //!
 //! Production guarantee: `iron_curtain_on_bolt_lost` is tagged
-//! `.after(BoltSystems::BoltLost).before(EffectV3Systems::Bridge)`, and
-//! `EffectV3Plugin` configures the transitive chain
-//! `Bridge → Tick → DmgSystems::EmitDamage`. These tests pin the functional
+//! `.after(BoltSystems::BoltLost).in_set(DmgSystems::EmitDamage)`,
+//! placing it ahead of `MutateDamage → ApplyDamage`. These tests pin the functional
 //! consequence: a single `tick(...)` applies a target cell's
 //! `VulnerableStack` multiplier to the Iron Curtain wave damage in the
 //! same tick the wave fires. Iron Curtain emits with `dealer: None`, so
