@@ -51,7 +51,7 @@ These are `Reversible` and use `EffectStack<Config>`.
 | **SpawnPhantom** | `SpawnPhantomConfig` | `duration`, `max_active` | Spawn phantom bolt with limited lifespan; if `max_active` reached, evict oldest | Phantom bolt lifespan tick → despawn | Despawn phantom bolt |
 | **CircuitBreaker** | `CircuitBreakerConfig` | `bumps_required`, `spawn_count`, `inherit`, `shockwave_range`, `shockwave_speed` | Insert `CircuitBreakerCounter`; each `PerfectBumped` decrements; on zero → fire `SpawnBolts` + `Shockwave`, reset counter | `tick_circuit_breaker` (counts bumps) | Remove counter |
 | **EntropyEngine** | `EntropyConfig` | `max_effects`, `pool: Vec<...>` | Insert `EntropyEngineState`; tracks kills; on kill → weighted random pick from pool → fire sub-effect | `tick_entropy` (watches death triggers) | Remove state; reset per-node in `Reset` set |
-| **TetherBeam** | `TetherBeamConfig` | `damage_mult`, `chain: bool`, `width` | Standard mode: spawn 2 tethered bolts + beam entity. Chain mode: link all active bolts with beam entities | `tick_tether_beam` (damage cells intersecting beam lines each tick) | Despawn beam entities |
+| **TetherBeam** | `TetherBeamConfig` | `damage_mult`, `mode: TetherMode`, `width` | `SpawnBolt` mode: spawn a new bolt + connect to source with a beam entity. `Chain` mode: connect source bolt to nearest existing bolt with a beam entity | `tick_tether_beam` (damage cells intersecting beam lines each tick) | Despawn beam entities |
 
 ## Fire-and-Forget Effects
 
