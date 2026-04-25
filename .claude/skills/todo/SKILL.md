@@ -45,7 +45,6 @@ Manage a prioritized development todo list. Captures conversation context so fut
 ```
 docs/todos/
   TODO.md              # ordered backlog — the active index
-  DONE.md              # completed items — historical record, not read routinely
   detail/
     <slug>.md          # rich context per item
     <slug>/            # directory form for items with research or design docs
@@ -55,6 +54,8 @@ docs/todos/
 ```
 
 `TODO.md` is the index. Detail files hold conversation context, design reasoning, scope notes, and anything the agent gathered during discussion. Items with research or extensive design docs use a directory instead of a single file.
+
+**Done items are removed, not archived.** There is no `DONE.md` historical log. Completed work lives in git history, the canonical docs (`docs/architecture/`, `docs/design/`) via promoted detail content, and CHANGELOG entries — not in the todo system. A growing parallel log of "things we finished" is a maintenance burden that nobody reads.
 
 ## Procedure
 
@@ -86,9 +87,7 @@ docs/todos/
 ### `/todo done <item>` — Complete
 
 1. Find the item in `TODO.md` (by number or name)
-2. Remove the entry from `TODO.md`
-3. Append `- ~~Short description~~ — one-line summary of what was delivered` to `DONE.md` (create if it doesn't exist)
-4. **Promote relevant documentation** from the detail file/directory:
+2. **Promote relevant documentation** from the detail file/directory BEFORE deleting it:
    a. Read the detail file (and any design docs in the directory)
    b. Identify content that belongs in `docs/architecture/` (technical decisions, system design, data structures, ordering, patterns) or `docs/design/` (game design, terminology, player-facing mechanics)
    c. For each piece of promotable content:
@@ -96,10 +95,13 @@ docs/todos/
       - If no matching doc exists but the content is substantial: create a new doc in the appropriate location
       - If the content is trivial or already covered: skip
    d. Update any `index.md` files that reference the promoted docs
-5. After promotion, delete the detail file (or detail directory). The knowledge now lives in the canonical docs, not in todos.
-6. Renumber remaining backlog entries sequentially
+3. Delete the detail file (or detail directory). The knowledge now lives in the canonical docs, not in todos.
+4. Remove the entry from `TODO.md`
+5. Renumber remaining backlog entries sequentially
 
 **Why promote instead of just delete?** Detail files accumulate design decisions, research findings, and architectural context during planning. Deleting them loses that knowledge. Promoting to `docs/architecture/` and `docs/design/` keeps the project documentation evergreen — future sessions can find the decisions without re-deriving them.
+
+**Why no DONE.md?** Completed work is recorded in git history (commit messages explain *what changed and why*), CHANGELOG entries (user-facing surface), and the canonical docs (promoted detail). A parallel "list of things we finished" decays the moment it's written and nobody reads it. Don't keep one.
 
 ### `/todo reorder` — Full Reorder
 
