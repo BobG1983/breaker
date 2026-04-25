@@ -12,17 +12,17 @@ use crate::prelude::SourceId;
 /// Internal request emitted by `PiercingBeamConfig::fire` and consumed by
 /// `apply_piercing_beam_damage` one tick later.
 #[derive(Message, Debug, Clone)]
-pub(crate) struct PiercingBeamEmissionRequested {
+pub(in crate::effect_v3) struct PiercingBeamEmissionRequested {
     /// World-space origin of the beam.
-    pub(crate) origin:      Vec2,
+    pub(in crate::effect_v3) origin:      Vec2,
     /// Unit-length forward direction of the beam.
-    pub(crate) direction:   Vec2,
+    pub(in crate::effect_v3) direction:   Vec2,
     /// Half-width of the beam rectangle (`width / 2.0`).
-    pub(crate) half_width:  f32,
+    pub(in crate::effect_v3) half_width:  f32,
     /// Raw, un-multiplied damage per cell hit.
-    pub(crate) base_damage: f32,
+    pub(in crate::effect_v3) base_damage: f32,
     /// The firing entity. Becomes `DamageDealt::dealer`.
-    pub(crate) dealer:      Option<Entity>,
+    pub(in crate::effect_v3) dealer:      Option<Entity>,
     /// Optional opaque caller-supplied `SourceId`.
-    pub(crate) source:      Option<SourceId>,
+    pub(in crate::effect_v3) source:      Option<SourceId>,
 }

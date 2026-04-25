@@ -211,12 +211,15 @@ pub(crate) fn debt_collector_on_impact(
         // Zero/negative-amount guard: a zero-stack cash-out (or a contrived
         // negative `BoltBaseDamage`) would otherwise emit a spurious
         // `DamageDealt<Cell>` that propagates through the full damage
-        // pipeline. Matches the `tether_emit_partner` guard in
-        // `hazard/hazards/tether/system.rs`. The `DebtCashOut` is intentionally
-        // NOT removed here — leaving it intact lets a future non-zero impact
-        // emit if conditions change, and aligns with the bare-`continue`
-        // pattern used by tether's pre-emission guard.
+        // pipeline. Unlike tether's reader-cursor guard (which skips an
+        // ephemeral message), `DebtCashOut` is a persistent component that
+        // must be removed and the bolt added to `cashed_this_frame` so
+        // (a) the dead `DebtCashOut(0.0)` doesn't pollute the archetype for
+        // the rest of the bolt's life, and (b) piercing bolts don't re-enter
+        // this guard on every subsequent `BoltImpactCell` in the same frame.
         if amount <= 0.0 {
+            commands.entity(msg.bolt).remove::<DebtCashOut>();
+            cashed_this_frame.push(msg.bolt);
             continue;
         }
         damage_writer.write(DamageDealt::<Cell> {

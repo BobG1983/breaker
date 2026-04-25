@@ -20,22 +20,26 @@ HealDealt<T> → apply_heal<T> (runs AFTER handle_kill; Without<Dead> filter pre
 
 ```rust
 /// Generic damage message — one Bevy message queue per victim type T.
-struct DamageDealt<T: GameEntity> {
-    dealer:      Option<Entity>,     // who caused this damage (propagated through chains)
-    target:      Entity,             // who takes the damage
-    amount:      f32,                // damage amount (pre-calculated including multipliers)
-    source_chip: Option<String>,     // originating chip name for UI/stats
-    _marker:     PhantomData<T>,
+/// Defined in rantzsoft_dmg crate.
+struct DamageDealt<T: Dmgable> {
+    dealer:        Option<Entity>,     // entity originating the damage; used for DamageBoostStack lookup
+    attributed_to: Option<Entity>,     // optional kill-attribution override; falls back to dealer when None
+    target:        Entity,             // who takes the damage
+    amount:        f32,                // pre-calculated damage amount
+    source:        Option<SourceId>,   // optional origin label (chip name, effect name) for attribution/UI
+    _marker:       PhantomData<T>,
 }
 
 /// Generic heal message — one Bevy message queue per target type T.
-struct HealDealt<T: GameEntity> {
-    healer:  Option<Entity>,     // entity that originated this heal (for attribution/UI)
-    target:  Entity,             // entity receiving the heal
-    amount:  f32,                // pre-calculated heal amount; values <= 0.0 are ignored
-    source:  Option<String>,     // free-form label (chip name, effect name, etc.)
-    cap:     HealCap,            // ceiling selector: Starting | Max
-    _marker: PhantomData<T>,
+/// Defined in rantzsoft_dmg crate.
+struct HealDealt<T: Dmgable> {
+    healer:        Option<Entity>,     // entity that originated this heal (for attribution/UI)
+    attributed_to: Option<Entity>,     // optional attribution override (symmetry with DamageDealt; no active consumer yet)
+    target:        Entity,             // entity receiving the heal
+    amount:        f32,                // pre-calculated heal amount; values <= 0.0 are ignored
+    source:        Option<SourceId>,   // optional origin label (chip name, effect name, etc.)
+    cap:           HealCap,            // ceiling selector: Starting | Max
+    _marker:       PhantomData<T>,
 }
 
 /// Per-message ceiling selector for apply_heal<T>.
@@ -85,7 +89,7 @@ Processes `HealDealt<T>` messages. Increments `Hp.current` bounded by the per-me
 
 `apply_heal<T>` uses a `Without<Dead>` query filter. This is what prevents same-tick revival: `handle_kill<T>` runs before `ApplyHeal` and inserts `Dead` on killed entities, so heals that arrive in the same tick targeting a freshly killed entity are silently skipped. Values `<= 0.0` are ignored.
 
-`ApplyHeal` runs as the final stage of the four-stage FixedUpdate chain: `ApplyDamage → DetectDeaths → HandleKill → ApplyHeal`.
+`ApplyHeal` is the final stage of the `DmgSystems` pipeline in FixedUpdate. The pipeline — `EmitDamage → … → ApplyDamage → … → EmitKill → … → ApplyKill → … → EmitHeal → … → ApplyHeal → PostApplyHeal` — is configured and owned by `rantzsoft_dmg`'s `RantzDmgPlugin`.
 
 ## Domain Handlers
 
@@ -96,7 +100,7 @@ Each T has a domain handler that sits between `KillYourself<T>` and `Destroyed<T
 | `Cell` | cells domain | Check invulnerability (guarded cells with active guardians); chain reaction — bolt attribution propagates via killer |
 | `Wall` | wall domain | One-shot walls, timer expiry |
 | `Bolt` | bolt domain | Environmental death (killer: None) — Killed trigger skipped |
-| `Salvo` | shared/death_pipeline (generic — no domain-specific handler) | Spawned by survival turrets; `Destroyed<Salvo>` is emitted but has no current consumers; despawned via `DespawnEntity` in FixedPostUpdate |
+| `Salvo` | rantzsoft_dmg crate-internal (generic — no domain-specific handler) | Spawned by survival turrets; `Destroyed<Salvo>` is emitted but has no current consumers; despawned via `DespawnEntity` in FixedPostUpdate |
 
 All handlers follow: receive KillYourself → validate → send Destroyed → send DespawnEntity message. Entity MUST survive through `bridge_destroyed` trigger evaluation — despawn happens in PostFixedUpdate.
 

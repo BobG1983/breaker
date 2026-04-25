@@ -1,7 +1,7 @@
 //! Explode systems — request consumer that emits per-cell damage.
-pub(crate) mod apply_explode;
+pub(in crate::effect_v3) mod apply_explode;
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) use apply_explode::apply_explode_damage;
+pub(in crate::effect_v3) use apply_explode::apply_explode_damage;

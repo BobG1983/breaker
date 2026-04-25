@@ -23,7 +23,7 @@ type LiveCellQuery<'w, 's> =
 /// the cells query directly (no quadtree). The piercing beam is unbounded
 /// along its forward axis — any quadtree rectangle would degenerate to a
 /// full-playfield scan with extra tree-traversal overhead.
-pub(crate) fn apply_piercing_beam_damage(
+pub(in crate::effect_v3) fn apply_piercing_beam_damage(
     mut reader: MessageReader<PiercingBeamEmissionRequested>,
     cells: LiveCellQuery,
     mut writer: MessageWriter<DamageDealt<Cell>>,

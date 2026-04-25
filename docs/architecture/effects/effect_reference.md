@@ -60,9 +60,9 @@ These are `Reversible` and use `EffectStack<Config>`.
 | Effect | Config | Key fields | Fire |
 |---|---|---|---|
 | **Shockwave** | `ShockwaveConfig` | `base_range`, `range_per_level`, `stacks`, `speed` | Spawn expanding ring entity; damages cells within ring; each cell hit once; despawns at max radius |
-| **Explode** | `ExplodeConfig` | `range`, `damage` | Instant AoE damage to all cells within range of entity position |
+| **Explode** | `ExplodeConfig` | `range`, `damage` | Writes `ExplodeEmissionRequested` message; `apply_explode_damage` consumer in `DmgSystems::EmitDamage` reads request, queries `CollisionQuadtree`, emits `DamageDealt<Cell>` per hit cell with raw `base_damage` |
 | **ChainLightning** | `ChainLightningConfig` | `arcs`, `range`, `damage_mult`, `arc_speed` | Spawn arc chain that jumps between nearby cells; each arc damages one target; arcs travel at `arc_speed` |
-| **PiercingBeam** | `PiercingBeamConfig` | `damage_mult`, `width` | Spawn beam request entity along bolt velocity direction; single-tick damage to all cells in the beam's line |
+| **PiercingBeam** | `PiercingBeamConfig` | `damage_mult`, `width` | Writes `PiercingBeamEmissionRequested` message (baking `bolt_base_damage * damage_mult` into `base_damage`); `apply_piercing_beam_damage` consumer in `DmgSystems::EmitDamage` reads request, iterates live cells, emits `DamageDealt<Cell>` per hit cell with raw `base_damage` |
 | **SpawnBolts** | `SpawnBoltsConfig` | `count`, `lifespan: Option<OrderedFloat<f32>>`, `inherit: bool` | Spawn N extra bolts; `inherit` copies parent's `BoundEffects`; `lifespan` sets per-bolt timer |
 | **ChainBolt** | `ChainBoltConfig` | `tether_distance: OrderedFloat<f32>` | Spawn a bolt tethered to parent via `DistanceConstraint` (from `rantzsoft_physics2d`) |
 | **MirrorProtocol** | `MirrorConfig` | `inherit: bool` | Duplicate bolt on last impact side using `LastImpact` + `ImpactSide`; the clone continues in the mirrored direction |

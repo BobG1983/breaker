@@ -188,7 +188,9 @@ fn bolt_without_debt_cash_out_produces_no_bonus() {
 fn debt_collector_skips_emission_when_amount_is_zero() {
     let mut app = build_debt_collector_app();
     seed_active_protocols_with_debt_collector(&mut app, 0.5);
-    // base_damage * stack = 10.0 * 0.0 = 0.0 — guard must skip emission.
+    // base_damage * stack = 10.0 * 0.0 = 0.0 — guard must skip emission AND
+    // remove `DebtCashOut` so the dead component doesn't pollute the bolt's
+    // archetype for the rest of its life.
     let bolt = spawn_bolt_with_base_damage_and_cashout(&mut app, 10.0, 0.0);
     let cell = app.world_mut().spawn_empty().id();
 
@@ -201,6 +203,10 @@ fn debt_collector_skips_emission_when_amount_is_zero() {
         "zero-amount cash-out must NOT emit a DamageDealt<Cell> (guard); got {}",
         bonuses.len()
     );
+    assert!(
+        app.world().get::<DebtCashOut>(bolt).is_none(),
+        "zero-amount guard must remove DebtCashOut (component is valueless and would otherwise persist forever)"
+    );
 }
 
 // ── Behavior 20b — negative-amount cash-out skips emission (guard) ─────────-
@@ -209,7 +215,8 @@ fn debt_collector_skips_emission_when_amount_is_zero() {
 fn debt_collector_skips_emission_when_amount_is_negative() {
     let mut app = build_debt_collector_app();
     seed_active_protocols_with_debt_collector(&mut app, 0.5);
-    // base_damage * stack = 10.0 * -0.5 = -5.0 — guard must skip emission.
+    // base_damage * stack = 10.0 * -0.5 = -5.0 — guard must skip emission AND
+    // remove `DebtCashOut`.
     let bolt = spawn_bolt_with_base_damage_and_cashout(&mut app, 10.0, -0.5);
     let cell = app.world_mut().spawn_empty().id();
 
@@ -221,6 +228,10 @@ fn debt_collector_skips_emission_when_amount_is_negative() {
         bonuses.is_empty(),
         "negative-amount cash-out must NOT emit a DamageDealt<Cell> (guard); got {}",
         bonuses.len()
+    );
+    assert!(
+        app.world().get::<DebtCashOut>(bolt).is_none(),
+        "negative-amount guard must remove DebtCashOut"
     );
 }
 

@@ -15,15 +15,15 @@ use crate::prelude::SourceId;
 /// `apply_explode_damage` one tick later. Carries everything the consumer
 /// needs to perform the spatial query and emit `DamageDealt<Cell>` per hit.
 #[derive(Message, Debug, Clone)]
-pub(crate) struct ExplodeEmissionRequested {
+pub(in crate::effect_v3) struct ExplodeEmissionRequested {
     /// World-space center of the explosion.
-    pub(crate) center:      Vec2,
+    pub(in crate::effect_v3) center:      Vec2,
     /// Radius of the explosion in world units.
-    pub(crate) radius:      f32,
+    pub(in crate::effect_v3) radius:      f32,
     /// Raw, un-multiplied damage per cell hit.
-    pub(crate) base_damage: f32,
+    pub(in crate::effect_v3) base_damage: f32,
     /// The firing entity (chip/effect owner).
-    pub(crate) dealer:      Option<Entity>,
+    pub(in crate::effect_v3) dealer:      Option<Entity>,
     /// Optional builder-produced `SourceId`.
-    pub(crate) source:      Option<SourceId>,
+    pub(in crate::effect_v3) source:      Option<SourceId>,
 }
