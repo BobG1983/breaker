@@ -66,15 +66,24 @@ pub struct ViolationEntry {
 #[derive(Resource, Default)]
 pub struct ViolationLog(pub Vec<ViolationEntry>);
 
-/// Stores the frozen world-space position for an entity with `disable_physics: true`.
+/// Stores the frozen world-space position (and optionally velocity) for an
+/// entity with `disable_physics: true`.
 ///
 /// When `ScenarioPhysicsFrozen` is present on an entity, `enforce_frozen_positions`
 /// resets the entity's `Position2D` to `target` every tick, preventing physics from
-/// moving it.
+/// moving it. If `velocity` is `Some`, `enforce_frozen_velocity` also re-pins
+/// `Velocity2D` to that value every tick (after `BoltSystems::SyncSpeedToStack`),
+/// so a scenario-injected wrong velocity survives the canonical velocity
+/// formula re-application that would otherwise normalize it.
 #[derive(Component)]
 pub struct ScenarioPhysicsFrozen {
     /// The world-space position this entity is pinned to each tick.
-    pub target: Vec2,
+    pub target:   Vec2,
+    /// Optional velocity to re-pin each tick. Used by self-tests like
+    /// `bolt_speed_inaccurate` that need an intentionally-wrong velocity
+    /// to survive `SyncSpeedToStack` so the invariant checker can observe
+    /// the mismatch and fire.
+    pub velocity: Option<Vec2>,
 }
 
 /// Baseline entity count for leak detection.

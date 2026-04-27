@@ -1,5 +1,31 @@
 use super::helpers::*;
 
+/// Minimal app that registers `check_bolt_speed_accurate` under the new
+/// `playing_state_gate`, with `entered_playing = true` and the given
+/// `NodeState` value forced as the current state. Avoids the full
+/// lifecycle plugin so the state isn't driven by other systems mid-tick.
+fn bolt_speed_gate_test_app(initial_state: NodeState) -> App {
+    use bevy::state::app::StatesPlugin;
+
+    use crate::{invariants::check_bolt_speed_accurate, lifecycle::systems::playing_state_gate};
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_plugins(StatesPlugin)
+        .insert_resource(ViolationLog::default())
+        .insert_resource(ScenarioFrame(1))
+        .insert_resource(ScenarioStats {
+            entered_playing: true,
+            ..Default::default()
+        })
+        .insert_resource(State::new(initial_state))
+        .add_systems(
+            FixedUpdate,
+            check_bolt_speed_accurate.run_if(playing_state_gate),
+        );
+    app
+}
+
 // -------------------------------------------------------------------------
 // ScenarioLifecycle — invariant system registration
 // -------------------------------------------------------------------------
@@ -253,6 +279,172 @@ fn scenario_stats_invariant_checks_incremented_after_one_tick() {
         stats.invariant_checks > 0,
         "expected invariant_checks > 0 after one tick with bolt entity, got {}",
         stats.invariant_checks
+    );
+}
+
+// -------------------------------------------------------------------------
+// BoltSpeedAccurate — current-NodeState gate (playing_state_gate)
+// -------------------------------------------------------------------------
+
+/// `check_bolt_speed_accurate` must NOT fire when the current `NodeState`
+/// is not `Playing`, even if `entered_playing` is `true`. This protects
+/// against transient mismatches during `Teardown` / `ChipSelect` /
+/// `Loading`, when `sync_bolt_speed_to_stack` (the system that maintains
+/// the stack-vs-velocity invariant) does not run.
+///
+/// Concretely: if `Until(NodeEndOccurred, Fire(SpeedBoost(1.3)))` reverses
+/// on `OnEnter(NodeState::Teardown)`, the stack clears but the bolt
+/// velocity remains at `base * 1.3` until the next `Playing` tick. The
+/// game-side invariant only holds during Playing, so the checker must
+/// mirror that.
+#[test]
+fn bolt_speed_accurate_does_not_fire_outside_node_state_playing() {
+    use rantzsoft_spatial2d::components::{BaseSpeed, MaxSpeed, MinSpeed};
+
+    let mut app = bolt_speed_gate_test_app(NodeState::Teardown);
+
+    // Spawn a fully-equipped bolt with mismatched velocity (520 vs base
+    // 400 — would otherwise trip BoltSpeedAccurate). Adding the system
+    // requires `playing_state_gate` semantics, so this asserts via the
+    // registered system in `bolt_speed_gate_test_app`.
+    app.world_mut().spawn((
+        ScenarioTagBolt,
+        Position2D(Vec2::new(0.0, 0.0)),
+        Velocity2D(Vec2::new(520.0, 0.0)),
+        BaseSpeed(400.0),
+        MinSpeed(200.0),
+        MaxSpeed(800.0),
+    ));
+
+    tick(&mut app);
+
+    let log = app.world().resource::<ViolationLog>();
+    assert!(
+        !log.0
+            .iter()
+            .any(|v| v.invariant == InvariantKind::BoltSpeedAccurate),
+        "expected no BoltSpeedAccurate violations when NodeState != Playing, got: {:?}",
+        log.0
+            .iter()
+            .filter(|v| v.invariant == InvariantKind::BoltSpeedAccurate)
+            .map(|v| &v.message)
+            .collect::<Vec<_>>(),
+    );
+}
+
+/// Control test: `check_bolt_speed_accurate` MUST fire when the current
+/// `NodeState` is `Playing` and the velocity is mismatched. This pairs
+/// with the gating test above to confirm the new gate isn't suppressing
+/// legitimate violations.
+#[test]
+fn bolt_speed_accurate_fires_in_node_state_playing() {
+    use rantzsoft_spatial2d::components::{BaseSpeed, MaxSpeed, MinSpeed};
+
+    let mut app = bolt_speed_gate_test_app(NodeState::Playing);
+
+    app.world_mut().spawn((
+        ScenarioTagBolt,
+        Position2D(Vec2::new(0.0, 0.0)),
+        Velocity2D(Vec2::new(520.0, 0.0)),
+        BaseSpeed(400.0),
+        MinSpeed(200.0),
+        MaxSpeed(800.0),
+    ));
+
+    tick(&mut app);
+
+    let log = app.world().resource::<ViolationLog>();
+    assert!(
+        log.0
+            .iter()
+            .any(|v| v.invariant == InvariantKind::BoltSpeedAccurate),
+        "expected at least one BoltSpeedAccurate violation in NodeState::Playing with mismatched velocity, got 0",
+    );
+}
+
+/// `playing_state_gate` returns `false` when `State<NodeState>` resource
+/// is absent (e.g. minimal test apps that didn't add `StatesPlugin`).
+/// The gate must be well-defined in this case so the registered system
+/// is never invoked with stale or surprising state.
+#[test]
+fn bolt_speed_accurate_does_not_fire_when_node_state_resource_absent() {
+    use rantzsoft_spatial2d::components::{BaseSpeed, MaxSpeed, MinSpeed};
+
+    use crate::{invariants::check_bolt_speed_accurate, lifecycle::systems::playing_state_gate};
+
+    // Build the same test surface as `bolt_speed_gate_test_app` but
+    // intentionally omit `StatesPlugin` and `State::new(...)` so the
+    // `Option<Res<State<NodeState>>>` parameter resolves to `None`.
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .insert_resource(ViolationLog::default())
+        .insert_resource(ScenarioFrame(1))
+        .insert_resource(ScenarioStats {
+            entered_playing: true,
+            ..Default::default()
+        })
+        .add_systems(
+            FixedUpdate,
+            check_bolt_speed_accurate.run_if(playing_state_gate),
+        );
+
+    app.world_mut().spawn((
+        ScenarioTagBolt,
+        Position2D(Vec2::new(0.0, 0.0)),
+        Velocity2D(Vec2::new(520.0, 0.0)),
+        BaseSpeed(400.0),
+        MinSpeed(200.0),
+        MaxSpeed(800.0),
+    ));
+
+    tick(&mut app);
+
+    let log = app.world().resource::<ViolationLog>();
+    assert!(
+        !log.0
+            .iter()
+            .any(|v| v.invariant == InvariantKind::BoltSpeedAccurate),
+        "expected no BoltSpeedAccurate violations when State<NodeState> is absent, got {} violation(s)",
+        log.0
+            .iter()
+            .filter(|v| v.invariant == InvariantKind::BoltSpeedAccurate)
+            .count(),
+    );
+}
+
+/// `enforce_frozen_velocity` must NOT mutate `Velocity2D` when
+/// `ScenarioPhysicsFrozen.velocity` is `None`. The position-only freeze
+/// path (e.g. a frozen breaker) must leave bolt velocity alone.
+#[test]
+fn enforce_frozen_velocity_skips_when_pinned_velocity_is_none() {
+    use crate::{invariants::ScenarioPhysicsFrozen, lifecycle::systems::enforce_frozen_velocity};
+
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins)
+        .add_systems(FixedUpdate, enforce_frozen_velocity);
+
+    let original_velocity = Vec2::new(123.0, -456.0);
+    let entity = app
+        .world_mut()
+        .spawn((
+            ScenarioPhysicsFrozen {
+                target:   Vec2::new(0.0, 0.0),
+                velocity: None,
+            },
+            Velocity2D(original_velocity),
+        ))
+        .id();
+
+    tick(&mut app);
+
+    let velocity = app
+        .world()
+        .entity(entity)
+        .get::<Velocity2D>()
+        .expect("Velocity2D should still be present");
+    assert_eq!(
+        velocity.0, original_velocity,
+        "enforce_frozen_velocity must not mutate Velocity2D when pinned.velocity is None",
     );
 }
 

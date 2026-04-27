@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 use breaker::state::run::node::resources::NodeTimer;
-use rantzsoft_spatial2d::components::Position2D;
+use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::types::{BoltDebugQuery, BreakerDebugQuery, ScenarioConfig};
 use crate::{
@@ -31,9 +31,15 @@ pub fn apply_entity_debug_overrides(
         }
 
         if setup.disable_physics {
-            commands
-                .entity(entity)
-                .insert(ScenarioPhysicsFrozen { target: position.0 });
+            // Pin velocity each tick when both `disable_physics: true` and
+            // `bolt_velocity` are set — needed so an intentionally-wrong
+            // velocity survives `BoltSystems::SyncSpeedToStack` re-normalization
+            // for invariant self-tests like `bolt_speed_inaccurate`.
+            let frozen_velocity = setup.bolt_velocity.map(|(vx, vy)| Vec2::new(vx, vy));
+            commands.entity(entity).insert(ScenarioPhysicsFrozen {
+                target:   position.0,
+                velocity: frozen_velocity,
+            });
         }
     }
 
@@ -44,9 +50,10 @@ pub fn apply_entity_debug_overrides(
         }
 
         if setup.disable_physics {
-            commands
-                .entity(entity)
-                .insert(ScenarioPhysicsFrozen { target: position.0 });
+            commands.entity(entity).insert(ScenarioPhysicsFrozen {
+                target:   position.0,
+                velocity: None,
+            });
         }
     }
 }
@@ -135,5 +142,20 @@ pub fn deferred_debug_setup(
 pub fn enforce_frozen_positions(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Position2D)>) {
     for (pinned, mut position) in &mut frozen {
         position.0 = pinned.target;
+    }
+}
+
+/// Re-pins `Velocity2D` to `ScenarioPhysicsFrozen.velocity` every tick.
+///
+/// Required for self-tests that need an intentionally-wrong velocity to
+/// survive `BoltSystems::SyncSpeedToStack` re-normalization so the
+/// invariant checker observes the mismatch and fires. Registered to run
+/// `.after(BoltSystems::SyncSpeedToStack)` so the re-injection happens
+/// after the canonical velocity formula has already normalized the value.
+pub fn enforce_frozen_velocity(mut frozen: Query<(&ScenarioPhysicsFrozen, &mut Velocity2D)>) {
+    for (pinned, mut velocity) in &mut frozen {
+        if let Some(v) = pinned.velocity {
+            velocity.0 = v;
+        }
     }
 }

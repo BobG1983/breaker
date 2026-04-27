@@ -17,7 +17,9 @@ use breaker::{
 use rantzsoft_stateflow::{routing_table::RoutingTable, transition::types::TransitionKind};
 
 use super::{
-    debug_setup::{apply_debug_setup, deferred_debug_setup, enforce_frozen_positions},
+    debug_setup::{
+        apply_debug_setup, deferred_debug_setup, enforce_frozen_positions, enforce_frozen_velocity,
+    },
     entity_tagging::tag_game_entities,
     frame_control::{
         check_frame_limit, entered_playing, exit_on_run_end,
@@ -120,6 +122,31 @@ fn playing_gate(stats: Option<Res<ScenarioStats>>) -> bool {
     stats.is_some_and(|s| s.entered_playing)
 }
 
+/// Stricter gate for invariants whose contract only holds while
+/// `NodeState::Playing` is the current state. Requires both that Playing
+/// has been entered at least once (`playing_gate`) AND that the current
+/// state is still Playing.
+///
+/// `BoltSpeedAccurate` uses this stricter gate because its game-side
+/// counterpart `sync_bolt_speed_to_stack` is also gated to
+/// `in_state(NodeState::Playing)`. Without matching gates, an
+/// `Until(NodeEndOccurred, Fire(SpeedBoost))` reversal during
+/// `OnEnter(NodeState::Teardown)` clears the stack but leaves the bolt
+/// velocity unchanged until the next Playing tick — a transient mismatch
+/// the invariant would otherwise flag during the gap between teardown and
+/// the next node's first `FixedUpdate` tick.
+///
+/// Both parameters use `Option<Res<...>>` so the gate is well-defined in
+/// minimal test apps: returns `false` if either resource is absent. In
+/// the full scenario lifecycle both are always present.
+pub(crate) fn playing_state_gate(
+    stats: Option<Res<ScenarioStats>>,
+    node_state: Option<Res<State<NodeState>>>,
+) -> bool {
+    stats.is_some_and(|s| s.entered_playing)
+        && node_state.is_some_and(|c| matches!(*c.get(), NodeState::Playing))
+}
+
 /// Registers each `FixedUpdate` invariant checker that is in the active set.
 ///
 /// Split into core (engine-level) and protocol-orphan helpers to keep each
@@ -165,12 +192,13 @@ fn register_core_invariant_checkers(app: &mut App, active: &HashSet<InvariantKin
         app.add_systems(
             FixedUpdate,
             check_bolt_speed_accurate
-                .run_if(playing_gate)
+                .run_if(playing_state_gate)
                 .after(apply_debug_frame_mutations)
                 .after(deferred_debug_setup)
                 .after(tag_game_entities)
                 .after(BreakerSystems::UpdateState)
-                .after(BoltSystems::SyncSpeedToStack),
+                .after(BoltSystems::SyncSpeedToStack)
+                .after(enforce_frozen_velocity),
         );
     }
     register_checker!(
@@ -332,6 +360,18 @@ fn register_scenario_systems(app: &mut App) {
             .after(tag_game_entities)
             .after(BreakerSystems::UpdateState)
             .before(BoltSystems::BoltLost),
+    );
+
+    // `enforce_frozen_velocity` MUST NOT chain into `BoltSystems::BoltLost`
+    // (that path closes a cycle: BoltLost → Bridge → ApplyDeferred →
+    // SyncSpeedToStack → enforce_frozen_velocity). It only needs to run
+    // after `SyncSpeedToStack` re-normalizes velocity, so the per-tick
+    // re-pin happens AFTER the sync overwrites it.
+    app.add_systems(
+        FixedUpdate,
+        enforce_frozen_velocity
+            .run_if(playing_gate)
+            .after(BoltSystems::SyncSpeedToStack),
     );
 
     // Conditionally register active FixedUpdate checkers.

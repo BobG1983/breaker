@@ -20,7 +20,8 @@ fn enforce_frozen_positions_resets_entity_to_frozen_target_each_tick() {
         .world_mut()
         .spawn((
             ScenarioPhysicsFrozen {
-                target: Vec2::new(0.0, -500.0),
+                target:   Vec2::new(0.0, -500.0),
+                velocity: None,
             },
             Position2D(Vec2::new(100.0, 200.0)),
         ))
