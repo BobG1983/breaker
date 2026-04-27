@@ -80,8 +80,11 @@ Queues a `FireEffectCommand`. No conditional logic — every walk of a `Fire` pr
 ```rust
 if gate_trigger != active_trigger { return; }
 match inner {
-    Tree::When(..) | Tree::Once(..) | Tree::Until(..) => {
+    Tree::When(..) | Tree::Once(..) => {
         commands.stage_effect(entity, source.to_owned(), inner.clone());
+    }
+    Tree::Until(gate, until_inner) => {
+        evaluate_until(entity, gate, until_inner, active_trigger, context, source, commands);
     }
     _ => {
         evaluate_tree(entity, inner, active_trigger, context, source, commands);
@@ -89,7 +92,9 @@ match inner {
 }
 ```
 
-The "arm-on-nested-gate" branch is what makes nested gate trees ladder across trigger events instead of collapsing in a single tick. The staged entry is evaluated against the *next* matching trigger.
+The "arm-on-nested-gate" branch stages `When`/`Once` inner trees, making nested gate trees ladder across trigger events instead of collapsing in a single tick. The staged entry is evaluated against the *next* matching trigger.
+
+`Tree::Until` is carved out from staging and delegated directly to `evaluate_until`. The Until self-binds into `BoundEffects` via `ensure_until_bound` during that command flush, and the timer (if `TimeExpires`) is armed in the same flush. Staging the Until instead would produce a Catch-22: the staged entry is gate-filtered by the bridge against `TimeExpires(d)`, which can only fire once the timer is armed, which only happens inside `UntilEvaluateCommand::apply`.
 
 ### evaluate_once (`walking/once/system.rs`)
 
@@ -98,9 +103,13 @@ Same gate check as `When`, plus self-removal:
 ```rust
 if gate_trigger != active_trigger { return; }
 match inner {
-    Tree::When(..) | Tree::Once(..) | Tree::Until(..) => {
+    Tree::When(..) | Tree::Once(..) => {
         commands.remove_effect(entity, source);     // remove FIRST
         commands.stage_effect(entity, source.to_owned(), inner.clone());
+    }
+    Tree::Until(gate, until_inner) => {
+        commands.remove_effect(entity, source);     // remove FIRST
+        evaluate_until(entity, gate, until_inner, active_trigger, context, source, commands);
     }
     _ => {
         evaluate_tree(entity, inner, active_trigger, context, source, commands);
@@ -109,7 +118,9 @@ match inner {
 }
 ```
 
-The remove-first / stage-second ordering for the nested-gate case is load-bearing: `RemoveEffectCommand` sweeps both `BoundEffects` and `StagedEffects` by name, so queuing the remove first clears the outer entry without touching the freshly-staged inner.
+The remove-first ordering for the `When`/`Once` nested-gate case is load-bearing: `RemoveEffectCommand` sweeps both `BoundEffects` and `StagedEffects` by name, so queuing the remove first clears the outer entry without touching the freshly-staged inner.
+
+For `Tree::Until`, the outer `Once` is also removed first. This is equally load-bearing: `ensure_until_bound` inside `UntilEvaluateCommand::apply` checks whether a matching `Until(gate, inner)` entry already exists before inserting. If the outer `Once(gate, Until(...))` is still in `BoundEffects` when the check runs, it does NOT match (different tree variant), so the insert proceeds correctly — but queuing the remove first is still required so the `Once` slot is vacated before the Until writes its own entry under the same source name.
 
 ### evaluate_during (`walking/during/system.rs`)
 
@@ -181,4 +192,4 @@ The bridge systems are the only callers of `walk_staged_effects` and `walk_bound
 
 The condition poller (`evaluate_conditions`) runs in `EffectV3Systems::Conditions` after all bridges. It does not call `walk_*_effects` — it uses its own iteration over entries whose top-level variant is `Tree::During` and applies/reverses scoped trees directly. See `conditions.md`.
 
-`TimeExpires` is a regular `Trigger` variant. The `time` trigger category owns timer ticking systems plus a bridge that converts elapsed-timer messages into `Trigger::TimeExpires(seconds)` dispatches just like any other trigger.
+`TimeExpires` is a regular `Trigger` variant. The `time` trigger category owns timer ticking systems plus a bridge (`on_time_expires`) that converts `EffectTimerExpired` messages into `Trigger::TimeExpires(seconds)` dispatches. Unlike other bridges, `on_time_expires` does **not** walk all entries — it pre-filters bound and staged trees to only those whose name matches `msg.source` (the `SourceId` that armed the timer) before calling the walkers. See `trigger_reference.md` for the full source-filter explanation.

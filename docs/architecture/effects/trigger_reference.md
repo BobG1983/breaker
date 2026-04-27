@@ -72,6 +72,8 @@ These triggers have no participants — `On(...)` is not valid against them (res
 
 `TimeExpires` is fired by the time trigger category's timer-tick system (`effect_v3/triggers/time/`). It is not a regular bridge — instead of reading a game message, the timer system manages per-entity countdowns and fires the trigger when the countdown hits zero. See `until.md` for the common authoring pattern: `Until(TimeExpires(2.0), Fire(SpeedBoost(...)))`.
 
+**Source-filter behavior:** `on_time_expires` does **not** walk all bound/staged trees on the entity. The `EffectTimerExpired` message carries a `source: SourceId` field (the source that armed the timer entry). The bridge pre-filters both `BoundEffects` and `StagedEffects` to only the entries whose name (wrapped via `SourceId::from(name.clone())`) equals `msg.source` before calling the walkers. This disambiguates concurrent same-duration Untils on the same entity — each timer entry is tagged with the source that armed it, so only the matching `Until` is reversed when that timer expires. A chip named `"speed_boost"` with `Until(TimeExpires(2.0), ...)` and a chip named `"size_boost"` with `Until(TimeExpires(2.0), ...)` on the same entity each own an independent timer entry and are reversed independently. The `EffectTimers` component stores entries as `(remaining, original_duration, SourceId)` triples for this reason.
+
 ## Bridge → Trigger mapping
 
 Each collision message type maps to specific bridge functions. The bridge functions live in `effect_v3/triggers/<category>/bridges/system.rs`:
