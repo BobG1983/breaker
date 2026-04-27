@@ -109,6 +109,7 @@ mod app_ext;
 mod components;
 mod messages;
 mod plugin;
+mod preview;
 mod sets;
 mod source_id;
 mod systems;
@@ -120,6 +121,7 @@ pub use components::{
 };
 pub use messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYourself};
 pub use plugin::RantzDmgPlugin;
+pub use preview::preview_damage;
 pub use sets::DmgSystems;
 pub use source_id::SourceId;
 // Per-`T` pipeline systems are NOT re-exported at the crate root. External

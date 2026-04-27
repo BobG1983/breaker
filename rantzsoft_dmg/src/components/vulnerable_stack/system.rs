@@ -67,6 +67,14 @@ impl VulnerableStack {
         product
     }
 
+    /// Multiplicative aggregate of every one-shot entry WITHOUT consuming
+    /// them. Peek-only sibling of `aggregate_and_consume_one_shots`.
+    /// Empty queue returns `1.0` (multiplicative identity).
+    #[must_use]
+    pub fn aggregate_one_shots(&self) -> f32 {
+        self.one_shots.iter().copied().product()
+    }
+
     /// True iff BOTH lanes are empty.
     #[must_use]
     pub const fn is_empty(&self) -> bool {
