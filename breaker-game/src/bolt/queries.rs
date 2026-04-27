@@ -46,8 +46,8 @@ pub(crate) struct BoltCollisionParams {
     pub piercing_remaining:   Option<&'static mut PiercingRemaining>,
     /// Active piercing effects (sum determines max charges).
     pub active_piercings:     Option<&'static EffectStack<PiercingConfig>>,
-    /// Active damage boost multipliers.
-    pub active_damage_boosts: Option<&'static DamageBoostStack>,
+    /// Active `DamageBoostStack` (per-bolt damage multiplier source).
+    pub damage_boost_stack:   Option<&'static DamageBoostStack>,
     /// Active speed boost multipliers.
     pub active_speed_boosts:  Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Node scaling factor for entity dimensions.

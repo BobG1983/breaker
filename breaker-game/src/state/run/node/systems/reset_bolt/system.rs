@@ -22,9 +22,10 @@ use crate::{
 /// immediately at base speed with a random angle within the bolt's
 /// [`BoltAngleSpread`] component.
 ///
-/// Effect components (e.g. `ActivePiercings`, `ActiveDamageBoosts`)
+/// Effect components (e.g. `EffectStack<PiercingConfig>`, `DamageBoostStack`)
 /// are NOT touched -- they persist across nodes. Only positional and velocity
-/// state is reset. [`PiercingRemaining`] is reset to `ActivePiercings.total()`.
+/// state is reset. [`PiercingRemaining`] is reset to the rounded aggregate of
+/// the bolt's piercing effect stack.
 pub(crate) fn reset_bolt(
     mut commands: Commands,
     run_state: Res<NodeOutcome>,

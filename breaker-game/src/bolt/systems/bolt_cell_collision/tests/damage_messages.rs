@@ -54,8 +54,8 @@ fn cell_collision_emits_damage_cell_with_base_damage() {
     );
 }
 
-/// Spec behavior 1: Base damage with no `ActiveDamageBoosts` component.
-/// `ActiveDamageBoosts` absent => identity (1.0), damage = 10.0 * 1.0 = 10.0.
+/// Spec behavior 1: Base damage with no `DamageBoostStack` component.
+/// `DamageBoostStack` absent => identity (1.0), damage = 10.0 * 1.0 = 10.0.
 #[test]
 fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
@@ -66,7 +66,7 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    // No ActiveDamageBoosts component
+    // No DamageBoostStack component
     spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
@@ -75,11 +75,11 @@ fn cell_collision_emits_damage_cell_with_no_effective_damage_multiplier() {
     assert_eq!(
         msgs.0.len(),
         1,
-        "bolt with no ActiveDamageBoosts should emit one DamageDealt<Cell>"
+        "bolt with no DamageBoostStack should emit one DamageDealt<Cell>"
     );
     assert!(
         (msgs.0[0].amount - 10.0).abs() < f32::EPSILON,
-        "no ActiveDamageBoosts should produce amount == 10.0 (identity), got {}",
+        "no DamageBoostStack should produce amount == 10.0 (identity), got {}",
         msgs.0[0].amount
     );
 }
@@ -129,7 +129,7 @@ fn cell_collision_delivers_boosted_damage_end_to_end() {
     );
 }
 
-/// Spec behavior 2 edge case: `ActiveDamageBoosts(1.0)` is identity.
+/// Spec behavior 2 edge case: `DamageBoostStack(1.0)` is identity.
 #[test]
 fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() {
     let mut app = test_app_with_damage_and_wall_messages();
@@ -151,11 +151,11 @@ fn cell_collision_emits_damage_cell_with_identity_effective_damage_multiplier() 
     assert_eq!(
         msgs.0.len(),
         1,
-        "ActiveDamageBoosts(1.0) bolt should emit one DamageDealt<Cell>"
+        "DamageBoostStack(1.0) bolt should emit one DamageDealt<Cell>"
     );
     assert!(
         (msgs.0[0].amount - 10.0).abs() < f32::EPSILON,
-        "ActiveDamageBoosts(1.0) should produce amount == 10.0, got {}",
+        "DamageBoostStack(1.0) should produce amount == 10.0, got {}",
         msgs.0[0].amount
     );
 }
@@ -357,9 +357,9 @@ fn cell_collision_delivers_multi_entry_boosted_damage_end_to_end() {
     );
 }
 
-/// Behavior 2: `bolt_cell_collision` uses default multiplier when no `ActiveDamageBoosts`.
+/// Behavior 2: `bolt_cell_collision` uses default multiplier when no `DamageBoostStack`.
 ///
-/// Given: Bolt with NO `ActiveDamageBoosts`.
+/// Given: Bolt with NO `DamageBoostStack`.
 /// When: bolt collides with cell.
 /// Then: `DamageDealt<Cell>` message has amount = 10.0 (default 1.0 multiplier).
 #[test]
@@ -372,7 +372,7 @@ fn cell_collision_ignores_stale_effective_damage_multiplier() {
     spawn_cell(&mut app, 0.0, cell_y);
 
     let start_y = cell_y - cc.height / 2.0 - bc.radius - 2.0;
-    // No ActiveDamageBoosts — verifies default multiplier of 1.0
+    // No DamageBoostStack — verifies default multiplier of 1.0
     spawn_bolt(&mut app, 0.0, start_y, 0.0, 400.0);
 
     tick(&mut app);
@@ -381,11 +381,11 @@ fn cell_collision_ignores_stale_effective_damage_multiplier() {
     assert_eq!(
         msgs.0.len(),
         1,
-        "bolt with no ActiveDamageBoosts should emit one DamageDealt<Cell>"
+        "bolt with no DamageBoostStack should emit one DamageDealt<Cell>"
     );
     assert!(
         (msgs.0[0].amount - 10.0).abs() < f32::EPSILON,
-        "DamageDealt<Cell>.amount should be 10.0 (no ActiveDamageBoosts = default multiplier), got {}",
+        "DamageDealt<Cell>.amount should be 10.0 (no DamageBoostStack = default multiplier), got {}",
         msgs.0[0].amount
     );
 }

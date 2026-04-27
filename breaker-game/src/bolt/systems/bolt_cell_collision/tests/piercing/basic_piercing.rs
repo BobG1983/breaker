@@ -104,7 +104,7 @@ fn piercing_bolt_passes_through_cell_it_would_destroy() {
 
 #[test]
 fn piercing_bolt_reflects_off_cell_it_would_not_destroy() {
-    // Bolt with PiercingRemaining(1), no ActiveDamageBoosts.
+    // Bolt with PiercingRemaining(1), no DamageBoostStack.
     // Cell with CellHealth(30) — base damage 10, cell survives.
     // Bolt should reflect (velocity.y < 0). PiercingRemaining stays 1.
     let mut app = test_app();

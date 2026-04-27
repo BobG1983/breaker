@@ -20,6 +20,7 @@
 use std::marker::PhantomData;
 
 use bevy::{ecs::system::SystemParam, prelude::*};
+use rantzsoft_dmg::preview_damage;
 use rantzsoft_physics2d::{
     prelude::{SweepHit, reflect},
     resources::CollisionQuadtree,
@@ -141,25 +142,13 @@ pub(crate) fn bolt_cell_collision(
         let mut velocity = bolt.spatial.velocity.0;
         let mut remaining_px = velocity.length() * dt;
 
-        // `base_damage` is emitted raw in `DamageDealt<Cell>.amount`; the
-        // `rantzsoft_dmg` pipeline applies `DamageBoostStack` and
-        // `VulnerableStack` downstream.
-        //
-        // The pierce/reflect decision needs a predicted post-pipeline damage
-        // to ask "would this impact kill the cell?". `effective_damage` here and
-        // `cell_damage` in `resolve_bolt_cell_impact` duplicate the pipeline's
-        // multiplier chain using `aggregate_persistent` (one-shots excluded).
-        // This is a known duplication with a subtle one-shot divergence —
-        // tracked as cleanup (see bolt_cell_collision pierce-decision task).
+        // Damage prediction (counts one-shots, doesn't consume) —
+        // see `preview_damage` rustdoc.
         let base_damage = bolt
             .collision
             .base_damage
             .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
-        let effective_damage = base_damage
-            * bolt
-                .collision
-                .active_damage_boosts
-                .map_or(1.0, DamageBoostStack::aggregate_persistent);
+        let effective_damage = preview_damage(base_damage, bolt.collision.damage_boost_stack, None);
 
         // Clear per-bolt pierce skip set
         pierced_this_frame.clear();
@@ -277,8 +266,7 @@ fn resolve_bolt_cell_impact(
         return None;
     }
 
-    let cell_damage =
-        effective_damage * vulnerability.map_or(1.0, VulnerableStack::aggregate_persistent);
+    let cell_damage = preview_damage(effective_damage, None, vulnerability);
 
     let can_pierce = bolt
         .collision

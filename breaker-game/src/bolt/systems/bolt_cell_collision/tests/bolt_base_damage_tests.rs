@@ -124,7 +124,7 @@ fn collision_with_zero_base_damage() {
     );
 }
 
-// ── Behavior 21: bolt_cell_collision uses BoltBaseDamage with ActiveDamageBoosts ──
+// ── Behavior 21: bolt_cell_collision uses BoltBaseDamage with DamageBoostStack ──
 
 /// Harness B migration: producer emits RAW 10.0; `apply_damage_boosts::<Cell>`
 /// multiplies to 15.0; cell HP decrements by 15.0.
