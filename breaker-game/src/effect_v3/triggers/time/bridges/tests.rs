@@ -6,7 +6,7 @@ use crate::{
     effect_v3::{
         effects::SpeedBoostConfig,
         stacking::EffectStack,
-        storage::BoundEffects,
+        storage::{BoundEffects, StagedEffects},
         triggers::time::{
             components::EffectTimers, messages::EffectTimerExpired, tick_timers::tick_effect_timers,
         },
@@ -43,6 +43,10 @@ fn bridge_test_app() -> App {
             ),
         )
         .build()
+}
+
+fn test_source(name: &str) -> SourceId {
+    SourceId::from(name.to_owned())
 }
 
 /// Helper to build a When(TimeExpires(duration), Fire(SpeedBoost)) tree.
@@ -95,6 +99,7 @@ fn on_time_expires_dispatches_trigger_on_entity_with_bound_effects() {
     app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
         entity,
         original_duration: OrderedFloat(5.0),
+        source: test_source("chip_a"),
     }]));
 
     tick(&mut app);
@@ -121,6 +126,7 @@ fn on_time_expires_no_effect_when_tree_does_not_match_duration() {
     app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
         entity,
         original_duration: OrderedFloat(3.0),
+        source: test_source("chip_a"),
     }]));
 
     tick(&mut app);
@@ -151,10 +157,12 @@ fn on_time_expires_skips_entity_without_bound_effects() {
         EffectTimerExpired {
             entity:            entity_a,
             original_duration: OrderedFloat(3.0),
+            source:            test_source("chip_a"),
         },
         EffectTimerExpired {
             entity:            entity_b,
             original_duration: OrderedFloat(3.0),
+            source:            test_source("chip_a"),
         },
     ]));
 
@@ -183,6 +191,7 @@ fn on_time_expires_silently_skips_despawned_entity() {
     app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
         entity,
         original_duration: OrderedFloat(3.0),
+        source: test_source("chip_a"),
     }]));
 
     // Should not panic
@@ -210,6 +219,7 @@ fn on_time_expires_uses_trigger_context_none_so_on_bump_cannot_resolve() {
     app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
         entity,
         original_duration: OrderedFloat(2.0),
+        source: test_source("chip_a"),
     }]));
 
     tick(&mut app);
@@ -247,10 +257,12 @@ fn on_time_expires_handles_multiple_messages_in_one_frame() {
         EffectTimerExpired {
             entity,
             original_duration: OrderedFloat(3.0),
+            source: test_source("chip_a"),
         },
         EffectTimerExpired {
             entity,
             original_duration: OrderedFloat(3.0),
+            source: test_source("chip_a"),
         },
     ]));
 
@@ -283,10 +295,12 @@ fn on_time_expires_different_durations_fire_matching_trees_only() {
         EffectTimerExpired {
             entity,
             original_duration: OrderedFloat(3.0),
+            source: test_source("chip_a"),
         },
         EffectTimerExpired {
             entity,
             original_duration: OrderedFloat(5.0),
+            source: test_source("chip_b"),
         },
     ]));
 
@@ -346,7 +360,11 @@ fn end_to_end_timer_expires_and_bridge_fires_across_two_ticks() {
         .world_mut()
         .spawn((
             EffectTimers {
-                timers: vec![(OrderedFloat(0.001), OrderedFloat(4.0))],
+                timers: vec![(
+                    OrderedFloat(0.001),
+                    OrderedFloat(4.0),
+                    test_source("chip_a"),
+                )],
             },
             BoundEffects(vec![time_expires_speed_tree("chip_a", 4.0, 2.0)]),
         ))
@@ -399,7 +417,11 @@ fn end_to_end_timer_with_long_remaining_does_not_fire() {
         .world_mut()
         .spawn((
             EffectTimers {
-                timers: vec![(OrderedFloat(10.0), OrderedFloat(10.0))],
+                timers: vec![(
+                    OrderedFloat(10.0),
+                    OrderedFloat(10.0),
+                    test_source("chip_a"),
+                )],
             },
             BoundEffects(vec![time_expires_speed_tree("chip_a", 10.0, 2.0)]),
         ))
@@ -437,6 +459,7 @@ fn non_matching_time_expires_duration_does_not_trigger() {
     app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
         entity,
         original_duration: OrderedFloat(3.0),
+        source: test_source("chip_a"),
     }]));
 
     tick(&mut app);
@@ -445,5 +468,203 @@ fn non_matching_time_expires_duration_does_not_trigger() {
     assert!(
         stack.is_none(),
         "tree gated on TimeExpires(5.0) should not fire for TimeExpires(3.0)"
+    );
+}
+
+// -- B7 (NEW): Bridge filters bound walks by source — only matching source
+
+#[test]
+fn on_time_expires_filters_bound_walks_by_source() {
+    let mut app = bridge_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn(BoundEffects(vec![
+            time_expires_speed_tree("chip_a", 2.0, 1.5),
+            time_expires_speed_tree("chip_b", 2.0, 2.7),
+        ]))
+        .id();
+
+    app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
+        entity,
+        original_duration: OrderedFloat(2.0),
+        source: test_source("chip_a"),
+    }]));
+
+    tick(&mut app);
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(entity)
+        .expect("EffectStack should exist after the matching-source walk");
+    assert_eq!(
+        stack.len(),
+        1,
+        "only chip_a should fire when message's source is chip_a"
+    );
+
+    // The single entry should be from chip_a with multiplier 1.5
+    let entries: Vec<&(SourceId, SpeedBoostConfig)> = stack.iter().collect();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].0, test_source("chip_a"));
+    assert_eq!(entries[0].1.multiplier, OrderedFloat(1.5));
+}
+
+#[test]
+fn on_time_expires_bound_filter_chip_b_message_fires_only_chip_b() {
+    let mut app = bridge_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn(BoundEffects(vec![
+            time_expires_speed_tree("chip_a", 2.0, 1.5),
+            time_expires_speed_tree("chip_b", 2.0, 2.7),
+        ]))
+        .id();
+
+    app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
+        entity,
+        original_duration: OrderedFloat(2.0),
+        source: test_source("chip_b"),
+    }]));
+
+    tick(&mut app);
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(entity)
+        .expect("EffectStack should exist");
+    assert_eq!(stack.len(), 1, "only chip_b should fire");
+    let entries: Vec<&(SourceId, SpeedBoostConfig)> = stack.iter().collect();
+    assert_eq!(entries[0].0, test_source("chip_b"));
+    assert_eq!(entries[0].1.multiplier, OrderedFloat(2.7));
+}
+
+// -- B8 (NEW): Bridge filters staged walks by source ------------------
+
+#[test]
+fn on_time_expires_filters_staged_walks_by_source() {
+    let mut app = bridge_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            BoundEffects::default(),
+            StagedEffects(vec![
+                time_expires_speed_tree("chip_a", 2.0, 1.5),
+                time_expires_speed_tree("chip_b", 2.0, 2.7),
+            ]),
+        ))
+        .id();
+
+    app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
+        entity,
+        original_duration: OrderedFloat(2.0),
+        source: test_source("chip_a"),
+    }]));
+
+    tick(&mut app);
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(entity)
+        .expect("EffectStack should exist after staged walk filtered by source");
+    assert_eq!(stack.len(), 1, "only chip_a should fire from staged walk");
+    let entries: Vec<&(SourceId, SpeedBoostConfig)> = stack.iter().collect();
+    assert_eq!(entries[0].0, test_source("chip_a"));
+    assert_eq!(entries[0].1.multiplier, OrderedFloat(1.5));
+}
+
+#[test]
+fn on_time_expires_staged_filter_no_matching_source_walks_nothing() {
+    let mut app = bridge_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn((
+            BoundEffects::default(),
+            StagedEffects(vec![
+                time_expires_speed_tree("chip_a", 2.0, 1.5),
+                time_expires_speed_tree("chip_b", 2.0, 2.7),
+            ]),
+        ))
+        .id();
+
+    // Source chip_c doesn't match either staged entry
+    app.insert_resource(TestTimerExpiredMessages(vec![EffectTimerExpired {
+        entity,
+        original_duration: OrderedFloat(2.0),
+        source: test_source("chip_c"),
+    }]));
+
+    tick(&mut app);
+
+    let stack = app.world().get::<EffectStack<SpeedBoostConfig>>(entity);
+    assert!(
+        stack.is_none() || stack.unwrap().is_empty(),
+        "no entries should fire when message source matches no staged entry"
+    );
+}
+
+// -- B9 (NEW): Two messages, two sources, each fires its own ----------
+
+#[test]
+fn on_time_expires_two_messages_two_sources_each_walks_only_its_match() {
+    let mut app = bridge_test_app();
+
+    let entity = app
+        .world_mut()
+        .spawn(BoundEffects(vec![
+            time_expires_speed_tree("chip_a", 2.0, 1.5),
+            time_expires_speed_tree("chip_b", 2.0, 2.7),
+        ]))
+        .id();
+
+    app.insert_resource(TestTimerExpiredMessages(vec![
+        EffectTimerExpired {
+            entity,
+            original_duration: OrderedFloat(2.0),
+            source: test_source("chip_a"),
+        },
+        EffectTimerExpired {
+            entity,
+            original_duration: OrderedFloat(2.0),
+            source: test_source("chip_b"),
+        },
+    ]));
+
+    tick(&mut app);
+
+    let stack = app
+        .world()
+        .get::<EffectStack<SpeedBoostConfig>>(entity)
+        .expect("EffectStack should exist after both messages");
+    assert_eq!(
+        stack.len(),
+        2,
+        "exactly one entry per source should fire (no cross-source duplication)"
+    );
+
+    let entries: Vec<&(SourceId, SpeedBoostConfig)> = stack.iter().collect();
+    let sources: Vec<&SourceId> = entries.iter().map(|(s, _)| s).collect();
+    assert!(sources.contains(&&test_source("chip_a")));
+    assert!(sources.contains(&&test_source("chip_b")));
+
+    // Each source maps to its expected multiplier
+    let mult_for = |src: &SourceId| -> Option<OrderedFloat<f32>> {
+        entries
+            .iter()
+            .find(|(s, _)| s == src)
+            .map(|(_, c)| c.multiplier)
+    };
+    assert_eq!(
+        mult_for(&test_source("chip_a")),
+        Some(OrderedFloat(1.5)),
+        "chip_a entry should have multiplier 1.5"
+    );
+    assert_eq!(
+        mult_for(&test_source("chip_b")),
+        Some(OrderedFloat(2.7)),
+        "chip_b entry should have multiplier 2.7"
     );
 }

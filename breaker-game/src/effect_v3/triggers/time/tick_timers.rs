@@ -7,12 +7,14 @@ use bevy::prelude::*;
 use ordered_float::OrderedFloat;
 
 use super::{components::EffectTimers, messages::EffectTimerExpired};
+use crate::prelude::SourceId;
 
 /// Ticks all [`EffectTimers`] components, decrementing remaining time.
 ///
-/// When an entry reaches zero, sends [`EffectTimerExpired`] with the entity
-/// and original duration, then removes the entry. If all entries are removed,
-/// removes the [`EffectTimers`] component from the entity.
+/// When an entry reaches zero, sends [`EffectTimerExpired`] with the entity,
+/// the original duration, and the entry's source, then removes the entry. If
+/// all entries are removed, removes the [`EffectTimers`] component from the
+/// entity.
 pub fn tick_effect_timers(
     mut query: Query<(Entity, &mut EffectTimers)>,
     time: Res<Time>,
@@ -21,21 +23,22 @@ pub fn tick_effect_timers(
 ) {
     let dt = time.delta_secs();
     for (entity, mut timers) in &mut query {
-        let mut expired = Vec::new();
+        let mut expired: Vec<(usize, OrderedFloat<f32>, SourceId)> = Vec::new();
 
-        for (i, (remaining, original)) in timers.timers.iter_mut().enumerate() {
+        for (i, (remaining, original, source)) in timers.timers.iter_mut().enumerate() {
             *remaining = OrderedFloat(remaining.0 - dt);
             if remaining.0 <= 0.0 {
-                expired.push((i, *original));
+                expired.push((i, *original, source.clone()));
             }
         }
 
         // Remove expired entries in reverse order to preserve indices
-        for &(i, original) in expired.iter().rev() {
+        for (i, original, source) in expired.into_iter().rev() {
             timers.timers.swap_remove(i);
             writer.write(EffectTimerExpired {
                 entity,
                 original_duration: original,
+                source,
             });
         }
 
@@ -66,6 +69,10 @@ mod tests {
             .build()
     }
 
+    fn test_source(name: &str) -> SourceId {
+        SourceId::from(name.to_owned())
+    }
+
     // -- Behavior 1: single timer decrements by delta time each tick ------
 
     #[test]
@@ -75,7 +82,11 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(1.0), OrderedFloat(1.0))],
+                timers: vec![(
+                    OrderedFloat(1.0),
+                    OrderedFloat(1.0),
+                    test_source("test_source"),
+                )],
             })
             .id();
 
@@ -102,7 +113,11 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(0.0), OrderedFloat(1.0))],
+                timers: vec![(
+                    OrderedFloat(0.0),
+                    OrderedFloat(1.0),
+                    test_source("test_source"),
+                )],
             })
             .id();
 
@@ -119,6 +134,7 @@ mod tests {
         assert_eq!(collector.0.len(), 1, "should send one EffectTimerExpired");
         assert_eq!(collector.0[0].entity, entity);
         assert_eq!(collector.0[0].original_duration, OrderedFloat(1.0));
+        assert_eq!(collector.0[0].source, test_source("test_source"));
     }
 
     // -- Behavior 2: timer reaching zero sends EffectTimerExpired ---------
@@ -130,7 +146,11 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(0.01), OrderedFloat(5.0))],
+                timers: vec![(
+                    OrderedFloat(0.01),
+                    OrderedFloat(5.0),
+                    test_source("test_source"),
+                )],
             })
             .id();
 
@@ -146,6 +166,7 @@ mod tests {
             OrderedFloat(5.0),
             "original_duration should be 5.0"
         );
+        assert_eq!(collector.0[0].source, test_source("test_source"));
     }
 
     #[test]
@@ -156,7 +177,11 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(0.005), OrderedFloat(3.0))],
+                timers: vec![(
+                    OrderedFloat(0.005),
+                    OrderedFloat(3.0),
+                    test_source("test_source"),
+                )],
             })
             .id();
 
@@ -168,6 +193,7 @@ mod tests {
         assert_eq!(collector.0.len(), 1);
         assert_eq!(collector.0[0].entity, entity);
         assert_eq!(collector.0[0].original_duration, OrderedFloat(3.0));
+        assert_eq!(collector.0[0].source, test_source("test_source"));
     }
 
     // -- Behavior 3: EffectTimers component removed when all entries expire
@@ -179,7 +205,11 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(0.001), OrderedFloat(3.0))],
+                timers: vec![(
+                    OrderedFloat(0.001),
+                    OrderedFloat(3.0),
+                    test_source("test_source"),
+                )],
             })
             .id();
 
@@ -215,8 +245,16 @@ mod tests {
             .world_mut()
             .spawn(EffectTimers {
                 timers: vec![
-                    (OrderedFloat(0.001), OrderedFloat(2.0)),
-                    (OrderedFloat(10.0), OrderedFloat(10.0)),
+                    (
+                        OrderedFloat(0.001),
+                        OrderedFloat(2.0),
+                        test_source("src_short"),
+                    ),
+                    (
+                        OrderedFloat(10.0),
+                        OrderedFloat(10.0),
+                        test_source("src_long"),
+                    ),
                 ],
             })
             .id();
@@ -232,12 +270,22 @@ mod tests {
             1,
             "only the second timer should remain"
         );
+        assert_eq!(
+            timers.timers[0].2,
+            test_source("src_long"),
+            "surviving entry's source should be src_long"
+        );
 
         let collector = app
             .world()
             .resource::<MessageCollector<EffectTimerExpired>>();
         assert_eq!(collector.0.len(), 1, "only one timer should have expired");
         assert_eq!(collector.0[0].original_duration, OrderedFloat(2.0));
+        assert_eq!(
+            collector.0[0].source,
+            test_source("src_short"),
+            "emitted message source should be src_short"
+        );
     }
 
     #[test]
@@ -248,8 +296,8 @@ mod tests {
             .world_mut()
             .spawn(EffectTimers {
                 timers: vec![
-                    (OrderedFloat(0.001), OrderedFloat(2.0)),
-                    (OrderedFloat(0.001), OrderedFloat(4.0)),
+                    (OrderedFloat(0.001), OrderedFloat(2.0), test_source("src_a")),
+                    (OrderedFloat(0.001), OrderedFloat(4.0), test_source("src_b")),
                 ],
             })
             .id();
@@ -274,6 +322,16 @@ mod tests {
             collector.0.iter().map(|m| m.original_duration).collect();
         assert!(durations.contains(&OrderedFloat(2.0)));
         assert!(durations.contains(&OrderedFloat(4.0)));
+
+        let sources: Vec<SourceId> = collector.0.iter().map(|m| m.source.clone()).collect();
+        assert!(
+            sources.contains(&test_source("src_a")),
+            "collector should contain a message with source src_a"
+        );
+        assert!(
+            sources.contains(&test_source("src_b")),
+            "collector should contain a message with source src_b"
+        );
     }
 
     // -- Behavior 5: multiple entities with independent timers ------------
@@ -285,14 +343,22 @@ mod tests {
         let entity_a = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(0.001), OrderedFloat(1.0))],
+                timers: vec![(
+                    OrderedFloat(0.001),
+                    OrderedFloat(1.0),
+                    test_source("entity_a"),
+                )],
             })
             .id();
 
         let entity_b = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(100.0), OrderedFloat(100.0))],
+                timers: vec![(
+                    OrderedFloat(100.0),
+                    OrderedFloat(100.0),
+                    test_source("entity_b"),
+                )],
             })
             .id();
 
@@ -314,6 +380,7 @@ mod tests {
             .resource::<MessageCollector<EffectTimerExpired>>();
         assert_eq!(collector.0.len(), 1);
         assert_eq!(collector.0[0].entity, entity_a);
+        assert_eq!(collector.0[0].source, test_source("entity_a"));
     }
 
     #[test]
@@ -337,7 +404,11 @@ mod tests {
         let entity_a = app
             .world_mut()
             .spawn(EffectTimers {
-                timers: vec![(OrderedFloat(0.001), OrderedFloat(7.5))],
+                timers: vec![(
+                    OrderedFloat(0.001),
+                    OrderedFloat(7.5),
+                    test_source("test_source"),
+                )],
             })
             .id();
 
@@ -356,5 +427,91 @@ mod tests {
             OrderedFloat(7.5),
             "original_duration should match"
         );
+        assert_eq!(
+            collector.0[0].source,
+            test_source("test_source"),
+            "source should match the entry's source"
+        );
+    }
+
+    // -- C2 (NEW): tick_effect_timers propagates third tuple field --------
+
+    #[test]
+    fn tick_effect_timers_propagates_source_into_expired_message() {
+        let mut app = timer_test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn(EffectTimers {
+                timers: vec![(
+                    OrderedFloat(0.001),
+                    OrderedFloat(3.0),
+                    test_source("chip_a"),
+                )],
+            })
+            .id();
+
+        tick(&mut app);
+
+        let collector = app
+            .world()
+            .resource::<MessageCollector<EffectTimerExpired>>();
+        assert_eq!(collector.0.len(), 1);
+        assert_eq!(collector.0[0].entity, entity);
+        assert_eq!(collector.0[0].original_duration, OrderedFloat(3.0));
+        assert_eq!(collector.0[0].source, test_source("chip_a"));
+    }
+
+    // -- C2 edge case: two entries with distinct sources both expire ------
+
+    #[test]
+    fn tick_effect_timers_propagates_distinct_sources_for_simultaneous_expiry() {
+        let mut app = timer_test_app();
+
+        let entity = app
+            .world_mut()
+            .spawn(EffectTimers {
+                timers: vec![
+                    (
+                        OrderedFloat(0.001),
+                        OrderedFloat(2.0),
+                        test_source("chip_a"),
+                    ),
+                    (
+                        OrderedFloat(0.001),
+                        OrderedFloat(4.0),
+                        test_source("chip_b"),
+                    ),
+                ],
+            })
+            .id();
+
+        tick(&mut app);
+
+        let collector = app
+            .world()
+            .resource::<MessageCollector<EffectTimerExpired>>();
+        assert_eq!(collector.0.len(), 2);
+
+        // Build (duration, source) pairs and assert exact multiset match
+        let mut pairs: Vec<(OrderedFloat<f32>, SourceId)> = collector
+            .0
+            .iter()
+            .map(|m| (m.original_duration, m.source.clone()))
+            .collect();
+        let mut expected: Vec<(OrderedFloat<f32>, SourceId)> = vec![
+            (OrderedFloat(2.0), test_source("chip_a")),
+            (OrderedFloat(4.0), test_source("chip_b")),
+        ];
+        pairs.sort_by_key(|a| a.0);
+        expected.sort_by_key(|a| a.0);
+        assert_eq!(
+            pairs, expected,
+            "the (duration, source) multiset should exactly match the inputs"
+        );
+
+        for msg in &collector.0 {
+            assert_eq!(msg.entity, entity);
+        }
     }
 }

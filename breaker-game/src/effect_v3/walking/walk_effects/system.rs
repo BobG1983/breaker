@@ -95,6 +95,10 @@ pub(in crate::effect_v3) fn walk_staged_effects(
 /// defensively so `walk_staged_effects` leaves them alone.
 fn tree_matches_trigger(tree: &Tree, active: &Trigger) -> bool {
     match tree {
+        // `Tree::Until(..)` is no longer staged by `evaluate_when` / `evaluate_once`
+        // — they route Untils through `evaluate_until` directly, which self-binds
+        // via `ensure_until_bound`. The arm here is a defensive guard against any
+        // future caller that stages an Until directly.
         Tree::When(gate, _) | Tree::Once(gate, _) | Tree::Until(gate, _) => gate == active,
         _ => false,
     }
