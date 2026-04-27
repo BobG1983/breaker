@@ -34,6 +34,17 @@ pub(crate) trait SourceIdExt {
     /// Wrap an existing `SourceId` as an armed-firing source.
     fn armed(inner: SourceId) -> ArmedBuilder;
 
+    /// Wrap an existing `SourceId` as the install-key for a Shape-B During
+    /// installed by an `Until(_, During(...))`. The canonical form is a
+    /// trailing `"#installed[0]"` suffix.
+    ///
+    /// Install-keys are matched only by full-string equality during
+    /// teardown — there is no reader helper. The hash-segment form
+    /// distinguishes them from colon-segment namespaces so the install-key
+    /// never aliases a normal source. See
+    /// `docs/architecture/effects/until.md` "Shape 4" for semantics.
+    fn installed(inner: SourceId) -> InstalledBuilder;
+
     /// Returns `true` if this source represents an armed-firing context.
     /// The canonical form is a trailing `":armed"` suffix.
     fn is_armed(&self) -> bool;
@@ -70,6 +81,12 @@ pub(crate) struct HazardBuilder {
 /// Armed-wrapper typestate.
 #[derive(Clone, Debug)]
 pub(crate) struct ArmedBuilder {
+    inner: SourceId,
+}
+
+/// Installed-During-wrapper typestate.
+#[derive(Clone, Debug)]
+pub(crate) struct InstalledBuilder {
     inner: SourceId,
 }
 
@@ -156,6 +173,18 @@ impl ArmedBuilder {
     }
 }
 
+impl InstalledBuilder {
+    /// Build the final `SourceId`.
+    ///
+    /// Format: `"<inner>#installed[0]"` — uses `SourceId::Display`.
+    /// Used by Shape-B `Until(_, During(...))` to install the inner
+    /// During into `BoundEffects` under a child key.
+    #[must_use]
+    pub(crate) fn build(self) -> SourceId {
+        SourceId::from(format!("{}#installed[0]", self.inner))
+    }
+}
+
 // ── Trait impl on `SourceId` ────────────────────────────────────────────────
 
 impl SourceIdExt for SourceId {
@@ -179,6 +208,10 @@ impl SourceIdExt for SourceId {
 
     fn armed(inner: SourceId) -> ArmedBuilder {
         ArmedBuilder { inner }
+    }
+
+    fn installed(inner: SourceId) -> InstalledBuilder {
+        InstalledBuilder { inner }
     }
 
     fn is_armed(&self) -> bool {
@@ -612,5 +645,50 @@ mod tests {
         let armed = SourceId::armed(inner).build();
         assert!(armed.is_armed());
         assert_eq!(armed.0.as_ref(), "hazard:diffusion:42:armed");
+    }
+
+    // ── Behavior 25: installed(inner).build() → "<inner>#installed[0]" ──
+
+    #[test]
+    fn installed_wraps_chip_source_with_installed_suffix() {
+        let inner = SourceId::from(String::from("chip:Piercing:Common"));
+        let installed = SourceId::installed(inner).build();
+        assert_eq!(installed.0.as_ref(), "chip:Piercing:Common#installed[0]");
+    }
+
+    #[test]
+    fn installed_wraps_protocol_source() {
+        let inner = SourceId::from(String::from("protocol:burnout"));
+        let installed = SourceId::installed(inner).build();
+        assert_eq!(installed.0.as_ref(), "protocol:burnout#installed[0]");
+    }
+
+    #[test]
+    fn installed_wraps_empty_source_to_hash_installed() {
+        // Edge case: degenerate empty inner — no panic.
+        let inner = SourceId::from(String::new());
+        let installed = SourceId::installed(inner).build();
+        assert_eq!(installed.0.as_ref(), "#installed[0]");
+    }
+
+    #[test]
+    fn installed_round_trips_chip_inner() {
+        let inner = SourceId::chip("X").rarity(Rarity::Common).build();
+        let installed = SourceId::installed(inner).build();
+        assert_eq!(installed.0.as_ref(), "chip:X:Common#installed[0]");
+    }
+
+    #[test]
+    fn installed_round_trips_protocol_inner() {
+        let inner = SourceId::protocol(ProtocolKind::Burnout).build();
+        let installed = SourceId::installed(inner).build();
+        assert_eq!(installed.0.as_ref(), "protocol:burnout#installed[0]");
+    }
+
+    #[test]
+    fn installed_round_trips_hazard_with_instance_inner() {
+        let inner = SourceId::hazard(HazardKind::Diffusion).instance(42).build();
+        let installed = SourceId::installed(inner).build();
+        assert_eq!(installed.0.as_ref(), "hazard:diffusion:42#installed[0]");
     }
 }

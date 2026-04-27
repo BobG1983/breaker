@@ -13,13 +13,26 @@ use crate::{
         triggers::time::components::EffectTimers,
         types::{Condition, ScopedTree, Tree, Trigger, TriggerContext},
     },
-    prelude::SourceId,
+    prelude::{SourceId, SourceIdExt},
 };
 
 /// Tracks which Until sources have already applied their inner effects
 /// on this entity. Each entry in the `HashSet` is a source name string.
 #[derive(Component, Default, Debug)]
 pub struct UntilApplied(pub HashSet<String>);
+
+/// Build the `BoundEffects` install-key for a Shape-B `Until(_, During(...))`.
+///
+/// Single source of truth for the `<source>#installed[0]` form so format
+/// changes (e.g. supporting multiple installed Durings per source) only
+/// touch one place. Mirrors the `armed_key_for` / `installed()` builder
+/// precedent in `shared/source_id_ext.rs`.
+fn install_key_for(source: &str) -> String {
+    SourceId::installed(SourceId::from(source.to_owned()))
+        .build()
+        .0
+        .into_owned()
+}
 
 /// Evaluate a `Tree::Until` node: apply inner effects immediately,
 /// reverse them when the trigger fires.
@@ -111,7 +124,7 @@ fn apply_until_during_branch(
 ) {
     if !is_applied {
         // Install the During into BoundEffects for the condition poller
-        let install_key = format!("{}#installed[0]", cmd.source);
+        let install_key = install_key_for(&cmd.source);
         if let Some(mut bound) = world.get_mut::<BoundEffects>(cmd.entity)
             && !bound.0.iter().any(|(name, _)| name == &install_key)
         {
@@ -292,7 +305,7 @@ fn teardown_installed_during(
     inner_scoped: &ScopedTree,
     world: &mut World,
 ) {
-    let install_key = format!("{source}#installed[0]");
+    let install_key = install_key_for(source);
 
     // Remove installed During from BoundEffects
     if let Some(mut bound) = world.get_mut::<BoundEffects>(entity) {

@@ -23,13 +23,21 @@ namespaces.
 | Chip | `SourceId::chip(template)[.rarity(r)].build()` | `chip:<template>[:<rarity>]` |
 | Protocol | `SourceId::protocol(kind)[.action(a)].build()` | `protocol:<name>[:<action>]` |
 | Hazard | `SourceId::hazard(kind)[.instance(id)].build()` | `hazard:<name>[:<u64>]` |
-| Armed | `<inner>.armed()` | `<inner>:armed` (suffix on any other format) |
+| Armed | `SourceId::armed(inner).build()` | `<inner>:armed` (suffix wrapper) |
+| Installed | `SourceId::installed(inner).build()` | `<inner>#installed[0]` (suffix wrapper) |
 
 `<rarity>` is the `Display` form of `Rarity` — PascalCase (`Common`,
 `Uncommon`, `Rare`, `Evolution`). `<action>` is a free-form discriminator
 chosen by the protocol (e.g. `protocol:burnout:shockwave`). `<u64>` is the
 concrete hazard instance identifier so multiple instances of the same
 hazard kind do not alias.
+
+`Armed` and `Installed` are wrapper namespaces that suffix an existing
+source. `Armed` marks a source as the firing context for an armed effect.
+`Installed` is the `BoundEffects` install-key for a Shape-B
+`Until(_, During(...))` (see `docs/architecture/effects/until.md`,
+"Shape 4"). Install-keys are opaque to readers — they are matched only by
+full-string equality during teardown (`walking/until/system.rs`).
 
 ## Reader helpers
 
