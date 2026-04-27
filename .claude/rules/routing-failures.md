@@ -75,7 +75,7 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 
 ## reviewer-file-length findings
 
-reviewer-file-length writes a split spec to `docs/todos/detail/<timestamp>-file-splits.md` and adds a todo to the top of the todo list. The orchestrator uses `/implement` or `/quickfix` to execute the splits from the todo, then removes orphaned `.rs` files and runs Basic Verification Tier.
+reviewer-file-length returns the split plan inline (summary table + refactor spec hint per file). It does NOT write to `docs/todos/`. The orchestrator executes the splits **directly inline in the current branch** — file moves following `.claude/rules/file-splitting.md` — and runs Basic Verification Tier after. Splits MUST land before the branch merges to develop. Do NOT defer to a todo. Do NOT route via `/implement` or `/quickfix`. If LOW-priority files are flagged, surface them to the user to decide whether to include them in the current split batch.
 
 ## reviewer-tests findings
 

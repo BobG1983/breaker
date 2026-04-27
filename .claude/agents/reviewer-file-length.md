@@ -1,7 +1,7 @@
 ---
 name: reviewer-file-length
-description: "Use this agent to find overly large source files and produce refactor specs for splitting them. Identifies files over 400 lines, analyzes test-to-production ratio, and outputs a prioritized table with concrete split recommendations. Produces refactor spec hints that writer-code can execute directly.\n\nExamples:\n\n- At a phase boundary:\n  Assistant: \"Phase complete. Let me use the reviewer-file-length agent to check for files that need splitting.\"\n\n- After a feature adds many tests:\n  Assistant: \"Let me use the reviewer-file-length agent to check if any files have grown too large.\"\n\n- When agents are reading files in multiple chunks:\n  Assistant: \"Context pollution suspected. Let me use the reviewer-file-length agent to identify split candidates.\"\n\n- Parallel note: Run alongside reviewer-quality, reviewer-correctness, runner-tests, and other post-implementation agents — all are independent."
-tools: Read, Write, Edit, Glob, Grep
+description: "Use this agent to find overly large source files and produce refactor specs for splitting them. Identifies files over 400 lines, analyzes test-to-production ratio, and outputs a prioritized table with concrete split recommendations directly to the orchestrator — splits are executed in the current branch BEFORE merging, never deferred to a todo.\n\nExamples:\n\n- At a phase boundary:\n  Assistant: \"Phase complete. Let me use the reviewer-file-length agent to check for files that need splitting.\"\n\n- After a feature adds many tests:\n  Assistant: \"Let me use the reviewer-file-length agent to check if any files have grown too large.\"\n\n- When agents are reading files in multiple chunks:\n  Assistant: \"Context pollution suspected. Let me use the reviewer-file-length agent to identify split candidates.\"\n\n- Parallel note: Run alongside reviewer-quality, reviewer-correctness, runner-tests, and other post-implementation agents — all are independent."
+tools: Read, Glob, Grep
 model: opus
 color: orange
 memory: project
@@ -85,22 +85,17 @@ domain/
 
 ## Output
 
-**Write the complete plan to `docs/todos/detail/<timestamp>-file-splits.md`** (where `<timestamp>` is the current date in YYYY-MM-DD format) using the format below. This detail file is linked from the todo list.
+**Return the complete split plan inline to the orchestrator.** Do NOT write a todo. Do NOT write a detail file. Do NOT modify `docs/todos/TODO.md`. The orchestrator executes the splits in the current branch before merging — splitting is never deferred.
 
 For each file, also check:
 - What the **parent module** declares (`mod original_file;`) — confirm it doesn't need changes
-- What **external files** import from this module — list them so the writer-code knows what to re-export
+- What **external files** import from this module — list them so the orchestrator knows what to re-export
 - Whether the original file has a `//!` doc comment — copy it to the mod.rs plan
 
-**After writing the detail file**, add a todo item to the **TOP** of `docs/todos/TODO.md` with:
-- Title: `Split oversized files (N HIGH, M MEDIUM)`
-- Detail link: the file you just wrote
-- Priority: place at the TOP of the list (before all other items)
-
 Return to the orchestrator:
-1. The detail file path: `docs/todos/detail/<timestamp>-file-splits.md`
-2. A summary table of all files and their priorities
-3. A recommended batching for parallel writer-code agents (group files that don't touch the same crate together)
+1. A summary table of all files and their priorities (format below)
+2. A refactor spec hint per HIGH/MEDIUM file (format below)
+3. A recommended batching when multiple files need splitting (group files that don't touch the same crate together — these can be split in parallel)
 
 ### Summary Table
 
@@ -143,10 +138,10 @@ For each HIGH and MEDIUM priority file, emit a refactor spec hint:
   - `group_name.rs`: test_fn_3, test_fn_4, ... (N tests, ~M lines)
 - Imports needed: [any use statements the split files will need]
 - Re-exports needed: [what mod.rs must re-export to maintain public API]
-- Delegate: writer-code can execute this refactor directly
+- Delegate: orchestrator executes this refactor inline in the current branch (NOT via /implement or /quickfix; NOT as a todo). Splits MUST land before the branch merges to develop.
 ```
 
-For LOW priority files, just list them in the table — no refactor spec needed.
+For LOW priority files, just list them in the table — no refactor spec needed. Surface them so the orchestrator can ask the user whether to include them in the current split batch.
 
 ## Important Notes
 
@@ -159,14 +154,11 @@ For LOW priority files, just list them in the table — no refactor spec needed.
 
 ⚠️ **ALWAYS read `.claude/rules/cargo.md` before running any cargo command.** It defines required aliases and which bare commands are prohibited.
 
-⚠️ **ABSOLUTE RULE — DO NOT TOUCH SOURCE FILES** ⚠️
-**NEVER edit, remove, rename, or create any source file (.rs, .ron, .toml, etc.).**
-The ONLY files you may write/edit are:
-- Your own memory files under `.claude/agent-memory/reviewer-file-length/`
-- `docs/todos/detail/<timestamp>-file-splits.md` (split spec output)
-- `docs/todos/TODO.md` (to add the split todo entry)
+⚠️ **ABSOLUTE RULE — READ-ONLY AGENT** ⚠️
+**NEVER edit, remove, rename, or create any file outside your own memory directory.**
+The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/reviewer-file-length/` (and only the ephemeral subdirectory unless promoting a stable pattern). You do NOT write to `docs/todos/`, you do NOT modify source files, you do NOT modify rule files.
 
-Describe the refactor precisely in the split spec — but do NOT apply it to source files.
+Describe the refactor precisely inline in your reply to the orchestrator — the orchestrator executes the split.
 
 # Agent Memory
 

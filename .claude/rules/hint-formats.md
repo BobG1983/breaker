@@ -85,7 +85,27 @@ Standardized output formats that verification agents produce and failure routing
 
 ## reviewer-file-length
 
-reviewer-file-length writes a split spec to `docs/todos/detail/<timestamp>-file-splits.md` and adds a todo to the top of the todo list — no hint format needed. The orchestrator executes the splits from the todo via `/implement` or `/quickfix`.
+reviewer-file-length returns its findings inline to the orchestrator: a summary table plus, per HIGH/MEDIUM file, a refactor spec hint of the form below. It does NOT write to `docs/todos/`. The orchestrator executes the splits inline in the current branch (per `.claude/rules/file-splitting.md`) before merge — never via `/implement`, `/quickfix`, or a todo.
+
+```
+**Refactor spec hint:**
+- Source file: `path/to/original_file.rs`
+- Total lines: N (prod: N, tests: N)
+- Strategy: A | B | C
+- Target structure:
+  ```
+  path/to/
+    new_dir/
+      mod.rs      // [exact contents]
+      system.rs   // [what goes here]
+      tests.rs    // [what goes here, or tests/ breakdown]
+  ```
+- Test groups (for sub-splitting):
+  - `group_name.rs`: test_fn_1, test_fn_2, ... (N tests, ~M lines)
+- Imports needed: [use statements the split files will need]
+- Re-exports needed: [what mod.rs must re-export to maintain public API]
+- Delegate: orchestrator executes the split inline in the current branch
+```
 
 ## Dependency finding (guard-dependencies)
 

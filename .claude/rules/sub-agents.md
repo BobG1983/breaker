@@ -38,7 +38,7 @@ Read-only code review. Safe to run concurrently with each other and with runners
 | **reviewer-bevy-api** | Correct Bevy API usage for project's version | Standard Verification Tier |
 | **reviewer-architecture** | Plugin boundaries, module structure, message patterns | Standard Verification Tier |
 | **reviewer-performance** | Archetype fragmentation, query efficiency, hot-path allocations | Standard Verification Tier |
-| **reviewer-file-length** | Finds oversized files, produces split spec | Full Verification Tier |
+| **reviewer-file-length** | Finds oversized files; orchestrator splits inline in current branch before merge (never via todo, /implement, or /quickfix) | Full Verification Tier |
 
 ## Guard Agents
 
