@@ -6,13 +6,15 @@ use std::{collections::HashSet, marker::PhantomData};
 use bevy::prelude::*;
 
 use super::{
-    super::system::{DiffusionConfig, PendingDiffusionEmissions, diffusion_reduce_primary},
+    super::system::{
+        DiffusionConfig, DiffusionInstances, PendingDiffusionEmissions, PendingEmission,
+        diffusion_reduce_primary,
+    },
     helpers::canonical_config,
 };
 use crate::{
     mutators::hazards::{
         definition::HazardKind,
-        diffusion::system::PendingEmission,
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
@@ -40,7 +42,7 @@ fn build_diffusion_test_app(share_percent: f32) -> App {
         .with_effects_pipeline()
         .with_resource::<ActiveHazards>()
         .with_resource::<PendingDiffusionEmissions>()
-        .with_resource::<crate::mutators::hazards::diffusion::system::DiffusionInstances>()
+        .with_resource::<DiffusionInstances>()
         .build();
 
     app.world_mut().insert_resource(DiffusionConfig {
@@ -85,7 +87,7 @@ fn reduce_primary_with_diffusion_inactive_passes_through() {
         .with_effects_pipeline()
         .with_resource::<ActiveHazards>()
         .with_resource::<PendingDiffusionEmissions>()
-        .with_resource::<crate::mutators::hazards::diffusion::system::DiffusionInstances>()
+        .with_resource::<DiffusionInstances>()
         .build();
     // Canonical config inserted, but no stacks.
     app.world_mut().insert_resource(canonical_config());

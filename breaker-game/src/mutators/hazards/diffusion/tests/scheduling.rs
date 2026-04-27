@@ -9,12 +9,18 @@
 //! 2. Accidental move into `EmitDamage` (which would let Diffusion emit
 //!    rings BEFORE any primary damage applies — semantically wrong).
 
+use std::marker::PhantomData;
+
 use bevy::prelude::*;
 
-use super::super::system::{diffusion_emit_rings, wire};
+use super::{
+    super::system::{DiffusionInstances, PendingDiffusionEmissions, diffusion_emit_rings, wire},
+    helpers::canonical_config,
+};
 use crate::{
     mutators::{
-        hazards::resources::ActiveHazards, plugin::wire_damage_chain,
+        hazards::{definition::HazardKind, resources::ActiveHazards},
+        plugin::wire_damage_chain,
         protocols::resources::ActiveProtocols,
     },
     prelude::*,
@@ -66,5 +72,73 @@ fn diffusion_emit_rings_is_not_in_emit_damage() {
          That would let Diffusion emit ripple rings in the emit stage — BEFORE \
          any primary damage applies — which inverts the intended post-apply \
          semantics."
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════
+// W2 Behavior 53 — `wire(app)` + `wire_damage_chain(app)` together schedule
+// `reduce_primary` in `MutateDamage` and `emit_rings` in `PostApplyDamage`.
+//
+// W2 Behavior 56 (cross-mechanic PostApplyDamage emitter ordering) lives in
+// `mutators/plugin/tests/damage_chain.rs`, which exercises
+// `MutatorsPlugin::wire_damage_chain` directly.
+// ════════════════════════════════════════════════════════════════════
+
+#[test]
+fn register_wires_systems_into_dmg_sets() {
+    // After wire(app) + wire_damage_chain(app) + 1 tick with Diffusion
+    // active + primary msg, msg.amount must be reduced (proves
+    // reduce_primary ran in MutateDamage).
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .with_effects_pipeline()
+        .with_resource::<ActiveHazards>()
+        .with_resource::<ActiveProtocols>()
+        .with_resource::<PendingDiffusionEmissions>()
+        .with_resource::<DiffusionInstances>()
+        .build();
+    app.world_mut().insert_resource(canonical_config());
+    app.world_mut()
+        .resource_mut::<ActiveHazards>()
+        .add_stack(HazardKind::Diffusion);
+    wire(&mut app);
+    wire_damage_chain(&mut app);
+
+    let c0 = app
+        .world_mut()
+        .spawn((
+            Cell,
+            Position2D(Vec2::ZERO),
+            Hp::new(100.0),
+            KilledBy { killer: None },
+        ))
+        .id();
+    // A second adjacent cell so the diffusion BFS has somewhere to splash
+    // ripple damage; the test only asserts on the primary's HP reduction.
+    app.world_mut().spawn((
+        Cell,
+        Position2D(Vec2::new(30.0, 0.0)),
+        Hp::new(100.0),
+        KilledBy { killer: None },
+    ));
+
+    app.world_mut()
+        .resource_mut::<Messages<DamageDealt<Cell>>>()
+        .write(DamageDealt::<Cell> {
+            dealer:        None,
+            attributed_to: None,
+            target:        c0,
+            amount:        100.0,
+            source:        None,
+            _marker:       PhantomData,
+        });
+
+    tick(&mut app);
+
+    let c0_hp = app.world().get::<Hp>(c0).expect("Hp").current;
+    assert!(
+        c0_hp < 100.0,
+        "C0 HP must be reduced: wire must schedule reduce_primary in MutateDamage"
     );
 }
