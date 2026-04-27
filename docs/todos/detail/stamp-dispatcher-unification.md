@@ -677,7 +677,7 @@ In scope:
 Out of scope:
 - Anchor's three remediations (`anchor-bump-force-multiplier.md`, `anchor-piercing.md`, `anchor-retire-during-primitive.md`) — separate TODO. This TODO fixes Anchor's DISPATCHER; Anchor's mechanic-specific fixes ride separately.
 - `damage-amplification-standardization.md` Pattern B itself — separate work. Ricochet depends on it but implementing Pattern B is its own remediation.
-- `effect-system-time-expires-wiring.md` — Deadline/Kickstart abandoned `Until(TimeExpires)` via code-driven migration; that remediation still stands for any other `Until(TimeExpires)` consumer.
+- `Until(TimeExpires)` wiring — completed in commit `945254fd`. Deadline/Kickstart abandoned the primitive via code-driven migration; the wiring remains live for any other RON consumer.
 - Site F Phase 2 (post-spawn deferred dispatch from builder) — parked until concrete caller appears.
 
 ## TODO entry

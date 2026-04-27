@@ -6,7 +6,7 @@
 
 ## Why
 
-Unit tests of individual pieces (the walker, the tick system, the bridge) pass while the integration stays broken. The `Until(TimeExpires)` bug is the archetype: every piece tested in isolation, no piece testing the seam between them. `effect-system-time-expires-wiring.md` fixes the specific gap; this remediation systematically prevents the category.
+Unit tests of individual pieces (the walker, the tick system, the bridge) pass while the integration stays broken. The `Until(TimeExpires)` bug is the archetype: every piece tested in isolation, no piece testing the seam between them. commit `945254fd` (`fix(effect_v3): wire Until(TimeExpires) end-to-end`) fixes the specific gap; this remediation systematically prevents the category.
 
 ## Remediation
 
@@ -37,7 +37,7 @@ Crucially, the test does NOT manually spawn `EffectTimers`, `EffectStack` entrie
 
 Based on the audit, start with the primitives most likely to have the `Until(TimeExpires)` pattern:
 
-1. **`Until(TimeExpires(duration), ...)`** \u2014 covered by `effect-system-time-expires-wiring.md` (fix + E2E test).
+1. **`Until(TimeExpires(duration), ...)`** \u2014 covered by commit `945254fd` (`fix(effect_v3): wire Until(TimeExpires) end-to-end`) (fix + E2E test).
 2. **`Until(Impacted(EntityKind), ...)`** \u2014 Ricochet's canonical pattern. Verify an E2E test exists that walks `Impacted(Wall)` all the way through to a DamageBoost on the bolt's EffectStack. If not, write one.
 3. **`When(NodeStartOccurred, ...)`** \u2014 Kickstart's trigger. Verify E2E: `OnEnter(NodeState::Playing)` \u2192 bridge fires NodeStartOccurred \u2192 walker fires inner.
 4. **`Stamp(EveryBolt, ...)`** \u2014 the audit's Issue 1 cross-cutting bug. Once `stamp-dispatcher-unification.md` lands, add an E2E test that declares `Stamp(EveryBolt, ...)` in a test-only RON fixture and asserts the tree lands on all bolts (not the breaker).
@@ -91,13 +91,13 @@ This remediation is complete when:
 1. Every primitive in `effect_v3/types/` (every `Trigger`, `Condition`, `Participant`, `StampTarget`, `RouteTarget`, `EffectType`, `Tree` variant) has at least one E2E test in `effect_v3/e2e/`.
 2. Every E2E test drives the full pipeline from a "real" trigger (no fixture-spawned `EffectTimers`, `EffectStack`, armed-scope entries, etc.).
 3. A coverage check (manual or scripted) confirms every variant is touched.
-4. Any gap discovered during the sweep (a primitive that silently no-ops because a middle step is unwired) is filed as its own remediation or folded into `effect-system-time-expires-wiring.md` if it's an analogous wiring bug.
+4. Any gap discovered during the sweep (a primitive that silently no-ops because a middle step is unwired) is filed as its own remediation or folded into commit `945254fd` (`fix(effect_v3): wire Until(TimeExpires) end-to-end`) if it's an analogous wiring bug.
 
 ### Effort sizing
 
 This is a multi-session effort. Recommend splitting into phases matching the primitive table:
 
-- Phase 1: `Until(TimeExpires)` \u2014 covered by `effect-system-time-expires-wiring.md`.
+- Phase 1: `Until(TimeExpires)` \u2014 covered by commit `945254fd` (`fix(effect_v3): wire Until(TimeExpires) end-to-end`).
 - Phase 2: Other `Until(trigger, ...)` variants (Impacted, Bump, etc.).
 - Phase 3: `During(condition, ...)` + `On(participant, ...)`.
 - Phase 4: `Stamp(target, ...)` every variant.
