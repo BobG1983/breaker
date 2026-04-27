@@ -13,10 +13,10 @@ Technical decisions for how the game is built. See `../design/` for *why* (game 
 
 | Document | Contents |
 |----------|----------|
-| [plugins.md](plugins.md) | Plugin architecture, crate structure, domain plugin rules |
+| [plugins.md](plugins.md) | Plugin philosophy, workspace + domain layout, cross-domain write rubric |
 | [layout.md](layout.md) | Canonical domain folder structure and per-file rules |
-| [messages.md](messages.md) | Inter-domain communication via Bevy messages |
-| [ordering.md](ordering.md) | System ordering, SystemSet conventions, ordering chain |
+| [messages.md](messages.md) | Inter-domain communication: when to use a message vs component vs resource |
+| [ordering.md](ordering.md) | System ordering principles, SystemSet conventions, schedule placement |
 | [state.md](state.md) | GameState, PlayingState, sub-states, run_if gating |
 | [physics.md](physics.md) | FixedUpdate physics, CCD collision, bolt reflection model |
 | [content.md](content.md) | Content identity (enum behaviors + RON instances), upgrade application, RON validation |

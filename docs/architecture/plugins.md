@@ -2,289 +2,111 @@
 
 ## Workspace Layout
 
-Cargo workspace with peer crates at the repository root. Directory names follow `breaker-<name>` convention.
-
 ```
-brickbreaker/                 # Repository root (workspace)
-├── Cargo.toml                # Workspace manifest — members, shared lints, profiles
-├── .cargo/config.toml        # Dev aliases (cargo dev, cargo dtest, cargo dscenario, etc.)
-├── breaker-game/             # Main game crate (binary + library)
-│   ├── Cargo.toml            # Package: breaker (lib) / brickbreaker (bin)
-│   ├── src/                  # Game source (see Domain Layout below)
-│   └── assets/               # RON data files, shaders, textures, audio
-├── rantzsoft_spatial2d/      # Game-agnostic 2D spatial plugin (Position2D, propagation, interpolation)
-│   ├── Cargo.toml            # Package: rantzsoft_spatial2d
-│   └── src/                  # Components, systems, DrawLayer trait, propagation enums
-├── rantzsoft_physics2d/      # Game-agnostic 2D physics primitives (quadtree, CCD, CollisionLayers, DistanceConstraint)
-│   ├── Cargo.toml            # Package: rantzsoft_physics2d
-│   └── src/                  # Aabb2D, CollisionLayers, DistanceConstraint, quadtree, CCD
-├── rantzsoft_defaults/       # Config/defaults pipeline: GameConfig derive macro, RON asset loader, seed/propagate systems, DefaultsSystems set, RantzDefaultsPlugin, SeedableRegistry trait
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs            # Re-exports GameConfig, SeedableConfig; declares all modules
-│       ├── handle.rs         # DefaultsHandle<D> resource (typed asset handle wrapper)
-│       ├── loader.rs         # RonAssetLoader<T> generic RON AssetLoader + deserialize_ron helper
-│       ├── plugin.rs         # RantzDefaultsPlugin, RantzDefaultsPluginBuilder (add_config/add_registry API), DefaultsSystems set (Seed, PropagateDefaults)
-│       ├── prelude.rs        # Public re-exports: GameConfig, SeedableConfig, SeedableRegistry, RegistryHandles, DefaultsHandle, RonAssetLoader, DefaultsSystems, RantzDefaultsPlugin, RantzDefaultsPluginBuilder
-│       ├── registry.rs       # SeedableRegistry trait (asset_dir, extensions, seed, update_single, update_all); RegistryHandles<A> resource (folder + typed handles)
-│       ├── seedable.rs       # SeedableConfig trait (asset_path, extensions, Config associated type)
-│       └── systems.rs        # seed_config, propagate_defaults, init_defaults_handle, seed_registry, propagate_registry, init_registry_handles generic systems
-├── rantzsoft_defaults_derive/ # Proc-macro crate: #[derive(GameConfig)] for RON defaults loading
-│   ├── Cargo.toml
-│   └── src/lib.rs
-├── rantzsoft_stateflow/      # Game-agnostic state routing, screen transitions, lifecycle messages
-│   ├── Cargo.toml            # Package: rantzsoft_stateflow
-│   └── src/                  # Route builder, dispatch, transition effects, cleanup
-├── rantzsoft_dmg/            # Game-agnostic damage/kill/heal pipeline (Hp, Dead, Invulnerable, DamageBoostStack, VulnerableStack, DmgSystems, RantzDmgPlugin, RantzDmgAppExt::register_dmgable)
-│   ├── Cargo.toml            # Package: rantzsoft_dmg
-│   ├── src/                  # Components, messages, systems, sets, traits, plugin, app_ext
-│   └── tests/                # Integration test suite (public API only)
-├── breaker-scenario-runner/  # Automated gameplay testing tool (dev-only binary)
-│   ├── Cargo.toml            # Package: breaker_scenario_runner
-│   ├── src/                  # Runner source (types, lifecycle, invariants, input, log_capture)
-│   └── scenarios/            # RON scenario files (crate-local, never shipped)
-└── docs/                     # Design docs, architecture, build plan
+brickbreaker/
+├── breaker-game/             # Main game (binary + library)
+├── rantzsoft_spatial2d/      # 2D spatial: Position2D, propagation, interpolation
+├── rantzsoft_physics2d/      # 2D physics: Aabb2D, CollisionLayers, DistanceConstraint, quadtree, CCD
+├── rantzsoft_defaults/       # GameConfig derive + RON loader + SeedableRegistry
+├── rantzsoft_defaults_derive/ # Proc-macro for #[derive(GameConfig)]
+├── rantzsoft_stateflow/      # State routing, screen transitions, lifecycle messages
+├── rantzsoft_dmg/            # Damage/kill/heal pipeline: Hp, Dead, Invulnerable, DmgSystems
+└── breaker-scenario-runner/  # Headless gameplay testing (dev-only)
 ```
 
-**Naming convention:** Game-specific crate directories use `breaker-<name>`; game-agnostic reusable crates use `rantzsoft_<name>` (see `.claude/rules/rantzsoft-crates.md`). Cargo package names use underscores (`brickbreaker`, `breaker_scenario_runner`, `rantzsoft_spatial2d`, etc.). `rantzsoft_*` crates contain zero game-specific code and may be extracted to separate repos when reuse is needed.
+**Naming.** Game-specific crates use `breaker-<name>`. Game-agnostic reusable crates use `rantzsoft_<name>` and contain ZERO game-specific code (see `.claude/rules/rantzsoft-crates.md`). They may be extracted to standalone repos when reuse is needed.
 
-## Domain Layout
+## Domain Layout (`breaker-game/src/`)
 
-One Bevy plugin per **game domain** (breaker, bolt, cells, etc.) — not one per Bevy system function. Each domain plugin encapsulates all the Bevy systems, components, resources, and messages related to that domain.
-
-Inside `breaker-game/`:
+One Bevy plugin per **domain**, not per system function.
 
 ```
 src/
-├── lib.rs            # Library root: declares all domain modules
-├── main.rs           # Binary entry point: calls lib to build and run
-├── app.rs            # App — constructs the Bevy App with DefaultPlugins + Game
-├── game.rs           # Game — PluginGroup that wires together all domain plugins
-├── prelude/          # Cross-domain import convenience — re-exports only, no types
-├── shared/           # Shared types: BaseWidth, BaseHeight, PlayfieldConfig, NodeScalingFactor (cleanup markers CleanupOnExit<S> come from rantzsoft_stateflow)
-├── state/            # State lifecycle, routing, menus, pause, run/node management, HUD
-├── input/            # Raw keyboard input to GameAction translation
-├── breaker/          # Breaker mechanics, state machine, bump system
-├── effect_v3/        # Effect system — data-driven Tree trigger/effect evaluation and dispatch (top-level domain)
-├── bolt/             # Bolt physics, reflection model, speed management, CCD collision detection, chain bolts
-├── cells/            # Cell types, grid layout, destruction
-├── walls/            # Wall builder, wall types, boundary entities
-├── chips/            # Chip system — ChipTemplateRegistry (SeedableRegistry) + ChipCatalog (expanded definitions + recipes); EvolutionTemplateRegistry (SeedableRegistry for evolution definitions); observer-based effect application
-├── mutators/         # Mutators domain — protocols (positive selectable upgrades) + hazards (stacking challenges); central damage-chain assembly (see Mutators Domain section)
-├── fx/               # Cross-cutting visual effects (fade-out, node transition overlays)
-├── audio/            # Event-driven audio, adaptive intensity (stub — Phase 6)
-└── debug/            # Dev tooling: overlays, telemetry, hot-reload, recording (sub-domains)
+├── lib.rs            # Library root — declares domain modules
+├── main.rs           # Binary entry — calls lib
+├── app.rs            # App constructor: DefaultPlugins + Game group
+├── game.rs           # PluginGroup wiring all domain plugins
+├── prelude/          # Cross-domain re-exports (no types)
+├── shared/           # PlayfieldConfig, BaseWidth, BaseHeight, etc.
+├── state/            # Lifecycle, routing, menus, pause, run/node, HUD
+├── input/            # Keyboard → GameAction translation
+├── breaker/          # Breaker mechanics, bump system
+├── effect_v3/        # Effect tree dispatch (top-level domain)
+├── bolt/             # Bolt physics, CCD, chain bolts
+├── cells/            # Cell types, grid, destruction
+├── walls/            # Wall builder, boundary entities
+├── chips/            # Chip catalog + recipes + dispatch
+├── mutators/         # Protocols (positive upgrades) + hazards (stacking challenges)
+├── fx/               # Cross-cutting visuals
+├── audio/            # Stub (Phase 6)
+└── debug/            # Dev tooling (cfg = "dev")
 ```
 
-**`lib.rs`** is the library root. It declares `app`, `game`, and `shared` as `pub mod` (needed by the binary and integration tests). Domain modules are `pub(crate) mod` to enforce plugin boundaries at the Rust visibility level. **`main.rs`** is the binary entry point — it calls `brickbreaker::app::build_app().run()`.
+`lib.rs` declares most modules `pub(crate)` to enforce plugin boundaries. The exceptions — `bolt`, `breaker`, `cells`, `chips`, `effect_v3`, `input`, `state`, `walls`, `debug` — are `pub` because `breaker-scenario-runner` needs cross-crate access for invariant checking and entity tagging.
 
-**Scenario runner exception** — `bolt`, `breaker`, `cells`, `chips`, `effect_v3`, `input`, `state`, and `walls` are declared as `pub mod` in `lib.rs` (not `pub(crate)`) because `breaker-scenario-runner` needs cross-crate access to their components, resources, and system sets for entity tagging, input injection, invariant checking, and ordering constraints. `state` is imported for `ChipOffers` and `ChipOffering` used in chip-selection invariant checks. This mirrors the existing debug domain exception.
+## Plugin Philosophy
 
-**`App`** (`app.rs`) is responsible for constructing the Bevy `App`, adding `DefaultPlugins`, and adding the `Game` plugin group.
+Each domain plugin is a `bevy::app::Plugin` that:
 
-**`Game`** (`game.rs`) is a `PluginGroup` responsible for wiring together all domain plugins in the correct order. This is the single place that knows about all plugins. Plugin registration order: `InputPlugin`, `StatePlugin`, `RantzSpatial2dPlugin::<GameDrawLayer>`, `RantzPhysics2dPlugin`, `WallPlugin`, `BreakerPlugin`, `EffectV3Plugin`, `RantzDmgPlugin`, `DmgRegistrationsPlugin`, `DmgGameOrderingPlugin`, `BoltPlugin`, `CellsPlugin`, `ChipsPlugin`, `MutatorsPlugin`, `FxPlugin`, `AudioPlugin`, `DebugPlugin`. `MutatorsPlugin` consolidates all selectable upgrades (protocols) and stacking challenges (hazards) into one domain — see "Mutators Domain" below.
+- Owns its components, resources, messages, and systems.
+- **Writes** to other domains only through messages.
+- **Reads** other domains' types freely — that's normal ECS, not a violation.
+- May contain nested sub-domain plugins for cohesive subsets. Only top-level plugins go in `game.rs`.
 
-**Domain plugins** (breaker, bolt, cells, etc.) are self-contained:
-- Each defines its own `Plugin` struct implementing `bevy::app::Plugin`
-- Registers its Bevy systems, messages, and states
-- Owns its components and resources
-- **Writes** to other domains only through messages — no direct mutation of another domain's components or resources
-- **Reads** from other domains' types (components, messages, resources) are normal ECS patterns and not violations — see "Cross-Domain Read Access" below
+If a domain exposes ordering anchors for cross-domain consumers, they live in a `pub enum {Domain}Systems` in `sets.rs`. See `ordering.md`.
 
-**Nested sub-domain plugins** — a domain may contain child plugins for cohesive subsets of functionality (e.g., breaker archetypes). The parent plugin adds child plugins via `app.add_plugins()`. `game.rs` only knows about top-level plugins. See [layout.md](layout.md) for the full nesting rules and folder structure.
+### Read vs write boundaries
 
-**Cross-domain SystemSet exports** — domains that expose ordering anchors for other domains define a `pub enum {Domain}Systems` in `sets.rs`. Current exported sets: `BreakerSystems` (`breaker/sets.rs`), `BoltSystems` (`bolt/sets.rs`), `EffectV3Systems` (`effect_v3/sets.rs`, variants: `Bridge`, `Tick`, `Conditions`, `Reset`), `UiSystems` (`state/run/node/hud/sets.rs`), `NodeSystems` (`state/run/node/sets.rs`). The external crates also export ordering sets: `rantzsoft_physics2d::PhysicsSystems` (`MaintainQuadtree`, `EnforceDistanceConstraints`) for ordering against the quadtree; `rantzsoft_spatial2d::SpatialSystems` (`SavePrevious`, `ApplyVelocity`, `ComputeGlobals`, `DeriveTransform`) for ordering against the spatial pipeline stages; `rantzsoft_defaults::DefaultsSystems` (`Seed`, `PropagateDefaults`) for ordering config-seeding systems via `RantzDefaultsPlugin`; `rantzsoft_dmg::DmgSystems` (16-variant chain: `EmitDamage → PostEmitDamage → ApplyDamageBoosts → MutateDamage → PostMutateDamage → ApplyVulnerable → ApplyDamage → PostApplyDamage → EmitKill → MutateKill → ApplyKill → PostApplyKill → EmitHeal → MutateHeal → ApplyHeal → PostApplyHeal`, configured `.chain()` by `RantzDmgPlugin`) for ordering against the damage/kill/heal pipeline. See [ordering.md](ordering.md) for the full table and usage rules.
+The architectural line is on **mutations**, not reads. The bolt collision system reads `Hp` from cells, `BaseWidth` from the breaker, `ActiveDamageBoosts` on bolts — that's fine. It writes `DamageDealt<Cell>` (a message), not `Hp.current` (a component). Routing every read through messages would be paranoia, not architecture.
 
-## Cross-Domain Read Access
+The `debug/` domain is the one accepted exception — it reads AND writes across domains because hot-reload, telemetry, and recording inherently cut across everything. All debug code is compiled out of release builds.
 
-The architectural boundary is about **writes** (mutations), not reads. Domains freely **read** other domains' types — components, message types, resources — via standard ECS queries. This is normal Bevy and not a violation:
+## Cross-Domain Write Exception Rubric
 
-- **bolt** (collision systems) reads `PiercingRemaining` (bolt domain — bolt gameplay state), `ActivePiercings`, `ActiveDamageBoosts` (effect domain) from bolt entities, `Hp` (shared death pipeline) from cell entities, and `BaseWidth`, `BaseHeight` (shared domain) from the breaker entity. The bolt collision systems also write message types owned by other domains (e.g., writing `DamageDealt<Cell>` into the unified death pipeline). This is expected — collision is a cross-cutting concern now hosted in the bolt domain.
-- **cells** receives pre-computed damage via the `DamageDealt<Cell>` message (unified death pipeline) — it does not read `ActiveDamageBoosts` directly. The bolt domain's `bolt_cell_collision` applies the multiplier when writing the message.
-- **breaker** reads `ActiveSpeedBoosts`, `ActiveSizeBoosts` (effect domain) from its own entity.
-- **effect** reads `BumpPerformed`, `BumpWhiffed` (breaker domain), `BoltImpactCell`, `BoltImpactBreaker`, `BoltImpactWall`, `BreakerImpactCell`, `BreakerImpactWall`, `BoltLost` (bolt/breaker domains), and `Destroyed<Cell>` / `Destroyed<Bolt>` / `Destroyed<Breaker>` / `Destroyed<Wall>` (unified death pipeline) messages in bridge systems.
-- **mutators/hazards** (`diffusion_reduce_primary` / `diffusion_emit_rings` in `mutators/hazards/diffusion/system.rs`) reads `DiffusionConfig` and `ActiveHazards` (hazard-owned). Cell damage application is owned by the crate's generic `apply_damage::<Cell>` in `DmgSystems::ApplyDamage`; diffusion BFS runs alongside as `diffusion_reduce_primary` (in `DmgSystems::MutateDamage`, mutates the primary message) and `diffusion_emit_rings` (in `DmgSystems::PostApplyDamage`, emits ring messages). Post-W7 the adjacency query uses `With<Cell>, Without<Dead>` — invulnerable cells ARE included in the candidate list; their ring `amount` is zeroed downstream by `invulnerable_filter::<Cell>` in `DmgSystems::ApplyDamage`.
+Sometimes a non-owning domain needs to mutate another domain's component. The default answer is "use a message"; exceptions exist when message indirection would cost more than it saves.
 
-**The rule**: any domain may `use crate::other_domain::*` for read-only queries and message consumption. No domain writes to another domain's canonical components or resources directly — that flows through messages. The `debug/` domain is the accepted exception (read AND write, compiled out of release builds).
+A write exception is acceptable only when ALL of these hold:
 
-## Velocity2D / Position2D Cross-Domain Write Exception
+1. **The writing domain has unique contextual data** the owning domain does not. (Hazard knows the heal cap; bolt domain doesn't.)
+2. **The mutation is a simple, scoped numeric/marker update** — not a state-machine transition.
+3. **The write is monotonic OR idempotent OR run-condition-gated** so it can't fight other writers.
+4. **A message-based design would require a new pipeline, enum variant, or consumer system that exists solely for this one path** — i.e. the indirection would not generalize.
 
-`Velocity2D` (and in one case `Position2D`, both rantzsoft_spatial2d components) on bolt entities are written by effect, cells, and protocol domain systems as an accepted architectural exception. Five write paths exist:
+Existing exceptions (search `cross-domain` in source comments at the call sites for the live list):
+- `Velocity2D` / `Position2D` on bolts — written by `effect_v3`, `cells/magnetic`, and `mutators/protocols/afterimage` for steering and reflection.
+- `PiercingRemaining` on bolts — written by `cells/armored` to debit armor cost.
+- `Hp.max` on cells — lifted by `mutators/hazards/{volatility,momentum}` to enable the mechanic's required ceiling.
+- `NodeSequence` / `NodeOutcome` resources — rewritten by `mutators/protocols/tier_regression` on `OnEnter(RunState::Node)`.
 
-- **effect** (`apply_gravity_pull` in `effect_v3/effects/gravity_well/effect.rs`): steers bolt velocity toward active gravity wells each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering to enforce speed constraints.
-- **effect** (`apply_attraction` in `effect_v3/effects/attraction/effect.rs`): steers bolt velocity toward the nearest attraction target each FixedUpdate tick. Uses `SpatialData` query and calls `apply_velocity_formula` after steering. Ordered `.after(PhysicsSystems::MaintainQuadtree)` for quadtree lookups.
-- **effect** (`speed_boost::fire()` / `reverse()` in `effect_v3/effects/speed_boost.rs`): immediately recalculates bolt velocity via `recalculate_velocity` (calls `apply_velocity_formula`) when a speed boost is applied or removed. This ensures bolt speed reflects the new multiplier without waiting for the next tick.
-- **cells** (`apply_magnetic_fields` in `cells/behaviors/magnetic/systems/apply_magnetic_fields.rs`): steers bolt velocity toward active magnetic cells each FixedUpdate tick. The cells domain owns the magnetic field parameters; the force application is simple arithmetic on velocity. Uses `BaseSpeed` for acceleration capping at `2 * base_speed`.
-- **mutators/protocols** (`afterimage_check_phantom_bounce` in `mutators/protocols/afterimage/system.rs`): on bolt-vs-`PhantomBreaker` AABB overlap, reflects the bolt by negating `Velocity2D.y` and snapping `Position2D.y` above the phantom's top face (`Position2D.y = phantom_pos.y + phantom_half.y + bolt_radius`). One system writes, writer reflects the bolt off the phantom AABB via velocity negation + position snap. The pattern mirrors `bolt_breaker_collision` but the phantom does NOT carry `Breaker`, so that system's `With<Breaker>` query does not match — routing via a synthetic collision message would duplicate the reflection machinery for a one-off case.
+Adding a new exception requires a comment at the call site (in the writing system) explaining which rubric items justify it. Don't update this doc — the source comment is the canonical record.
 
-The effect paths call `apply_velocity_formula` to enforce `(base_speed * boost_mult).clamp(min, max)` magnitude. The magnetic path caps acceleration magnitude directly rather than calling `apply_velocity_formula` — the existing speed clamping systems handle final speed enforcement. The afterimage path writes a raw reflection + position snap and relies on downstream speed-clamp systems for final speed enforcement (identical to the real-breaker reflection pattern).
+## The Mutators Domain
 
-## PiercingRemaining Cross-Domain Write Exception
+`mutators/` consolidates protocols (positive selectable upgrades) and hazards (stacking challenges). Both share structural patterns and several mechanics participate in the shared `DmgSystems::MutateDamage` / `PostApplyDamage` chains. That cross-mechanic ordering can't live cleanly in any one mechanic's `wire(app)`, which is why `MutatorsPlugin::wire_damage_chain` is the single source of truth for chain assembly.
 
-`PiercingRemaining` (bolt domain component at `bolt/components/definitions.rs`) is written by the cells domain `check_armor_direction` system as an accepted architectural exception. One write path exists:
+`MutatorsPlugin::build` calls three internal wiring steps:
 
-- **cells** (`check_armor_direction` in `cells/behaviors/armored/systems/check_armor_direction.rs`): on an armored-face breakthrough (piercing >= armor_value), decrements the bolt's `PiercingRemaining` by `armor_value` via `saturating_sub`. The cells domain knows the armor cost; routing through messages (e.g., a `ConsumeArmorPiercing` message consumed by the bolt domain) would require bolt to participate in a pipeline it doesn't own for a simple decrement.
+1. `wire_protocols(app)` — protocol registry/messages + per-mechanic `protocols::wire(app)` fan-out.
+2. `wire_hazards(app)` — hazard registry/messages + per-mechanic `hazards::wire(app)` fan-out.
+3. `wire_damage_chain(app)` — central ordering for diffusion / tether / echo_strike chain participants.
 
-Structurally identical rationale to the Velocity2D exception: the writing domain has the contextual data, the owning domain's component is a simple numeric, and message indirection adds complexity without benefit.
+Run-end cleanup is each mechanic's own responsibility (`OnExit(NodeState::Playing)` registered inside its `wire(app)`).
 
-## Hp.max Cross-Domain Write Exception
+**Game-side `DamageDealt<T>` writers MUST be tagged `.in_set(DmgSystems::EmitDamage)`** unless they're transitively ordered there via `EffectV3Systems::Tick`. Tagging a tick-set system with `EmitDamage` directly creates a scheduling cycle.
 
-`Hp.max` (`rantzsoft_dmg` component) on cell entities is written by the hazard domain as an accepted architectural exception. Two write paths exist:
+How to add a new mutator: see `creating-a-mutator.md`.
 
-- **mutators/hazards** (`attach_volatility_timers` in `mutators/hazards/volatility.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * max_multiplier)` when the Volatility hazard is active. Runs each FixedUpdate tick, gated by `hazard_active(HazardKind::Volatility)`.
-- **mutators/hazards** (`attach_momentum_ceiling` in `mutators/hazards/momentum/system.rs`): lifts each cell's `Hp.max` to `max(existing_max, hp.starting * MOMENTUM_SPLIT_MULTIPLIER)` when the Momentum hazard is active. Enables `HealCap::Max` heals from `momentum_heal_on_nonlethal` to push `hp.current` past `hp.starting`, required for the cell-split mechanic. Runs each FixedUpdate tick before `momentum_heal_on_nonlethal`, gated by `hazard_active(HazardKind::Momentum) AND in_state(NodeState::Playing)`.
+## The Effect Domain
 
-Message indirection would be worse for both writes for the same two reasons: (1) routing through a `HealCap` variant would require adding a new dimension to the heal pipeline enum just for per-hazard ceilings, a disproportionate API surface; (2) a dedicated `RaiseHpMax` Bevy message + handler would exist solely for these hazards and would not generalize to any other current or planned mechanic.
+`effect_v3/` stores effect trees in `BoundEffects` / `StagedEffects` (per-entity components), walks them through per-node evaluators, and dispatches via the `Fireable` / `Reversible` traits. The dispatch shape is enum-as-data: each variant of `EffectType` wraps a per-effect config struct that carries the parameters and implements the trait.
 
-Both writes are safe by three properties:
-
-- **Monotonic**: `hp.max.map_or(target, |m| m.max(target))` — never lowers `Hp.max`.
-- **Idempotent**: the write is guarded by a value comparison (`if hp.max != new_max`) so already-lifted cells don't trigger spurious change detection. Momentum additionally reads through `bypass_change_detection()` to keep the read path off the `Mut<Hp>` auto-deref.
-- **Scoped**: the enclosing `.run_if(hazard_active(HazardKind::Volatility))` / `.run_if(hazard_active(HazardKind::Momentum))` gate ensures each path is unreachable when its hazard is inactive.
-
-Cleanup is implicit: cell entities are despawned on node end, so the `Hp.max` lift persists only for the lifetime of the current node.
-
-## NodeSequence / NodeOutcome Cross-Domain Write Exception
-
-`NodeSequence` and `NodeOutcome` (run-domain resources at `state/run/resources.rs`) are written by protocol-domain systems as an accepted architectural exception. Two write paths exist:
-
-- **mutators/protocols** (`tier_regression::apply_tier_regression`): on `OnEnter(RunState::Node)` — when `TierRegressionPending` is present — splices a clone of the previous tier's `NodeAssignment`s into `NodeSequence.assignments` and rewrites `NodeOutcome.tier` / `NodeOutcome.position_in_tier`. One-shot per activation; the pending marker is consumed after execution. Ordered `.after(NodeSystems::AdvanceNode)` so apply is the final authority over `outcome.tier` / `outcome.position_in_tier` — prevents a Boss-boundary bug where `advance_node`'s post-Boss tier increment would silently cancel the rewind. A sibling system `snapshot_pre_advance_state` runs `.before(NodeSystems::AdvanceNode)` on the same edge to capture the pre-advance `NodeOutcome.tier` / `node_index` into the protocol-owned `TierRegressionPending` resource — it does NOT write run-domain state and is noted here only for ordering context.
-- **mutators/protocols** (`conductor::swap_primary_on_perfect_bump`): swaps `ExtraBolt` markers between bolt entities on `BumpPerformed { grade: Perfect }` — reads and writes bolt-domain markers to keep `ExactlyOnePrimaryBolt` invariant after the swap.
-
-Rationale: protocol activations are one-shot, pre-gated by `protocol_active(...)` + a per-run pending marker, and the mutation is a single transactional rewrite of run/bolt state. Routing via messages (e.g., `RegressTier { tiers_back: u32 }` or `RequestPrimarySwap { .. }`) would add a message type, a receiving-domain consumer, and a new schedule ordering constraint — for no decoupling win, because the protocol system already owns the activation semantics and has direct access to its own config. The write is safe because:
-- The run domain does not read these resources during the protocol's write window (`OnEnter(RunState::Node)` fires before any `FixedUpdate` readers).
-- The writing system holds no `MessageReader`/`MessageWriter` over the same resource, so there is no same-tick ordering ambiguity.
-- Cleanup is implicit — `TierRegressionPending` is `commands.remove_resource`-ed inside the writing system; `ExtraBolt` swap is idempotent (invariant-preserving).
-
-Protocol-domain systems that need to write run-domain resources MUST add themselves to this list and explain the rationale. Protocol systems that want to enqueue run-domain work should prefer existing messages (e.g., `DamageDealt<Cell>` from `debt_collector`, `iron_curtain`) over direct resource writes.
-
-## Mutators Domain — Protocols + Hazards Consolidated
-
-The `mutators/` domain owns both **protocols** (positive selectable upgrades chosen at chip-select) and **hazards** (negative stackable challenges chosen during infinite play at tier 9+). Both sub-categories share structural patterns (per-mechanic dirs with `definition`/`config`/`messages`/`resources`/`system`/`tests`) and participate in cross-cutting damage-pipeline chains, which is why they live under one domain owned by `MutatorsPlugin`.
-
-### Why a single plugin
-
-Several systems from both sub-categories (`diffusion_reduce_primary`, `diffusion_emit_rings`, `tether_emit_partner`, `echo_strike_emit_siblings`) participate in the shared `DmgSystems::MutateDamage` and `DmgSystems::PostApplyDamage` chains. Their relative ordering is a cross-mechanic concern that can't live cleanly in any single mechanic's `wire(app)` function. `MutatorsPlugin::wire_damage_chain` is the single source of truth for that ordering — every chain participant is registered there.
-
-### Layout
-
-```
-mutators/
-├── plugin/                 # MutatorsPlugin + central wire_damage_chain
-│   ├── mod.rs
-│   ├── system.rs
-│   └── tests/damage_chain.rs   # Cross-mechanic ordering pins
-├── protocols/              # 11 selectable-upgrade mechanics
-│   ├── mod.rs              # Per-mechanic fan-out (`wire(app)`)
-│   ├── definition.rs       # ProtocolKind, ProtocolDefinition, ProtocolTuning
-│   ├── messages.rs         # ProtocolSelected
-│   ├── resources.rs        # ActiveProtocols, ProtocolOffer, UnlockedProtocols, protocol_active() run-condition
-│   ├── systems/            # generate_protocol_offering, dispatch_protocol_selection, ProtocolGate
-│   ├── test_utils.rs
-│   └── <mechanic>/         # afterimage, burnout, conductor, debt_collector, echo_strike, fission, greed, iron_curtain, reckless_dash, siphon, tier_regression
-└── hazards/                # 16 stacking-challenge mechanics
-    ├── mod.rs              # Per-mechanic fan-out (`wire(app)`)
-    ├── definition.rs       # HazardKind, HazardDefinition, HazardTuning
-    ├── messages.rs         # HazardSelected
-    ├── resources.rs        # ActiveHazards, HazardOffers, hazard_active() run-condition
-    ├── systems/            # dispatch_hazard_selection
-    └── <mechanic>/         # cascade, decay, diffusion, drift, echo_cells, erosion, fracture, gravity_surge, haste, momentum, overcharge, renewal, resonance, sympathy, tether, volatility
-```
-
-### `MutatorsPlugin::build`
-
-Calls three internal `wire_*` functions in order:
-
-1. `wire_protocols(app)` — protocol registry/messages + per-mechanic fan-out via `protocols::wire(app)`
-2. `wire_hazards(app)` — hazard registry/messages + per-mechanic fan-out via `hazards::wire(app)`
-3. `wire_damage_chain(app)` — central `MutateDamage` / `PostApplyDamage` ordering for diffusion / tether / echo_strike
-
-Per-mechanic run-end cleanup is each mechanic's responsibility — every `<mechanic>::wire(app)` registers its own `OnExit(NodeState::Playing)` cleanup system. There is no central cleanup driver.
-
-### `DamageDealt<T>` writers MUST live in `DmgSystems::EmitDamage`
-
-Game-side systems that emit `DamageDealt<T>` messages directly (not through `effect_v3` effect dispatch) MUST be tagged `.in_set(DmgSystems::EmitDamage)`. This places them ahead of the `MutateDamage → ApplyVulnerable → ApplyDamage` chain so emissions accumulate before flushing.
-
-**Exception:** systems already inside `EffectV3Systems::Tick` (e.g., `apply_pulse_damage`, `apply_chain_lightning_damage`, `apply_tether_damage`, `apply_shockwave_damage`) are transitively before `EmitDamage` via `EffectV3Systems::Tick.before(DmgSystems::EmitDamage)` — tagging them with `EmitDamage` would create a cycle. Don't.
-
-**Other exception:** `bolt_cell_collision` is tagged `.in_set(BoltSystems::CellCollision)` and ordered transitively via the bolt-impact chain (`CellCollision → EffectV3Systems::Bridge → EffectV3Systems::Tick → DmgSystems::EmitDamage`). Tagging it directly with `EmitDamage` creates a cycle because `BoltSystems::CellCollision` is transitively before `EffectV3Systems::Bridge` via sibling `bolt_wall_collision` / `bolt_breaker_collision` ordering. The transitive chain is sufficient.
-
-## Debug Domain — Cross-Domain Exception
-
-The `debug/` domain (gated behind `#[cfg(feature = "dev")]`) is the **only domain permitted to read AND write other domains' resources and components** directly. This is an accepted architectural exception because:
-
-- Hot-reload systems must write to `Res<*Config>` and insert/update entity components across all domains
-- Telemetry systems must read components and resources from every domain for display
-- Recording systems capture `GameAction` inputs for later scripted playback
-- All debug code is compiled out of release builds — it cannot introduce production coupling
-
-This exception does **not** extend to other domains. Production code still communicates through messages only.
-
-## Effect Domain — Trait-Based Dispatch with Per-Effect Configs
-
-The `effect_v3/` domain stores effect trees in `Tree`-typed components (`BoundEffects`, `StagedEffects`), walks them via per-node evaluators in `walking/`, and dispatches each effect through a config struct that implements the `Fireable` (and optionally `Reversible`) trait. There is no `EffectKind` enum holding methods — the enum (`EffectType`) is the dispatch layer and the per-effect config struct is the implementation.
-
-The full architecture (directory layout, type system, walker, conditions, dispatch) lives under `architecture/effects/`. This section captures only the high-level shape relevant to the plugin model.
-
-### Plugin
-
-`EffectV3Plugin` (`effect_v3/plugin.rs`) does four things in `build`:
+`EffectV3Plugin::build` does four things:
 
 1. Configures `EffectV3Systems` ordering (`Bridge → Tick → Conditions`).
-2. Registers `evaluate_conditions` into `EffectV3Systems::Conditions`.
-3. Inserts `SpawnStampRegistry` and registers the four spawn-watcher systems (`stamp_spawned_bolts/cells/walls/breakers`) into `EffectV3Systems::Bridge`.
-4. Calls each trigger category's `register::register(app)` (`bump`, `impact`, `death`, `bolt_lost`, `node`, `time`) and each effect config's `Fireable::register(app)` (all 30 configs called unconditionally so adding tick systems later cannot be silently dropped).
+2. Registers `evaluate_conditions` into `Conditions`.
+3. Inserts `SpawnStampRegistry` and registers spawn-watcher systems.
+4. Calls each trigger category's `register::register(app)` and each effect config's `Fireable::register(app)`.
 
-### Type system at a glance
+Free functions in `effect_v3/dispatch/` (`fire_dispatch`, `reverse_dispatch`, etc.) match on the enum once and call `config.fire(...)`. The walker queues `FireEffectCommand` / `ReverseEffectCommand`; commands run inside `Command::apply` where `&mut World` is available.
 
-- `EffectType` — 30-variant enum, each variant wraps a per-effect `Config` struct (`SpeedBoost(SpeedBoostConfig)`, etc.). Every config implements `Fireable`.
-- `ReversibleEffectType` — 16-variant subset for effects whose configs implement `Reversible`. Used in `ScopedTree::Fire` (the only `Fire` position inside `During`/`Until` scopes).
-- `Tree` — recursive node enum (`Fire`, `When`, `Once`, `During`, `Until`, `Sequence`, `On`). Stored in `BoundEffects` / `StagedEffects`.
-- `RootNode` — top-level entry point (`Stamp(StampTarget, Tree)` or `Spawn(EntityKind, Tree)`). Used by chip/breaker/cell definitions.
-- `Trigger` — game events bridged from messages.
-- `Condition` — state predicates polled by `evaluate_conditions`.
-- `EffectCommandsExt` — extension trait on `Commands` with eight methods: `fire_effect`, `reverse_effect`, `route_effect`, `stamp_effect`, `stage_effect`, `remove_effect`, `remove_staged_effect`, `track_armed_fire`.
-
-### Dispatch layer (free functions, not enum methods)
-
-`fire_dispatch` (`effect_v3/dispatch/fire_dispatch.rs`) is a free function that pattern-matches on `EffectType` and calls the relevant `config.fire(entity, source, world)`:
-
-```rust
-pub fn fire_dispatch(effect: &EffectType, entity: Entity, source: &str, world: &mut World) {
-    match effect {
-        EffectType::SpeedBoost(config) => config.fire(entity, source, world),
-        // ... one arm per variant
-    }
-}
-```
-
-`reverse_dispatch`, `fire_reversible_dispatch`, and `reverse_all_by_source_dispatch` (in `dispatch/reverse_dispatch/system.rs`) handle `ReversibleEffectType` analogously. The walker queues `FireEffectCommand` / `ReverseEffectCommand`; those commands call the dispatch functions inside `Command::apply` where `&mut World` is available.
-
-### Chain storage
-
-Two components, both flat tuple vecs:
-
-- **`BoundEffects(pub Vec<(String, Tree)>)`** — permanent entries that re-arm on every matching trigger. Removed only by `commands.remove_effect`, `Tree::Once` self-removal, or condition disarm.
-- **`StagedEffects(pub Vec<(String, Tree)>)`** — one-shot entries consumed when their top-level gate matches. Walker uses entry-specific `(name, tree)` tuple matching to consume the right entry without wiping fresh same-name stages queued during the same evaluation.
-
-There is no internal indexing by trigger/condition/source — chip counts per entity are small enough that linear scan plus structural enum equality is the right trade-off.
-
-### Until and During: state machines, not desugaring
-
-`Tree::Until` is **not** desugared into other node types. `evaluate_until` queues an `UntilEvaluateCommand` that runs a small state machine inside `Command::apply`, using a per-entity `UntilApplied` component to track which sources have already fired. There is no `Reverse` node and no separate desugaring pass.
-
-`Tree::During` is similarly not desugared. `evaluate_during` queues a `DuringInstallCommand` that idempotently inserts the During into `BoundEffects` under a `#installed[0]` key. The `evaluate_conditions` poller (in `EffectV3Systems::Conditions`) iterates installed Durings every tick and fires/reverses scoped trees on transitions tracked by a `DuringActive` component.
-
-Both state machines call `reverse_dispatch` directly from inside their command/system rather than going through `commands.reverse_effect`, because they already hold `&mut World`.
-
-See `architecture/effects/` for the full breakdown:
-
-- `structure.md` — directory layout
-- `core_types.md` — type system reference
-- `node_types.md` — Tree variants and ScopedTree restrictions
-- `evaluation.md` — walker entry points and per-node evaluators
-- `until.md` — Until state machine and the four shapes
-- `conditions.md` — During poller and the four shapes
-- `commands.md` — EffectCommandsExt and concrete commands
-- `dispatch.md` — chip dispatch flow and spawn watchers
-- `ordering.md` — EffectV3Systems sets and FixedUpdate placement
+The full architecture lives in `architecture/effects/` (structure, type system, walker, conditions, commands, dispatch). This file documents only the plugin-level shape.
