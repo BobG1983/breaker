@@ -1,0 +1,17 @@
+// Adversarial: Surge chip selected via chip_selections path (not initial_effects).
+// Exercises the full chip-dispatch → stamp → Until(TimeExpires(1.5)) pipeline.
+// Regression target: arm_time_expires_timer idempotency at effect_v3/walking/until/system.rs:364-385.
+// If Until(1.5) never reverses, SpeedBoost(1.5x) stacks per bump; BoltSpeedAccurate catches unbounded speed.
+// Perfect(AlwaysPerfect) ensures PerfectBumped fires every return; Dense layout maximises bump frequency.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerInBounds, BreakerCountReasonable, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: true,
+    seed: 1,
+    chip_selections: ["Surge"],
+)

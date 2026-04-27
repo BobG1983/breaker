@@ -1,0 +1,21 @@
+// Adversarial: Once(NodeStartOccurred, Until(TimeExpires(2.0), Fire(SpeedBoost(1.3x)))) via initial_effects.
+// Tests evaluate_once remove-first ordering at effect_v3/walking/once/system.rs:52-66.
+// Regression A: if remove_effect queues AFTER evaluate_until, ensure_until_bound's idempotency check
+//   matches the still-present Once(...) slot and skips the bind — timer never arms, boost never reverses.
+// Regression B: if Once re-fires on each subsequent NodeStart, SpeedBoost compounds (1.69x, 2.197x ...).
+// Scatter layout clears in ~5-8s per node, giving many NodeStart events across 5000 frames.
+// BoltSpeedAccurate catches both "timer never armed" (boost stacks permanently) and "Once re-fires" modes.
+(
+    breaker: "Aegis",
+    layout: "Scatter",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 5000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerInBounds, BreakerCountReasonable, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 4242,
+    initial_effects: [
+        Stamp(Bolt, Once(NodeStartOccurred, Until(TimeExpires(2.0), Fire(SpeedBoost((multiplier: 1.3)))))),
+    ],
+)

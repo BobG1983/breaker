@@ -1,0 +1,17 @@
+// Adversarial: Surge selected 3 times (max_taken=3), dispatching the same effect tree under
+// SourceId "chip:Surge:Common" three times. The arm_time_expires_timer idempotency check at
+// effect_v3/walking/until/system.rs:364-385 must collapse all three dispatches to ONE timer.
+// Regression: if idempotency fails, 3x SpeedBoost(1.5x) = 3.375x effective multiplier stacks
+// unboundedly per bump cycle; BoltSpeedAccurate catches the resulting physics corruption.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerInBounds, BreakerCountReasonable, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: true,
+    seed: 1,
+    chip_selections: ["Surge", "Surge", "Surge"],
+)

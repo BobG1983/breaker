@@ -1,0 +1,17 @@
+// Adversarial: Overclock chip selected via chip_selections path (not initial_effects).
+// Exercises chip-dispatch → stamp → Until(TimeExpires(3.0), Sequence([SpeedBoost, DamageBoost])).
+// Regression target: reverse_scoped_tree at effect_v3/walking/until/system.rs:289-293 must reverse BOTH
+// SpeedBoost and DamageBoost when the Until expires; if either is missed, speed accumulates unboundedly.
+// 5000 frames at 64 Hz allows ~27 Until cycles (3.0s each), maximising reversal opportunities.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Perfect(AlwaysPerfect),
+    max_frames: 5000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerInBounds, BreakerCountReasonable, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: true,
+    seed: 1,
+    chip_selections: ["Overclock"],
+)
