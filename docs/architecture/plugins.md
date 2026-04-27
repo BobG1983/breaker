@@ -57,7 +57,7 @@ If a domain exposes ordering anchors for cross-domain consumers, they live in a 
 
 ### Read vs write boundaries
 
-The architectural line is on **mutations**, not reads. The bolt collision system reads `Hp` from cells, `BaseWidth` from the breaker, `ActiveDamageBoosts` on bolts — that's fine. It writes `DamageDealt<Cell>` (a message), not `Hp.current` (a component). Routing every read through messages would be paranoia, not architecture.
+The architectural line is on **mutations**, not reads. The bolt collision system reads `Hp` from cells, `BaseWidth` from the breaker, `DamageBoostStack` on bolts — that's fine. It writes `DamageDealt<Cell>` (a message), not `Hp.current` (a component). Routing every read through messages would be paranoia, not architecture.
 
 The `debug/` domain is the one accepted exception — it reads AND writes across domains because hot-reload, telemetry, and recording inherently cut across everything. All debug code is compiled out of release builds.
 

@@ -56,12 +56,12 @@ There isn't a current piercing design doc. Writing one — even short — would 
 
 ## Dependencies
 
-- TODO #26 (pierce-decision damage duplication) is the mechanical prerequisite — introduces `preview_damage::<T>` so pierce and pipeline use the same function.
+- ~~TODO #26 (pierce-decision damage duplication) — introduces `preview_damage` so pierce and pipeline use the same function.~~ **LANDED** — `rantzsoft_dmg::preview_damage` exists and is wired into `bolt_cell_collision`. This prerequisite is resolved.
 - TODO #9 (broken protocols/hazards) and the `Fireable::fire` refactor (W9 of port-to-rantzsoft-dmg.md) touch similar emission patterns; piercing-beam is the obvious sibling.
 
 ## Non-goals
 
-- Don't start this work until #26 lands — otherwise changes to pierce-decision math get entangled with the duplication cleanup.
+- ~~Don't start this work until #26 lands~~ — `preview_damage` has landed; the gate is open.
 - Don't assume current behavior is correct. Investigate first, decide second.
 
 ## Deliverable

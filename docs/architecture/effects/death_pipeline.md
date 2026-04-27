@@ -25,7 +25,7 @@ struct DamageDealt<T: Dmgable> {
     dealer:        Option<Entity>,     // entity originating the damage; used for DamageBoostStack lookup
     attributed_to: Option<Entity>,     // optional kill-attribution override; falls back to dealer when None
     target:        Entity,             // who takes the damage
-    amount:        f32,                // pre-calculated damage amount
+    amount:        f32,                // raw base damage; pipeline applies DamageBoostStack (in ApplyDamageBoosts) and VulnerableStack (in ApplyVulnerable) before apply_damage consumes it
     source:        Option<SourceId>,   // optional origin label (chip name, effect name) for attribution/UI
     _marker:       PhantomData<T>,
 }

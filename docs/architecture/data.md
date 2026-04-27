@@ -112,22 +112,36 @@ All 22+ stat components are now produced by `build()` in a single call. The `Wit
 
 ## Active Component Pattern
 
-Stat-modifying effects use a single-tier `Active*` stack model — consumers read `Active*` directly via accessor methods:
+Stat-modifying effects use two parallel stack models depending on the stat type:
+
+**`EffectStack<T>` (game-domain, `effect_v3/stacking`)** — for speed boosts, size boosts, piercing config, bump force, quick-stop. Each `fire_effect` call pushes one entry onto an `EffectStack<ConfigType>` component on the entity; `reverse_effect` removes it. Consumers call `.aggregate()` / `.multiplier()` / `.total()` inline.
+
+```
+fire_effect(entity, SpeedBoost(1.5))
+        ↓  (push onto EffectStack<SpeedBoostConfig>)
+EffectStack<SpeedBoostConfig>
+        ↓  (consumers call .aggregate() inline)
+apply_velocity_formula: speed_multiplier = stack.aggregate()
+```
+
+**`DamageBoostStack` / `VulnerableStack` (crate-owned, `rantzsoft_dmg`)** — for damage multipliers and vulnerability multipliers. Managed by the `rantzsoft_dmg` crate's `DamageBoostConfig`/`VulnerableConfig` `Fireable`/`Reversible` shims. The pipeline stages `apply_damage_boosts::<T>` and `apply_vulnerable::<T>` consume these stacks automatically; game systems do NOT multiply damage inline.
 
 ```
 fire_effect(entity, DamageBoost(2.0))
-        ↓  (push onto Active stack)
-ActiveDamageBoosts(vec![2.0])
-        ↓  (consumers call .multiplier() inline)
-bolt_cell_collision: effective_damage = BASE_BOLT_DAMAGE * active.multiplier()
+        ↓  (DamageBoostConfig::fire → DamageBoostStack::add)
+DamageBoostStack on bolt entity
+        ↓  (apply_damage_boosts::<Cell> in DmgSystems::ApplyDamageBoosts)
+DamageDealt<Cell>.amount scaled before apply_damage::<Cell>
 ```
+
+**Preview helper** — `rantzsoft_dmg::preview_damage(base, boosts, vuln) -> f32` produces a non-consuming peek at the final damage value (counts one-shots without consuming them). Used by `bolt_cell_collision` to predict lethality for pierce decisions without racing the pipeline's own consumption.
 
 **Rules:**
 
-- **`Active*` components** (e.g., `ActiveDamageBoosts`, `ActiveSpeedBoosts`, `ActivePiercings`) live in the effect domain (`effect/effects/<name>.rs`). They are plain `Vec` stacks — each applied effect instance pushes one entry; `reverse_effect` removes it.
-- **Consumers** (bolt collision, move_breaker, etc.) read `Active*` directly using the `.multiplier()` method (product of all entries, default 1.0) or `.total()` (sum of all entries, for additive stats like piercing). No separate cache component is computed.
-- **`PiercingRemaining`** is bolt gameplay state (lives in the bolt domain), not an effect stat. `ActivePiercings::total()` gives the cap that `PiercingRemaining` resets to on wall/breaker contact.
-- `Active*` components are inserted lazily by `fire()` when first needed. Consumers handle the absent case via `Option<&Active*>` and map to the identity value (1.0 for multipliers, 0 for sums).
+- `EffectStack<T>` components live in the effect domain (`effect_v3/stacking`). Consumers read them directly via `.aggregate()` / `.multiplier()` / `.total()`. No separate cache component is computed.
+- `DamageBoostStack` / `VulnerableStack` are owned by `rantzsoft_dmg`. Game systems NEVER multiply damage inline — emit raw `base_damage` in `DamageDealt<T>.amount`; the pipeline applies the stacks.
+- **`PiercingRemaining`** is bolt gameplay state (lives in the bolt domain), not an effect stat. `EffectStack<PiercingConfig>::total()` gives the cap that `PiercingRemaining` resets to on wall/breaker contact.
+- `EffectStack<T>` components are inserted lazily by `fire()` when first needed. Consumers handle the absent case via `Option<&EffectStack<T>>` and map to the identity value (1.0 for multipliers, 0 for sums).
 
 ---
 
