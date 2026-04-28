@@ -1,18 +1,18 @@
-//! System to apply time penalties from breaker consequences.
+//! System to reduce the node timer (consumer of [`ReduceNodeTimer`] messages).
 
 use bevy::prelude::*;
 
 use crate::{
     prelude::*,
-    state::run::node::messages::{ApplyTimePenalty, TimerExpired},
+    state::run::node::messages::{ReduceNodeTimer, TimerExpired},
 };
 
-/// Reads [`ApplyTimePenalty`] messages and subtracts from [`NodeTimer::remaining`].
+/// Reads [`ReduceNodeTimer`] messages and subtracts from [`NodeTimer::remaining`].
 ///
 /// Sends [`TimerExpired`] if the timer crosses zero. Skips if the timer is
 /// already at zero (idempotent).
-pub(crate) fn apply_time_penalty(
-    mut reader: MessageReader<ApplyTimePenalty>,
+pub(crate) fn apply_reduce_node_timer(
+    mut reader: MessageReader<ReduceNodeTimer>,
     mut timer: ResMut<NodeTimer>,
     mut writer: MessageWriter<TimerExpired>,
 ) {
@@ -21,7 +21,7 @@ pub(crate) fn apply_time_penalty(
             continue;
         }
 
-        timer.remaining -= msg.seconds;
+        timer.remaining -= msg.delta;
 
         if timer.remaining <= 0.0 {
             timer.remaining = 0.0;
@@ -35,11 +35,11 @@ mod tests {
     use super::*;
 
     #[derive(Resource)]
-    struct SendPenalty(Option<f32>);
+    struct SendReduce(Option<f32>);
 
-    fn send_penalty(flag: Res<SendPenalty>, mut writer: MessageWriter<ApplyTimePenalty>) {
-        if let Some(seconds) = flag.0 {
-            writer.write(ApplyTimePenalty { seconds });
+    fn send_reduce(flag: Res<SendReduce>, mut writer: MessageWriter<ReduceNodeTimer>) {
+        if let Some(delta) = flag.0 {
+            writer.write(ReduceNodeTimer { delta });
         }
     }
 
@@ -57,17 +57,17 @@ mod tests {
 
     fn test_app_with_send(remaining: f32) -> App {
         TestAppBuilder::new()
-            .with_message::<ApplyTimePenalty>()
+            .with_message::<ReduceNodeTimer>()
             .with_message::<TimerExpired>()
             .insert_resource(NodeTimer {
                 remaining,
                 total: remaining,
             })
-            .insert_resource(SendPenalty(None))
+            .insert_resource(SendReduce(None))
             .with_resource::<TimerExpiredCaptured>()
             .with_system(
                 FixedUpdate,
-                (send_penalty, apply_time_penalty, capture_timer_expired).chain(),
+                (send_reduce, apply_reduce_node_timer, capture_timer_expired).chain(),
             )
             .build()
     }
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn subtracts_from_timer() {
         let mut app = test_app_with_send(30.0);
-        app.world_mut().resource_mut::<SendPenalty>().0 = Some(5.0);
+        app.world_mut().resource_mut::<SendReduce>().0 = Some(5.0);
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn clamps_to_zero() {
         let mut app = test_app_with_send(3.0);
-        app.world_mut().resource_mut::<SendPenalty>().0 = Some(5.0);
+        app.world_mut().resource_mut::<SendReduce>().0 = Some(5.0);
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn sends_timer_expired_at_zero() {
         let mut app = test_app_with_send(3.0);
-        app.world_mut().resource_mut::<SendPenalty>().0 = Some(5.0);
+        app.world_mut().resource_mut::<SendReduce>().0 = Some(5.0);
         tick(&mut app);
 
         let captured = app.world().resource::<TimerExpiredCaptured>();
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn no_double_expired() {
         let mut app = test_app_with_send(0.0);
-        app.world_mut().resource_mut::<SendPenalty>().0 = Some(5.0);
+        app.world_mut().resource_mut::<SendReduce>().0 = Some(5.0);
         tick(&mut app);
 
         let captured = app.world().resource::<TimerExpiredCaptured>();

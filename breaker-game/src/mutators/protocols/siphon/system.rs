@@ -11,7 +11,7 @@
 //! - [`wire`] — wires the three runtime systems with the design-doc
 //!   schedules, run-ifs, and ordering.
 //! - [`siphon_on_cell_destroyed`] — consumes `Destroyed<Cell>`, updates
-//!   `SiphonStreak`, emits `ReverseTimePenalty` on non-first kills.
+//!   `SiphonStreak`, emits `IncreaseNodeTimer` on non-first kills.
 //! - [`siphon_tick_streak`] — decrements the streak window each frame, clamps
 //!   to zero on expiry and resets `kill_count`.
 //! - [`siphon_cleanup_node`] — resets `SiphonStreak` to default on node exit.
@@ -24,7 +24,7 @@ use crate::{
         resources::{ActiveProtocols, protocol_active},
     },
     prelude::*,
-    state::run::node::{messages::ReverseTimePenalty, sets::NodeSystems},
+    state::run::node::{messages::IncreaseNodeTimer, sets::NodeSystems},
 };
 
 // ── SiphonConfig ────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// - `siphon_tick_streak` → `FixedUpdate`, before `siphon_on_cell_destroyed`,
 ///   under `protocol_active(Siphon)` + `in_state(NodeState::Playing)`.
 /// - `siphon_on_cell_destroyed` → `FixedUpdate`, before
-///   `NodeSystems::ApplyTimePenalty`, intentionally ungated at the
+///   `NodeSystems::ReduceNodeTimer`, intentionally ungated at the
 ///   registration level. Enforces the `ActiveProtocols` /
 ///   `NodeState::Playing` gate in-body via an immediate `reader.clear()` +
 ///   return when inactive so buffered `Destroyed<Cell>` messages cannot
@@ -106,7 +106,7 @@ pub(crate) fn wire(app: &mut App) {
     );
     app.add_systems(
         FixedUpdate,
-        siphon_on_cell_destroyed.before(NodeSystems::ApplyTimePenalty),
+        siphon_on_cell_destroyed.before(NodeSystems::ReduceNodeTimer),
     );
     app.add_systems(OnExit(NodeState::Playing), siphon_cleanup_node);
 }
@@ -114,7 +114,7 @@ pub(crate) fn wire(app: &mut App) {
 // ── Systems ─────────────────────────────────────────────────────────────────
 
 /// Consumes `Destroyed<Cell>`, updates [`SiphonStreak`], emits
-/// `ReverseTimePenalty` for every non-first kill.
+/// `IncreaseNodeTimer` for every non-first kill.
 ///
 /// Harness-safe: clears the reader and early-returns when `SiphonStreak` or
 /// `SiphonConfig` is absent so buffered messages don't leak into a later frame
@@ -125,7 +125,7 @@ pub(crate) fn siphon_on_cell_destroyed(
     node_state: Option<Res<State<NodeState>>>,
     streak: Option<ResMut<SiphonStreak>>,
     config: Option<Res<SiphonConfig>>,
-    mut penalty_writer: MessageWriter<ReverseTimePenalty>,
+    mut timer_writer: MessageWriter<IncreaseNodeTimer>,
 ) {
     if active_protocols
         .as_ref()
@@ -155,8 +155,8 @@ pub(crate) fn siphon_on_cell_destroyed(
             // time.
             streak.kill_count = streak.kill_count.saturating_add(1);
             streak.window_remaining = config.streak_window;
-            penalty_writer.write(ReverseTimePenalty {
-                seconds: config.time_per_kill,
+            timer_writer.write(IncreaseNodeTimer {
+                delta: config.time_per_kill,
             });
         }
     }

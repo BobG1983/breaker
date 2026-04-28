@@ -1,7 +1,7 @@
 //! Shared test fixtures for Siphon protocol tests.
 //!
 //! App builders, canonical `SiphonConfig`, `SiphonStreak` installers,
-//! `ActiveProtocols` seeder, `Destroyed<Cell>` writers, `ReverseTimePenalty`
+//! `ActiveProtocols` seeder, `Destroyed<Cell>` writers, `IncreaseNodeTimer`
 //! collector reader, and the `activate_now` CommandQueue-flush helper.
 //!
 //! Canonical config is `streak_window: 2.0`, `time_per_kill: 0.5` — the
@@ -28,14 +28,14 @@ use crate::{
         resources::ActiveProtocols,
     },
     prelude::*,
-    state::run::node::messages::ReverseTimePenalty,
+    state::run::node::messages::IncreaseNodeTimer,
 };
 
 // ── App builders ────────────────────────────────────────────────────────────
 
 /// Default Siphon test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` + `SiphonStreak` initialised, `Destroyed<Cell>`
-/// registered, `ReverseTimePenalty` capture installed, `SiphonConfig`
+/// registered, `IncreaseNodeTimer` capture installed, `SiphonConfig`
 /// inserted at the canonical values, and `wire` called.
 pub(super) fn build_siphon_app() -> App {
     let mut app = TestAppBuilder::new()
@@ -44,7 +44,7 @@ pub(super) fn build_siphon_app() -> App {
         .with_resource::<ActiveProtocols>()
         .with_resource::<SiphonStreak>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<ReverseTimePenalty>()
+        .with_message_capture::<IncreaseNodeTimer>()
         .build();
     app.world_mut().insert_resource(canonical_siphon_config());
     wire(&mut app);
@@ -59,7 +59,7 @@ pub(super) fn build_siphon_app_no_streak() -> App {
         .in_state_node_playing()
         .with_resource::<ActiveProtocols>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<ReverseTimePenalty>()
+        .with_message_capture::<IncreaseNodeTimer>()
         .build();
     app.world_mut().insert_resource(canonical_siphon_config());
     wire(&mut app);
@@ -75,7 +75,7 @@ pub(super) fn build_siphon_app_no_config() -> App {
         .with_resource::<ActiveProtocols>()
         .with_resource::<SiphonStreak>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<ReverseTimePenalty>()
+        .with_message_capture::<IncreaseNodeTimer>()
         .build();
     wire(&mut app);
     app
@@ -168,13 +168,13 @@ pub(super) fn write_n_cell_destroyed(app: &mut App, count: u32) {
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
 
-/// Returns every captured `ReverseTimePenalty` from the
-/// `MessageCollector<ReverseTimePenalty>` resource. Tests that only need the
-/// count call `.len()`; tests that need the `seconds` sum map through
-/// `.iter().map(|m| m.seconds).sum()`.
-pub(super) fn collected_reverse_time_penalties(app: &App) -> Vec<ReverseTimePenalty> {
+/// Returns every captured `IncreaseNodeTimer` from the
+/// `MessageCollector<IncreaseNodeTimer>` resource. Tests that only need the
+/// count call `.len()`; tests that need the `delta` sum map through
+/// `.iter().map(|m| m.delta).sum()`.
+pub(super) fn collected_increase_node_timers(app: &App) -> Vec<IncreaseNodeTimer> {
     app.world()
-        .resource::<MessageCollector<ReverseTimePenalty>>()
+        .resource::<MessageCollector<IncreaseNodeTimer>>()
         .0
         .clone()
 }

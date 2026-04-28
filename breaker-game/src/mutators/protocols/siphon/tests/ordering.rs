@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use super::{
     super::system::SiphonStreak,
     helpers::{
-        build_siphon_app, collected_reverse_time_penalties, install_siphon_streak,
+        build_siphon_app, collected_increase_node_timers, install_siphon_streak,
         seed_active_protocols_with_siphon, write_cell_destroyed,
     },
 };
@@ -47,9 +47,9 @@ fn tick_runs_before_reader_so_near_expiry_kill_starts_fresh_streak() {
         "tick-first ordering should make kill a FRESH streak: (2.0, 1); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "first kill of fresh streak must emit zero ReverseTimePenalty; got {} penalties",
-        collected_reverse_time_penalties(&app).len()
+        collected_increase_node_timers(&app).is_empty(),
+        "first kill of fresh streak must emit zero IncreaseNodeTimer; got {} timers",
+        collected_increase_node_timers(&app).len()
     );
 }
 
@@ -75,16 +75,16 @@ fn mid_window_kill_continues_streak_with_one_penalty() {
         "mid-window kill should extend streak to (2.0, 3); got {streak:?}"
     );
 
-    let penalties = collected_reverse_time_penalties(&app);
+    let timers = collected_increase_node_timers(&app);
     assert_eq!(
-        penalties.len(),
+        timers.len(),
         1,
-        "mid-window kill emits exactly one ReverseTimePenalty; got {}",
-        penalties.len()
+        "mid-window kill emits exactly one IncreaseNodeTimer; got {}",
+        timers.len()
     );
     assert!(
-        (penalties[0].seconds - 0.5).abs() < f32::EPSILON,
-        "penalty.seconds expected 0.5; got {}",
-        penalties[0].seconds
+        (timers[0].delta - 0.5).abs() < f32::EPSILON,
+        "penalty.delta expected 0.5; got {}",
+        timers[0].delta
     );
 }

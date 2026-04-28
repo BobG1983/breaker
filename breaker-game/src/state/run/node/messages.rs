@@ -14,22 +14,23 @@ pub struct NodeCleared;
 #[derive(Message, Clone, Debug)]
 pub struct TimerExpired;
 
-/// Sent by the breaker behavior system to subtract time from the node timer.
+/// Sent by hazards (e.g. Decay) to subtract time from the node timer.
 ///
-/// Consumed by `apply_time_penalty` in the node subdomain.
+/// Consumed by `apply_reduce_node_timer` in the node subdomain.
 #[derive(Message, Clone, Debug)]
-pub struct ApplyTimePenalty {
+pub struct ReduceNodeTimer {
     /// Seconds to subtract from the node timer.
-    pub seconds: f32,
+    pub delta: f32,
 }
 
-/// Sent by effect reversal to add time back to the node timer.
+/// Sent by protocols (e.g. Siphon) to add time back to the node timer.
 ///
-/// Consumed by `reverse_time_penalty` in the node subdomain.
+/// Consumed by `apply_increase_node_timer` in the node subdomain. Read (in the
+/// scenario runner) by `check_timer_monotonically_decreasing` for exemption logic.
 #[derive(Message, Clone, Debug)]
-pub struct ReverseTimePenalty {
+pub struct IncreaseNodeTimer {
     /// Seconds to add back to the node timer.
-    pub seconds: f32,
+    pub delta: f32,
 }
 
 /// Sent by `spawn_cells_from_layout` after all cells are spawned.
@@ -53,20 +54,20 @@ mod tests {
     fn messages_debug_format() {
         assert!(format!("{NodeCleared:?}").contains("NodeCleared"));
         assert!(format!("{TimerExpired:?}").contains("TimerExpired"));
-        let penalty = ApplyTimePenalty { seconds: 5.0 };
-        assert!(format!("{penalty:?}").contains("ApplyTimePenalty"));
+        let reduce = ReduceNodeTimer { delta: 5.0 };
+        assert!(format!("{reduce:?}").contains("ReduceNodeTimer"));
         assert!(format!("{CellsSpawned:?}").contains("CellsSpawned"));
         assert!(format!("{SpawnNodeComplete:?}").contains("SpawnNodeComplete"));
     }
 
     #[test]
-    fn reverse_time_penalty_debug_format() {
-        let reverse = ReverseTimePenalty { seconds: 5.0 };
+    fn increase_node_timer_debug_format() {
+        let increase = IncreaseNodeTimer { delta: 5.0 };
         assert!(
-            (reverse.seconds - 5.0).abs() < f32::EPSILON,
-            "expected seconds to be 5.0, got {}",
-            reverse.seconds
+            (increase.delta - 5.0).abs() < f32::EPSILON,
+            "expected delta to be 5.0, got {}",
+            increase.delta
         );
-        assert!(format!("{reverse:?}").contains("ReverseTimePenalty"));
+        assert!(format!("{increase:?}").contains("IncreaseNodeTimer"));
     }
 }

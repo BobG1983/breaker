@@ -9,7 +9,7 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
-    state::run::node::{messages::ApplyTimePenalty, sets::NodeSystems},
+    state::run::node::{messages::ReduceNodeTimer, sets::NodeSystems},
 };
 
 /// Per-run tuning values extracted from [`HazardTuning::Decay`] at activation.
@@ -54,20 +54,20 @@ pub(crate) fn wire(app: &mut App) {
         FixedUpdate,
         decay_tick
             .after(NodeSystems::TickTimer)
-            .before(NodeSystems::ApplyTimePenalty)
+            .before(NodeSystems::ReduceNodeTimer)
             .run_if(hazard_active(HazardKind::Decay))
             .run_if(in_state(NodeState::Playing)),
     );
 }
 
-/// Converts the per-stack speedup percentage into an [`ApplyTimePenalty`]
+/// Converts the per-stack speedup percentage into a [`ReduceNodeTimer`]
 /// message each tick. Skipped when [`DecayConfig`] is absent — the config is
 /// only inserted once a Decay stack is selected.
 fn decay_tick(
     time: Res<Time>,
     active: Res<ActiveHazards>,
     config: Option<Res<DecayConfig>>,
-    mut writer: MessageWriter<ApplyTimePenalty>,
+    mut writer: MessageWriter<ReduceNodeTimer>,
 ) {
     let Some(config) = config else { return };
     let stacks = active.stacks(HazardKind::Decay);
@@ -76,9 +76,7 @@ fn decay_tick(
     if extra_drain <= 0.0 {
         return;
     }
-    writer.write(ApplyTimePenalty {
-        seconds: extra_drain,
-    });
+    writer.write(ReduceNodeTimer { delta: extra_drain });
 }
 
 #[cfg(test)]
@@ -88,14 +86,14 @@ mod tests {
     use bevy::ecs::message::Messages;
 
     use super::*;
-    use crate::prelude::TestAppBuilder;
+    use crate::{prelude::TestAppBuilder, state::run::node::messages::ReduceNodeTimer};
 
     fn test_app_playing() -> App {
         TestAppBuilder::new()
             .with_state_hierarchy()
             .in_state_node_playing()
             .with_resource::<ActiveHazards>()
-            .with_message::<ApplyTimePenalty>()
+            .with_message::<ReduceNodeTimer>()
             .build()
     }
 
@@ -112,9 +110,9 @@ mod tests {
 
     fn penalties(app: &App) -> Vec<f32> {
         app.world()
-            .resource::<Messages<ApplyTimePenalty>>()
+            .resource::<Messages<ReduceNodeTimer>>()
             .iter_current_update_messages()
-            .map(|m| m.seconds)
+            .map(|m| m.delta)
             .collect()
     }
 
@@ -205,7 +203,7 @@ mod tests {
             .as_secs_f32();
         let expected = timestep * 0.15;
         let msgs = penalties(&app);
-        assert_eq!(msgs.len(), 1, "expected exactly one ApplyTimePenalty");
+        assert_eq!(msgs.len(), 1, "expected exactly one ReduceNodeTimer");
         assert!(
             (msgs[0] - expected).abs() < 1e-5,
             "stack 1, delta {timestep}s, 15% → {expected}s, got {}",

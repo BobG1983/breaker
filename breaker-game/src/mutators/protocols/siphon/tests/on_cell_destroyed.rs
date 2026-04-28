@@ -1,6 +1,6 @@
 //! Group C — `siphon_on_cell_destroyed` reader behavior (Behaviors 9–21).
 //!
-//! Pins the reader's streak-update + `ReverseTimePenalty` emission rules:
+//! Pins the reader's streak-update + `IncreaseNodeTimer` emission rules:
 //! first-kill-silent, subsequent-kill-emits; hard-set window on every kill;
 //! multi-kill per frame fires one penalty per non-first kill; harness-safe
 //! paths on missing `SiphonStreak` / `SiphonConfig`; run-if gates on
@@ -13,7 +13,7 @@ use super::{
     super::system::{SiphonConfig, SiphonStreak},
     helpers::{
         build_siphon_app, build_siphon_app_no_config, build_siphon_app_no_streak,
-        collected_reverse_time_penalties, install_siphon_config, install_siphon_streak,
+        collected_increase_node_timers, install_siphon_config, install_siphon_streak,
         seed_active_protocols_with_siphon, write_cell_destroyed, write_n_cell_destroyed,
     },
 };
@@ -40,15 +40,15 @@ fn first_kill_with_empty_streak_sets_state_and_emits_no_penalty() {
         "first kill should set streak to (2.0, 1); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "first kill should emit NO ReverseTimePenalty"
+        collected_increase_node_timers(&app).is_empty(),
+        "first kill should emit NO IncreaseNodeTimer"
     );
 
     // Edge case: a second tick without any new Destroyed<Cell> leaves the
     // collector empty (message was not deferred).
     tick(&mut app);
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
+        collected_increase_node_timers(&app).is_empty(),
         "no messages in frame 2 should keep collector empty"
     );
 }
@@ -74,17 +74,17 @@ fn second_kill_within_window_increments_resets_window_and_emits_one_penalty() {
         "second kill should leave streak at (2.0, 2) — HARD SET window; got {streak:?}"
     );
 
-    let penalties = collected_reverse_time_penalties(&app);
+    let timers = collected_increase_node_timers(&app);
     assert_eq!(
-        penalties.len(),
+        timers.len(),
         1,
-        "expected exactly one ReverseTimePenalty, got {}",
-        penalties.len()
+        "expected exactly one IncreaseNodeTimer, got {}",
+        timers.len()
     );
     assert!(
-        (penalties[0].seconds - 0.5).abs() < f32::EPSILON,
-        "penalty.seconds expected 0.5, got {}",
-        penalties[0].seconds
+        (timers[0].delta - 0.5).abs() < f32::EPSILON,
+        "penalty.delta expected 0.5, got {}",
+        timers[0].delta
     );
 
     // Edge case check: HARD SET, not additive. `1.5 + 2.0 = 3.5` is the
@@ -111,11 +111,11 @@ fn third_kill_on_streaking_streak_increments_and_emits_another_penalty() {
         },
         "third kill should produce (2.0, 3); got {streak:?}"
     );
-    let penalties = collected_reverse_time_penalties(&app);
-    assert_eq!(penalties.len(), 1, "expected exactly one penalty");
+    let timers = collected_increase_node_timers(&app);
+    assert_eq!(timers.len(), 1, "expected exactly one penalty");
     assert!(
-        (penalties[0].seconds - 0.5).abs() < f32::EPSILON,
-        "penalty.seconds expected 0.5"
+        (timers[0].delta - 0.5).abs() < f32::EPSILON,
+        "penalty.delta expected 0.5"
     );
 
     // Edge case — fifth kill from kill_count: 4 produces kill_count: 5.
@@ -131,8 +131,8 @@ fn third_kill_on_streaking_streak_increments_and_emits_another_penalty() {
         "fifth kill should increment to 5, not wrap or cap; got {}",
         streak.kill_count
     );
-    let penalties = collected_reverse_time_penalties(&app);
-    assert_eq!(penalties.len(), 1, "fifth kill should still emit 1 penalty");
+    let timers = collected_increase_node_timers(&app);
+    assert_eq!(timers.len(), 1, "fifth kill should still emit 1 penalty");
 }
 
 // ── Behavior 12 — hard window reset: set, not add ───────────────────────────
@@ -177,8 +177,8 @@ fn kill_after_expired_streak_starts_fresh_without_penalty() {
         "kill on expired streak should produce (2.0, 1); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "first-kill-of-fresh-streak must emit zero penalties"
+        collected_increase_node_timers(&app).is_empty(),
+        "first-kill-of-fresh-streak must emit zero timers"
     );
 
     // Edge case: identical test with SiphonStreak constructed via default()
@@ -201,15 +201,15 @@ fn kill_after_expired_streak_starts_fresh_without_penalty() {
         "default()-origin expired streak should produce same (2.0, 1); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "default()-origin first kill must still emit zero penalties"
+        collected_increase_node_timers(&app).is_empty(),
+        "default()-origin first kill must still emit zero timers"
     );
 }
 
-// ── Behavior 14 — three kills same frame: 2 penalties, total 1.0s ───────────
+// ── Behavior 14 — three kills same frame: 2 timers, total 1.0s ───────────
 
 #[test]
-fn three_kills_in_same_frame_emit_two_penalties() {
+fn three_kills_in_same_frame_emit_two_timers() {
     let mut app = build_siphon_app();
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
     // SiphonStreak::default() pre-installed.
@@ -227,26 +227,26 @@ fn three_kills_in_same_frame_emit_two_penalties() {
         "three kills: streak should be (2.0, 3); got {streak:?}"
     );
 
-    let penalties = collected_reverse_time_penalties(&app);
+    let timers = collected_increase_node_timers(&app);
     assert_eq!(
-        penalties.len(),
+        timers.len(),
         2,
-        "three kills on empty streak: first silent + 2 penalties; got {}",
-        penalties.len()
+        "three kills on empty streak: first silent + 2 timers; got {}",
+        timers.len()
     );
 
-    // Edge case: sum of `seconds` equals 1.0 (= 2 × 0.5) exactly.
-    let total: f32 = penalties.iter().map(|m| m.seconds).sum();
+    // Edge case: sum of `delta` equals 1.0 (= 2 × 0.5) exactly.
+    let total: f32 = timers.iter().map(|m| m.delta).sum();
     assert!(
         (total - 1.0).abs() < f32::EPSILON,
-        "total seconds across frame must equal 1.0 (2 × 0.5); got {total}"
+        "total delta across frame must equal 1.0 (2 × 0.5); got {total}"
     );
 }
 
-// ── Behavior 15 — eight kills on an already-alive streak: 8 penalties ───────
+// ── Behavior 15 — eight kills on an already-alive streak: 8 timers ───────
 
 #[test]
-fn eight_kills_in_one_frame_on_alive_streak_emit_eight_penalties() {
+fn eight_kills_in_one_frame_on_alive_streak_emit_eight_timers() {
     let mut app = build_siphon_app();
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
     install_siphon_streak(&mut app, 1.0, 1);
@@ -266,24 +266,24 @@ fn eight_kills_in_one_frame_on_alive_streak_emit_eight_penalties() {
         streak.window_remaining
     );
 
-    let penalties = collected_reverse_time_penalties(&app);
+    let timers = collected_increase_node_timers(&app);
     assert_eq!(
-        penalties.len(),
+        timers.len(),
         8,
-        "8 kills on alive streak should emit 8 penalties; got {}",
-        penalties.len()
+        "8 kills on alive streak should emit 8 timers; got {}",
+        timers.len()
     );
-    for (i, p) in penalties.iter().enumerate() {
+    for (i, p) in timers.iter().enumerate() {
         assert!(
-            (p.seconds - 0.5).abs() < f32::EPSILON,
-            "penalty[{i}].seconds expected 0.5, got {}",
-            p.seconds
+            (p.delta - 0.5).abs() < f32::EPSILON,
+            "penalty[{i}].delta expected 0.5, got {}",
+            p.delta
         );
     }
-    let total: f32 = penalties.iter().map(|m| m.seconds).sum();
+    let total: f32 = timers.iter().map(|m| m.delta).sum();
     assert!(
         (total - 4.0).abs() < f32::EPSILON,
-        "total seconds expected 4.0 (8 × 0.5); got {total}"
+        "total delta expected 4.0 (8 × 0.5); got {total}"
     );
 }
 
@@ -304,8 +304,8 @@ fn reader_is_gated_off_when_siphon_not_in_active_protocols() {
         "streak must be unchanged (default) when Siphon is not active; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "no penalties when Siphon is not active"
+        collected_increase_node_timers(&app).is_empty(),
+        "no timers when Siphon is not active"
     );
 }
 
@@ -320,7 +320,7 @@ fn reader_is_gated_off_when_node_state_is_not_playing() {
         .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
         .with_resource::<SiphonStreak>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<crate::state::run::node::messages::ReverseTimePenalty>()
+        .with_message_capture::<crate::state::run::node::messages::IncreaseNodeTimer>()
         .in_state_chip_selecting()
         .build();
     app.world_mut().insert_resource(SiphonConfig {
@@ -340,8 +340,8 @@ fn reader_is_gated_off_when_node_state_is_not_playing() {
         "streak must be unchanged when NodeState != Playing; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "no penalties when NodeState != Playing"
+        collected_increase_node_timers(&app).is_empty(),
+        "no timers when NodeState != Playing"
     );
 }
 
@@ -363,8 +363,8 @@ fn reader_does_not_panic_when_siphon_config_absent() {
         "streak unchanged when config absent; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "no penalties when config absent"
+        collected_increase_node_timers(&app).is_empty(),
+        "no timers when config absent"
     );
     assert!(
         app.world().get_resource::<SiphonConfig>().is_none(),
@@ -398,8 +398,8 @@ fn reader_does_not_panic_when_siphon_streak_absent() {
         "system must not side-effect-insert SiphonStreak when absent"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "no penalties when streak absent"
+        collected_increase_node_timers(&app).is_empty(),
+        "no timers when streak absent"
     );
 
     // Edge case: second tick with no new messages does not cause duplicate
@@ -424,7 +424,7 @@ fn reader_with_no_messages_leaves_streak_unchanged() {
         .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
         .with_resource::<SiphonStreak>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<crate::state::run::node::messages::ReverseTimePenalty>()
+        .with_message_capture::<crate::state::run::node::messages::IncreaseNodeTimer>()
         .build();
     app.world_mut().insert_resource(SiphonConfig {
         streak_window: 2.0,
@@ -447,8 +447,8 @@ fn reader_with_no_messages_leaves_streak_unchanged() {
         "empty-queue reader must leave streak at (1.5, 2); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "no messages → no penalties"
+        collected_increase_node_timers(&app).is_empty(),
+        "no messages → no timers"
     );
 
     // Edge case: second quiet tick still no-op.
@@ -463,8 +463,8 @@ fn reader_with_no_messages_leaves_streak_unchanged() {
         "second quiet tick must remain (1.5, 2); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "second quiet tick emits no penalties"
+        collected_increase_node_timers(&app).is_empty(),
+        "second quiet tick emits no timers"
     );
 }
 
@@ -488,17 +488,17 @@ fn reader_emits_raw_time_per_kill_without_clamping() {
     write_cell_destroyed(&mut app);
     tick(&mut app);
 
-    let penalties = collected_reverse_time_penalties(&app);
+    let timers = collected_increase_node_timers(&app);
     assert_eq!(
-        penalties.len(),
+        timers.len(),
         1,
-        "expected exactly one ReverseTimePenalty, got {}",
-        penalties.len()
+        "expected exactly one IncreaseNodeTimer, got {}",
+        timers.len()
     );
     assert!(
-        (penalties[0].seconds - 120.0).abs() < f32::EPSILON,
-        "penalty.seconds must equal config.time_per_kill (120.0) — no clamp; got {}",
-        penalties[0].seconds
+        (timers[0].delta - 120.0).abs() < f32::EPSILON,
+        "penalty.delta must equal config.time_per_kill (120.0) — no clamp; got {}",
+        timers[0].delta
     );
     let streak = *app.world().resource::<SiphonStreak>();
     assert_eq!(
@@ -525,11 +525,11 @@ fn reader_emits_raw_time_per_kill_without_clamping() {
     write_cell_destroyed(&mut app);
     tick(&mut app);
 
-    let penalties = collected_reverse_time_penalties(&app);
-    assert_eq!(penalties.len(), 1, "tiny value: expected 1 penalty");
+    let timers = collected_increase_node_timers(&app);
+    assert_eq!(timers.len(), 1, "tiny value: expected 1 penalty");
     assert!(
-        (penalties[0].seconds - 0.01).abs() < f32::EPSILON,
-        "penalty.seconds must equal tiny config.time_per_kill (0.01); got {}",
-        penalties[0].seconds
+        (timers[0].delta - 0.01).abs() < f32::EPSILON,
+        "penalty.delta must equal tiny config.time_per_kill (0.01); got {}",
+        timers[0].delta
     );
 }

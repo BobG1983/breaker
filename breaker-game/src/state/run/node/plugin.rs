@@ -11,14 +11,14 @@ use crate::{
             systems::{spawn_side_panels, spawn_timer_hud, update_timer_display},
         },
         messages::{
-            ApplyTimePenalty, CellsSpawned, NodeCleared, ReverseTimePenalty, SpawnNodeComplete,
+            CellsSpawned, IncreaseNodeTimer, NodeCleared, ReduceNodeTimer, SpawnNodeComplete,
             TimerExpired,
         },
         resources::{ClearRemainingCount, ScenarioLayoutOverride},
         sets::NodeSystems,
         systems::{
-            all_animate_in_complete, apply_time_penalty, check_spawn_complete,
-            init_clear_remaining, init_node_timer, reverse_time_penalty, set_active_layout,
+            all_animate_in_complete, apply_increase_node_timer, apply_reduce_node_timer,
+            check_spawn_complete, init_clear_remaining, init_node_timer, set_active_layout,
             spawn_cells_from_layout, tick_node_timer, track_node_completion,
         },
     },
@@ -58,8 +58,8 @@ impl Plugin for NodePlugin {
             .init_resource::<ScenarioLayoutOverride>()
             .add_message::<NodeCleared>()
             .add_message::<TimerExpired>()
-            .add_message::<ApplyTimePenalty>()
-            .add_message::<ReverseTimePenalty>()
+            .add_message::<ReduceNodeTimer>()
+            .add_message::<IncreaseNodeTimer>()
             .add_message::<CellsSpawned>()
             .add_message::<SpawnNodeComplete>()
             .add_message::<ChipSelected>()
@@ -98,12 +98,12 @@ impl Plugin for NodePlugin {
                 (
                     track_node_completion.in_set(NodeSystems::TrackCompletion),
                     tick_node_timer.in_set(NodeSystems::TickTimer),
-                    reverse_time_penalty
-                        .in_set(NodeSystems::ApplyTimePenalty)
+                    apply_increase_node_timer
+                        .in_set(NodeSystems::ReduceNodeTimer)
                         .after(NodeSystems::TickTimer)
-                        .before(apply_time_penalty),
-                    apply_time_penalty
-                        .in_set(NodeSystems::ApplyTimePenalty)
+                        .before(apply_reduce_node_timer),
+                    apply_reduce_node_timer
+                        .in_set(NodeSystems::ReduceNodeTimer)
                         .after(NodeSystems::TickTimer),
                 )
                     .run_if(in_state(NodeState::Playing)),

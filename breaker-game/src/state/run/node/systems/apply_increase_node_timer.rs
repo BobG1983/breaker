@@ -1,43 +1,46 @@
-//! System to reverse time penalties from effect reversal.
+//! System to increase the node timer (consumer of [`IncreaseNodeTimer`] messages).
 
 use bevy::prelude::*;
 
-use crate::{prelude::*, state::run::node::messages::ReverseTimePenalty};
+use crate::{prelude::*, state::run::node::messages::IncreaseNodeTimer};
 
-/// Reads [`ReverseTimePenalty`] messages and adds seconds back to
+/// Reads [`IncreaseNodeTimer`] messages and adds delta back to
 /// [`NodeTimer::remaining`], clamping to [`NodeTimer::total`].
 ///
-/// Unlike [`super::apply_time_penalty`], this system does NOT send
+/// Unlike [`super::apply_reduce_node_timer`], this system does NOT send
 /// [`TimerExpired`] — adding time back cannot cause timer expiry.
-pub(crate) fn reverse_time_penalty(
-    mut reader: MessageReader<ReverseTimePenalty>,
+pub(crate) fn apply_increase_node_timer(
+    mut reader: MessageReader<IncreaseNodeTimer>,
     mut timer: ResMut<NodeTimer>,
 ) {
     for msg in reader.read() {
-        timer.remaining = (timer.remaining + msg.seconds).min(timer.total);
+        timer.remaining = (timer.remaining + msg.delta).min(timer.total);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state::run::node::messages::ReverseTimePenalty;
+    use crate::state::run::node::messages::IncreaseNodeTimer;
 
     #[derive(Resource)]
-    struct SendReverse(Vec<f32>);
+    struct SendIncrease(Vec<f32>);
 
-    fn send_reverse(flag: Res<SendReverse>, mut writer: MessageWriter<ReverseTimePenalty>) {
-        for &seconds in &flag.0 {
-            writer.write(ReverseTimePenalty { seconds });
+    fn send_increase(flag: Res<SendIncrease>, mut writer: MessageWriter<IncreaseNodeTimer>) {
+        for &delta in &flag.0 {
+            writer.write(IncreaseNodeTimer { delta });
         }
     }
 
     fn test_app_with_send(remaining: f32, total: f32) -> App {
         TestAppBuilder::new()
-            .with_message::<ReverseTimePenalty>()
+            .with_message::<IncreaseNodeTimer>()
             .insert_resource(NodeTimer { remaining, total })
-            .insert_resource(SendReverse(vec![]))
-            .with_system(FixedUpdate, (send_reverse, reverse_time_penalty).chain())
+            .insert_resource(SendIncrease(vec![]))
+            .with_system(
+                FixedUpdate,
+                (send_increase, apply_increase_node_timer).chain(),
+            )
             .build()
     }
 
@@ -46,7 +49,7 @@ mod tests {
     #[test]
     fn adds_seconds_back_to_remaining() {
         let mut app = test_app_with_send(25.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![5.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![5.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -60,13 +63,13 @@ mod tests {
     #[test]
     fn zero_seconds_does_not_change_remaining() {
         let mut app = test_app_with_send(25.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![0.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![0.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
         assert!(
             (timer.remaining - 25.0).abs() < f32::EPSILON,
-            "remaining should stay at 25.0 with zero-second reverse, got {}",
+            "remaining should stay at 25.0 with zero-delta increase, got {}",
             timer.remaining
         );
     }
@@ -76,7 +79,7 @@ mod tests {
     #[test]
     fn clamps_remaining_to_total() {
         let mut app = test_app_with_send(58.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![5.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![5.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -90,7 +93,7 @@ mod tests {
     #[test]
     fn at_total_remains_at_total() {
         let mut app = test_app_with_send(60.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![5.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![5.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -106,13 +109,13 @@ mod tests {
     #[test]
     fn restores_time_from_zero() {
         let mut app = test_app_with_send(0.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![5.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![5.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
         assert!(
             (timer.remaining - 5.0).abs() < f32::EPSILON,
-            "remaining should be 5.0 after reversing from zero, got {}",
+            "remaining should be 5.0 after increasing from zero, got {}",
             timer.remaining
         );
     }
@@ -122,7 +125,7 @@ mod tests {
     #[test]
     fn processes_multiple_messages_in_one_tick() {
         let mut app = test_app_with_send(20.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![5.0, 3.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![5.0, 3.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -136,7 +139,7 @@ mod tests {
     #[test]
     fn multiple_messages_clamp_to_total() {
         let mut app = test_app_with_send(55.0, 60.0);
-        app.world_mut().resource_mut::<SendReverse>().0 = vec![5.0, 5.0];
+        app.world_mut().resource_mut::<SendIncrease>().0 = vec![5.0, 5.0];
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();
@@ -152,7 +155,7 @@ mod tests {
     #[test]
     fn no_message_no_change() {
         let mut app = test_app_with_send(25.0, 60.0);
-        // SendReverse default is empty vec — no messages
+        // SendIncrease starts as an empty vec — no messages
         tick(&mut app);
 
         let timer = app.world().resource::<NodeTimer>();

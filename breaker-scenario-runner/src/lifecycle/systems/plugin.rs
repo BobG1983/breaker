@@ -113,7 +113,7 @@ fn register_scenario_resources(app: &mut App) {
         .add_message::<SpawnNodeComplete>()
         .add_message::<ChipSelected>()
         // Needed by check_timer_monotonically_decreasing exemption logic.
-        .add_message::<breaker::state::run::node::messages::ReverseTimePenalty>();
+        .add_message::<breaker::state::run::node::messages::IncreaseNodeTimer>();
 }
 
 /// Returns `true` when the scenario has entered the `Playing` phase,

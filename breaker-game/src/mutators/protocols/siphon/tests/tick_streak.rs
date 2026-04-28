@@ -14,7 +14,7 @@ use super::{
     super::system::{SiphonConfig, SiphonStreak},
     helpers::{
         build_siphon_app, build_siphon_app_no_config, build_siphon_app_no_streak,
-        collected_reverse_time_penalties, install_siphon_streak, seed_active_protocols_with_siphon,
+        collected_increase_node_timers, install_siphon_streak, seed_active_protocols_with_siphon,
     },
 };
 use crate::prelude::*;
@@ -209,13 +209,13 @@ fn tick_does_not_touch_streak_when_no_active_streak_and_no_messages() {
         );
     }
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "no penalties across 3 quiet ticks"
+        collected_increase_node_timers(&app).is_empty(),
+        "no timers across 3 quiet ticks"
     );
 
     // Edge case: a single kill lands, then 5 idle ticks decay it naturally
     // — window_remaining shrinks by 5 * dt but never becomes negative;
-    // no further penalties are emitted beyond the (first-kill silent) one.
+    // no further timers are emitted beyond the (first-kill silent) one.
     super::helpers::write_cell_destroyed(&mut app);
     tick(&mut app);
     let streak_after_kill = *app.world().resource::<SiphonStreak>();
@@ -240,8 +240,8 @@ fn tick_does_not_touch_streak_when_no_active_streak_and_no_messages() {
         );
     }
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "only the (silent) first kill occurred; no penalties should be emitted"
+        collected_increase_node_timers(&app).is_empty(),
+        "only the (silent) first kill occurred; no timers should be emitted"
     );
 }
 
@@ -311,7 +311,7 @@ fn tick_is_gated_off_when_siphon_not_active() {
         .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
         .with_resource::<SiphonStreak>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<crate::state::run::node::messages::ReverseTimePenalty>()
+        .with_message_capture::<crate::state::run::node::messages::IncreaseNodeTimer>()
         .in_state_chip_selecting()
         .build();
     app.world_mut().insert_resource(SiphonConfig {

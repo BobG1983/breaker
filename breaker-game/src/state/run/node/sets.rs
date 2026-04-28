@@ -12,14 +12,14 @@ pub enum NodeSystems {
     TrackCompletion,
     /// Tick the node countdown timer.
     TickTimer,
-    /// Apply and reverse time penalties from effect consequences.
+    /// Apply timer adjustments (reductions and additions) from hazards / protocols.
     ///
-    /// Contains both `apply_time_penalty` (subtracts) and `reverse_time_penalty` (adds back).
-    /// `reverse_time_penalty` runs before `apply_time_penalty` within this set.
+    /// Contains both `apply_reduce_node_timer` (subtracts) and `apply_increase_node_timer` (adds back).
+    /// `apply_increase_node_timer` runs before `apply_reduce_node_timer` within this set.
     /// Runs after `TickTimer`. Systems that read `TimerExpired` should
-    /// order `.after(NodeSystems::ApplyTimePenalty)` to see penalty-induced
+    /// order `.after(NodeSystems::ReduceNodeTimer)` to see reduction-induced
     /// expirations in the same tick.
-    ApplyTimePenalty,
+    ReduceNodeTimer,
     /// The `init_node_timer` system — initializes the node countdown timer.
     InitTimer,
     /// Cell cleanup on node teardown (`cleanup_on_exit::<NodeState>`). Runs

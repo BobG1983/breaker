@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use breaker::state::run::node::{messages::ReverseTimePenalty, resources::NodeTimer};
+use breaker::state::run::node::{messages::IncreaseNodeTimer, resources::NodeTimer};
 
 use crate::{invariants::*, types::InvariantKind};
 
@@ -10,26 +10,28 @@ use crate::{invariants::*, types::InvariantKind};
 /// (same-duration node transition). If `remaining` increases otherwise, appends a
 /// [`ViolationEntry`] with [`InvariantKind::TimerMonotonicallyDecreasing`].
 ///
-/// **`ReverseTimePenalty` exemption**: when a [`ReverseTimePenalty`] message is
-/// present in the current tick, a timer increase is expected (the effect adds
-/// seconds back) and is silently skipped. This prevents false positives when the
-/// `TimePenalty` effect is reversed (e.g. on node end or effect expiry).
+/// **`IncreaseNodeTimer` exemption**: when an [`IncreaseNodeTimer`] message is
+/// present in the current tick, a timer increase is expected (the message adds
+/// delta back) and is silently skipped. This prevents false positives when
+/// something legitimately adds time back (Siphon protocol, future systems).
 ///
 /// Skips and resets when [`NodeTimer`] is absent.
 pub fn check_timer_monotonically_decreasing(
     timer: Option<Res<NodeTimer>>,
     mut previous: Local<Option<(f32, f32)>>,
     frame: Res<ScenarioFrame>,
-    mut reverse_reader: MessageReader<ReverseTimePenalty>,
+    mut increase_reader: MessageReader<IncreaseNodeTimer>,
     mut log: ResMut<ViolationLog>,
     mut stats: Option<ResMut<ScenarioStats>>,
 ) {
     if let Some(ref mut s) = stats {
         s.invariant_checks += 1;
     }
-    // Consume all ReverseTimePenalty messages this tick.
-    // If any were sent, a timer increase is legitimate.
-    let reverse_penalty_this_tick = reverse_reader.read().next().is_some();
+    // Drain ALL IncreaseNodeTimer messages this tick. Bevy 0.18 retains
+    // unread messages in the double-buffer for one extra frame, so partial
+    // drains (e.g. `.next().is_some()`) can leak into next tick and cause
+    // false-negative violation suppression.
+    let increase_this_tick = increase_reader.read().count() > 0;
 
     let Some(timer) = timer else {
         *previous = None;
@@ -54,8 +56,8 @@ pub fn check_timer_monotonically_decreasing(
                 *previous = Some((current, current_total));
                 return;
             }
-            // Legitimate increase from ReverseTimePenalty — skip, don't fire.
-            if reverse_penalty_this_tick {
+            // Legitimate increase from IncreaseNodeTimer — skip, don't fire.
+            if increase_this_tick {
                 *previous = Some((current, current_total));
                 return;
             }

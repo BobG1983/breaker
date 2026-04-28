@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use super::{
     super::system::{SiphonConfig, SiphonStreak, wire},
     helpers::{
-        build_siphon_app, collected_reverse_time_penalties, install_siphon_streak,
+        build_siphon_app, collected_increase_node_timers, install_siphon_streak,
         seed_active_protocols_with_siphon, write_cell_destroyed,
     },
 };
@@ -37,8 +37,8 @@ fn register_wires_siphon_on_cell_destroyed_in_fixed_update() {
         "wire-wired reader must process first kill to (2.0, 1); got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "first kill emits zero penalties (wire-wired path)"
+        collected_increase_node_timers(&app).is_empty(),
+        "first kill emits zero timers (wire-wired path)"
     );
 }
 
@@ -59,8 +59,8 @@ fn register_wired_reader_is_gated_off_when_siphon_not_active() {
         "wire-wired reader must not run when Siphon not active; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "wire-wired reader emits no penalties when Siphon not active"
+        collected_increase_node_timers(&app).is_empty(),
+        "wire-wired reader emits no timers when Siphon not active"
     );
 }
 
@@ -73,7 +73,7 @@ fn register_wired_reader_is_gated_off_when_node_state_not_playing() {
         .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
         .with_resource::<SiphonStreak>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<crate::state::run::node::messages::ReverseTimePenalty>()
+        .with_message_capture::<crate::state::run::node::messages::IncreaseNodeTimer>()
         .in_state_chip_selecting()
         .build();
     app.world_mut().insert_resource(SiphonConfig {
@@ -93,8 +93,8 @@ fn register_wired_reader_is_gated_off_when_node_state_not_playing() {
         "wire-wired reader must be gated off when NodeState != Playing; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "wire-wired reader emits no penalties when NodeState != Playing"
+        collected_increase_node_timers(&app).is_empty(),
+        "wire-wired reader emits no timers when NodeState != Playing"
     );
 }
 
@@ -125,8 +125,8 @@ fn register_wires_tick_before_reader() {
         "with tick BEFORE reader, near-expiry kill must become fresh streak; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "fresh-streak first kill must emit zero penalties under wire ordering"
+        collected_increase_node_timers(&app).is_empty(),
+        "fresh-streak first kill must emit zero timers under wire ordering"
     );
 }
 
@@ -160,7 +160,7 @@ fn register_does_not_panic_when_streak_and_config_absent() {
         .in_state_node_playing()
         .with_resource::<crate::mutators::protocols::resources::ActiveProtocols>()
         .with_message::<Destroyed<Cell>>()
-        .with_message_capture::<crate::state::run::node::messages::ReverseTimePenalty>()
+        .with_message_capture::<crate::state::run::node::messages::IncreaseNodeTimer>()
         .build();
     wire(&mut app);
     seed_active_protocols_with_siphon(&mut app, 2.0, 0.5);
@@ -180,8 +180,8 @@ fn register_does_not_panic_when_streak_and_config_absent() {
         "wire must not side-effect-insert SiphonConfig"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "wire-wired systems emit no penalties when resources absent"
+        collected_increase_node_timers(&app).is_empty(),
+        "wire-wired systems emit no timers when resources absent"
     );
 }
 
@@ -202,7 +202,7 @@ fn register_schedule_ticks_with_no_messages() {
         "default streak is idle — tick is a no-op; got {streak:?}"
     );
     assert!(
-        collected_reverse_time_penalties(&app).is_empty(),
-        "quiet tick emits no penalties"
+        collected_increase_node_timers(&app).is_empty(),
+        "quiet tick emits no timers"
     );
 }

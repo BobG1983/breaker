@@ -67,7 +67,7 @@ impl Plugin for RunPlugin {
                 (
                     handle_node_cleared.after(NodeSystems::TrackCompletion),
                     handle_timer_expired
-                        .after(NodeSystems::ApplyTimePenalty)
+                        .after(NodeSystems::ReduceNodeTimer)
                         .after(handle_node_cleared),
                     handle_run_lost
                         .after(handle_node_cleared)
