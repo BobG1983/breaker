@@ -156,3 +156,16 @@ Independent of TODO #0 and #2. Can land at any time. Doesn't block anything; not
 ## TODO entry
 
 > **[ready]** Greed skip button — conditional skip button + indicator on chip-select UI, visible only when Greed protocol is active. Lives entirely in `state/run/chip_select/`. Subsumes `audit/remediations/greed-skip-button.md`. Independent of #1 and #2. — [detail](detail/greed-skip-button.md)
+
+## Planning decisions (2026-04-28, branch `feature/greed-skip-button`)
+
+The detail above assumed mouse / per-entity click input. Exploration confirmed the existing chip-select UI is **keyboard-only** — `handle_chip_input` reads `ButtonInput<KeyCode>` via `InputConfig`, and selection is tracked in `ChipSelectSelection { row: SelectionRow, chip_index }` (existing variants `Chip`, `Protocol`).
+
+Approved plan deviations:
+
+- **No separate `handle_skip_input` system.** Instead, add `SelectionRow::Skip` and extend `handle_chip_input`'s vertical-nav + confirm `match` with a third arm. Mirrors the existing `Chip` / `Protocol` row pattern; visual selected-border highlight Just Works.
+- **`SkipButton` + `SkipIndicator` marker components are still added** — they make the conditional spawn behavior testable.
+- **`ChipOfferSkipped` correction**: the detail file's claim that this message is "wired in `handle_chip_input.rs:130`" is wrong. No production system writes it today; the new `Skip` arm in `handle_chip_input` is the first writer.
+- **Mouse interaction is out of scope** — the existing UI has no `Interaction` click pipeline. If a literal clickable button is wanted later, that's a separate todo (introduce the click model first, then re-skin this feature).
+
+Plan file: `~/.claude-home/plans/dapper-jingling-teapot.md`

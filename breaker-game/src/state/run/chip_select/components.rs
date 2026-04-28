@@ -21,3 +21,14 @@ pub(super) struct ChipTimerText;
 /// code can target it. `None` offer means no entity is spawned.
 #[derive(Component, Debug, Clone, Copy)]
 pub(super) struct ProtocolCard;
+
+/// Marker on the Greed Skip-row root entity. Spawned by `spawn_chip_select`
+/// only when `ActiveProtocols::contains(ProtocolKind::Greed)` is true.
+#[derive(Component, Debug, Clone, Copy)]
+pub(super) struct SkipButton;
+
+/// Marker on the Skip-row indicator-text entity. Its `Text` reports the
+/// player's current skip count and the projected rarity boost for the next
+/// chip offering. Computed by `format_skip_indicator` at spawn time.
+#[derive(Component, Debug, Clone, Copy)]
+pub(super) struct SkipIndicator;

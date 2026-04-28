@@ -5,12 +5,15 @@ use crate::{
     chips::ChipDefinition,
     mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
-        resources::ProtocolOffer,
+        greed::{GreedConfig, GreedStacks},
+        resources::{ActiveProtocols, ProtocolOffer},
     },
     prelude::*,
     state::run::chip_select::{
         ChipOffering, ChipSelectConfig,
-        components::{ChipCard, ChipSelectScreen, ChipTimerText, ProtocolCard},
+        components::{
+            ChipCard, ChipSelectScreen, ChipTimerText, ProtocolCard, SkipButton, SkipIndicator,
+        },
         resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer, SelectionRow},
     },
 };
@@ -84,12 +87,14 @@ fn def_for(kind: ProtocolKind, name: &str) -> ProtocolDefinition {
 }
 
 fn test_app_with_offers(offers: ChipOffers) -> App {
-    TestAppBuilder::new()
+    let mut app = TestAppBuilder::new()
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(offers)
         .with_resource::<ProtocolOffer>()
         .with_system(Update, spawn_chip_select)
-        .build()
+        .build();
+    app.insert_resource(ActiveProtocols::default());
+    app
 }
 
 /// Like `test_app_with_offers` but also inserts a `ProtocolOffer` value.
@@ -99,6 +104,28 @@ fn test_app_with_offers_and_protocol_offer(
 ) -> App {
     let mut app = test_app_with_offers(offers);
     app.insert_resource(protocol_offer);
+    app
+}
+
+/// Build a test app with offers, a protocol offer, and an optional set of
+/// (Greed-related) resources installed. Greed is "inactive" when
+/// `active_protocols` is left at default; the helper inserts `GreedStacks`
+/// and `GreedConfig` only when the caller passes them.
+fn test_app_greed(
+    offers: ChipOffers,
+    protocol_offer: ProtocolOffer,
+    active_protocols: ActiveProtocols,
+    greed_stacks: Option<GreedStacks>,
+    greed_config: Option<GreedConfig>,
+) -> App {
+    let mut app = test_app_with_offers_and_protocol_offer(offers, protocol_offer);
+    app.insert_resource(active_protocols);
+    if let Some(stacks) = greed_stacks {
+        app.insert_resource(stacks);
+    }
+    if let Some(cfg) = greed_config {
+        app.insert_resource(cfg);
+    }
     app
 }
 
@@ -480,5 +507,301 @@ fn protocol_card_component_derive_and_visibility_smoke_test() {
     assert!(
         app.world().get::<ProtocolCard>(entity).is_some(),
         "entity should carry the ProtocolCard marker"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Greed Skip-row spawn tests (B1–B3).
+// ─────────────────────────────────────────────────────────────────
+
+// ── B1: Skip button NOT spawned when Greed is inactive ──
+
+#[test]
+fn skip_button_not_spawned_when_greed_inactive() {
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        ActiveProtocols::default(), // Greed inactive
+        Some(GreedStacks { skips: 0 }),
+        Some(GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        }),
+    );
+    app.update();
+
+    let button_count = app
+        .world_mut()
+        .query::<&SkipButton>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        button_count, 0,
+        "SkipButton must not spawn when Greed is inactive"
+    );
+
+    let indicator_count = app
+        .world_mut()
+        .query::<&SkipIndicator>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        indicator_count, 0,
+        "SkipIndicator must not spawn when Greed is inactive"
+    );
+}
+
+#[test]
+fn skip_button_not_spawned_when_greed_inactive_and_resources_absent() {
+    // Edge case of B1: with `ActiveProtocols::default()` AND `GreedStacks` /
+    // `GreedConfig` both absent, the spawn must not panic and counts remain 0.
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        ActiveProtocols::default(),
+        None,
+        None,
+    );
+    app.update();
+
+    let button_count = app
+        .world_mut()
+        .query::<&SkipButton>()
+        .iter(app.world())
+        .count();
+    assert_eq!(button_count, 0);
+
+    let indicator_count = app
+        .world_mut()
+        .query::<&SkipIndicator>()
+        .iter(app.world())
+        .count();
+    assert_eq!(indicator_count, 0);
+}
+
+// ── B2: Skip button spawned when Greed is active ──
+
+#[test]
+fn skip_button_spawned_when_greed_active() {
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut active = ActiveProtocols::default();
+    active.insert(def_for(ProtocolKind::Greed, "Greed"));
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        active,
+        Some(GreedStacks { skips: 0 }),
+        Some(GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        }),
+    );
+    app.update();
+
+    let button_count = app
+        .world_mut()
+        .query::<&SkipButton>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        button_count, 1,
+        "SkipButton must spawn exactly once when Greed is active"
+    );
+
+    let indicator_count = app
+        .world_mut()
+        .query::<&SkipIndicator>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        indicator_count, 1,
+        "SkipIndicator must spawn exactly once when Greed is active"
+    );
+}
+
+#[test]
+fn skip_button_spawned_when_greed_active_without_protocol_offer() {
+    // Edge case of B2: with `ProtocolOffer(None)` and Greed active, Skip row
+    // still spawns (Greed activeness drives the row, not the protocol offer).
+    let mut active = ActiveProtocols::default();
+    active.insert(def_for(ProtocolKind::Greed, "Greed"));
+    let mut app = test_app_greed(
+        make_offers(3),
+        ProtocolOffer(None),
+        active,
+        Some(GreedStacks { skips: 0 }),
+        Some(GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        }),
+    );
+    app.update();
+
+    let button_count = app
+        .world_mut()
+        .query::<&SkipButton>()
+        .iter(app.world())
+        .count();
+    assert_eq!(button_count, 1);
+
+    let indicator_count = app
+        .world_mut()
+        .query::<&SkipIndicator>()
+        .iter(app.world())
+        .count();
+    assert_eq!(indicator_count, 1);
+
+    let protocol_count = app
+        .world_mut()
+        .query::<&ProtocolCard>()
+        .iter(app.world())
+        .count();
+    assert_eq!(protocol_count, 0);
+}
+
+// ── B3: Skip indicator text reflects current GreedStacks.skips and computed boost percent ──
+
+#[test]
+fn skip_indicator_text_reflects_skips_and_boost_percent() {
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut active = ActiveProtocols::default();
+    active.insert(def_for(ProtocolKind::Greed, "Greed"));
+    // GreedConfig::rarity_boost_per_skip is in PERCENT units (post-activate
+    // multiplication). Construct directly with 5.0, NOT via def_for which
+    // uses the raw RON fraction (0.05).
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        active,
+        Some(GreedStacks { skips: 3 }),
+        Some(GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        }),
+    );
+    app.update();
+
+    // Among Text children of the SkipIndicator, at least one carries text
+    // containing both "3" (the skip count) and "15" (3 * 5.0 = 15% boost).
+    let mut found = false;
+    let mut texts: Vec<String> = Vec::new();
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&Text, With<SkipIndicator>>();
+    for text in query.iter(app.world()) {
+        let s: &str = text;
+        texts.push(s.to_owned());
+        if s.contains('3') && s.contains("15") {
+            found = true;
+        }
+    }
+    assert!(
+        found,
+        "expected SkipIndicator text to contain both '3' and '15', got texts: {texts:?}"
+    );
+}
+
+#[test]
+fn skip_indicator_text_zero_skips_renders_plus_zero_percent() {
+    // Edge case 1 of B3: skips == 0, rarity_boost_per_skip == 5.0.
+    // Boost = 0 * 5.0 = 0.0. Expected: "Skips: 0 (+0% next)".
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut active = ActiveProtocols::default();
+    active.insert(def_for(ProtocolKind::Greed, "Greed"));
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        active,
+        Some(GreedStacks { skips: 0 }),
+        Some(GreedConfig {
+            rarity_boost_per_skip: 5.0,
+        }),
+    );
+    app.update();
+
+    let mut found = false;
+    let mut texts: Vec<String> = Vec::new();
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&Text, With<SkipIndicator>>();
+    for text in query.iter(app.world()) {
+        let s: &str = text;
+        texts.push(s.to_owned());
+        if s.contains('0') && s.contains("+0%") {
+            found = true;
+        }
+    }
+    assert!(
+        found,
+        "expected SkipIndicator text to contain both '0' and '+0%', got texts: {texts:?}"
+    );
+}
+
+#[test]
+fn skip_indicator_text_falls_back_to_plus_zero_percent_when_greed_config_absent() {
+    // Edge case 2 of B3: GreedStacks { skips: 3 } present, GreedConfig absent.
+    // Indicator falls back to displaying "+0%" while still reading the live
+    // skip count. Expected: "Skips: 3 (+0% next)".
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut active = ActiveProtocols::default();
+    active.insert(def_for(ProtocolKind::Greed, "Greed"));
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        active,
+        Some(GreedStacks { skips: 3 }),
+        None, // GreedConfig absent
+    );
+    app.update();
+
+    let mut found = false;
+    let mut texts: Vec<String> = Vec::new();
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&Text, With<SkipIndicator>>();
+    for text in query.iter(app.world()) {
+        let s: &str = text;
+        texts.push(s.to_owned());
+        if s.contains('3') && s.contains("+0%") {
+            found = true;
+        }
+    }
+    assert!(
+        found,
+        "expected SkipIndicator text to contain both '3' and '+0%' when GreedConfig absent, got texts: {texts:?}"
+    );
+}
+
+#[test]
+fn skip_indicator_text_falls_back_to_zero_when_both_greed_resources_absent() {
+    // Defensive case: Greed active, but BOTH GreedStacks AND GreedConfig
+    // are absent (e.g., a degenerate test harness or a state-machine bug
+    // that activates Greed without inserting its resources). The indicator
+    // must still spawn without panic and display "Skips: 0 (+0% next)".
+    let offer = ProtocolOffer(Some(def_for(ProtocolKind::Greed, "Greed")));
+    let mut active = ActiveProtocols::default();
+    active.insert(def_for(ProtocolKind::Greed, "Greed"));
+    let mut app = test_app_greed(
+        make_offers(3),
+        offer,
+        active,
+        None, // GreedStacks absent
+        None, // GreedConfig absent
+    );
+    app.update();
+
+    let mut found = false;
+    let mut texts: Vec<String> = Vec::new();
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&Text, With<SkipIndicator>>();
+    for text in query.iter(app.world()) {
+        let s: &str = text;
+        texts.push(s.to_owned());
+        if s.contains('0') && s.contains("+0%") {
+            found = true;
+        }
+    }
+    assert!(
+        found,
+        "expected SkipIndicator text to contain both '0' and '+0%' when both Greed resources absent, got texts: {texts:?}"
     );
 }

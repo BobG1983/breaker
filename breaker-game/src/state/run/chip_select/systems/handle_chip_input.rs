@@ -6,10 +6,15 @@ use rantzsoft_stateflow::ChangeState;
 use crate::{
     chips::inventory::ChipInventory,
     input::InputConfig,
-    mutators::protocols::{messages::ProtocolSelected, resources::ProtocolOffer},
+    mutators::protocols::{
+        definition::ProtocolKind,
+        messages::ProtocolSelected,
+        resources::{ActiveProtocols, ProtocolOffer},
+    },
     prelude::*,
     state::run::chip_select::{
         ChipSelectConfig,
+        messages::ChipOfferSkipped,
         resources::{ChipOffering, ChipOffers, ChipSelectSelection, SelectionRow},
     },
 };
@@ -18,19 +23,23 @@ use crate::{
 #[derive(SystemParam)]
 pub(crate) struct ChipInputActions<'w> {
     /// Current chip selection state (row + chip index).
-    selection:       ResMut<'w, ChipSelectSelection>,
+    selection:        ResMut<'w, ChipSelectSelection>,
     /// State transition control.
-    state_writer:    MessageWriter<'w, ChangeState<ChipSelectState>>,
+    state_writer:     MessageWriter<'w, ChangeState<ChipSelectState>>,
     /// Message writer for chip selection events.
-    chip_writer:     MessageWriter<'w, ChipSelected>,
+    chip_writer:      MessageWriter<'w, ChipSelected>,
     /// Message writer for protocol selection events.
-    protocol_writer: MessageWriter<'w, ProtocolSelected>,
+    protocol_writer:  MessageWriter<'w, ProtocolSelected>,
+    /// Message writer for the Greed skip event.
+    skip_writer:      MessageWriter<'w, ChipOfferSkipped>,
     /// Inventory for recording decay on non-selected chips.
-    inventory:       ResMut<'w, ChipInventory>,
+    inventory:        ResMut<'w, ChipInventory>,
     /// Chip select configuration (decay factor, etc.).
-    chip_config:     Res<'w, ChipSelectConfig>,
+    chip_config:      Res<'w, ChipSelectConfig>,
     /// The offered protocol for this chip-select visit (if any).
-    offer:           Res<'w, ProtocolOffer>,
+    offer:            Res<'w, ProtocolOffer>,
+    /// Active protocols — drives whether the Skip row is reachable.
+    active_protocols: Res<'w, ActiveProtocols>,
 }
 
 /// Handles left/right card navigation, up/down row navigation, and confirmation.
@@ -48,9 +57,11 @@ pub(crate) fn handle_chip_input(
 ) {
     let card_count = offers.0.len();
     let has_offer = actions.offer.0.is_some();
+    let greed_active = actions.active_protocols.contains(ProtocolKind::Greed);
 
-    // No cards AND no protocol offer — confirm just exits.
-    if card_count == 0 && !has_offer {
+    // No cards AND no protocol offer AND Greed inactive — confirm just exits.
+    // (When Greed is active, the Skip row is reachable even with zero offers.)
+    if card_count == 0 && !has_offer && !greed_active {
         if config.menu_confirm.iter().any(|k| keys.just_pressed(*k)) {
             actions.state_writer.write(ChangeState::new());
         }
@@ -73,16 +84,27 @@ pub(crate) fn handle_chip_input(
     }
 
     // Vertical navigation between rows.
-    if config.menu_down.iter().any(|k| keys.just_pressed(*k))
-        && actions.selection.row == SelectionRow::Chip
-        && has_offer
-    {
-        actions.selection.row = SelectionRow::Protocol;
+    let down_pressed = config.menu_down.iter().any(|k| keys.just_pressed(*k));
+    let up_pressed = config.menu_up.iter().any(|k| keys.just_pressed(*k));
+
+    if down_pressed {
+        actions.selection.row = match (actions.selection.row, has_offer, greed_active) {
+            (SelectionRow::Chip, true, _) => SelectionRow::Protocol,
+            (SelectionRow::Chip, false, true) | (SelectionRow::Protocol, _, true) => {
+                SelectionRow::Skip
+            }
+            (row, ..) => row,
+        };
     }
-    if config.menu_up.iter().any(|k| keys.just_pressed(*k))
-        && actions.selection.row == SelectionRow::Protocol
-    {
-        actions.selection.row = SelectionRow::Chip;
+
+    if up_pressed {
+        // Up from Skip with no offer → Chip; from Protocol → Chip; from Chip → Chip (no-op).
+        // All three collapse to Chip; the wildcard is the cleanest expression
+        // (clippy rejects spelling them out separately).
+        actions.selection.row = match actions.selection.row {
+            SelectionRow::Skip if has_offer => SelectionRow::Protocol,
+            _ => SelectionRow::Chip,
+        };
     }
 
     // Confirm.
@@ -126,17 +148,39 @@ pub(crate) fn handle_chip_input(
                         .protocol_writer
                         .write(ProtocolSelected { kind: def.kind() });
                 }
-
-                // Decay every offered chip — the player skipped the chip row.
-                for offer in &offers.0 {
-                    actions
-                        .inventory
-                        .record_offered(offer.name(), actions.chip_config.seen_decay_factor);
-                }
-
+                decay_all_offers(
+                    &mut actions.inventory,
+                    &offers,
+                    actions.chip_config.seen_decay_factor,
+                );
+                actions.state_writer.write(ChangeState::new());
+            }
+            SelectionRow::Skip => {
+                // Intentionally unconditional. Reachability is gated upstream
+                // (the Skip row only spawns when Greed is active, and the
+                // vertical-nav match only routes here when `greed_active`).
+                // The protocol-layer gate is `greed_on_skip` (downstream),
+                // which discards the message when Greed is inactive — a
+                // stray emit from this arm is harmless.
+                actions.skip_writer.write(ChipOfferSkipped);
+                decay_all_offers(
+                    &mut actions.inventory,
+                    &offers,
+                    actions.chip_config.seen_decay_factor,
+                );
                 actions.state_writer.write(ChangeState::new());
             }
         }
+    }
+}
+
+/// Apply `record_offered` with `decay_factor` to every chip in `offers`.
+/// Used by the Protocol and Skip confirm arms (the player took no chip, so
+/// every offer decays). The Chip arm uses its own filtered loop because it
+/// must skip the index the player selected.
+fn decay_all_offers(inventory: &mut ChipInventory, offers: &ChipOffers, decay_factor: f32) {
+    for offer in &offers.0 {
+        inventory.record_offered(offer.name(), decay_factor);
     }
 }
 

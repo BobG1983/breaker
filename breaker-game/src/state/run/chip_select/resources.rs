@@ -83,6 +83,8 @@ pub(super) enum SelectionRow {
     Chip,
     /// Focus is on the protocol card below the chip row.
     Protocol,
+    /// Focus is on the Greed skip row below the protocol card.
+    Skip,
 }
 
 /// Tracks which card is currently highlighted — both the row (chip vs

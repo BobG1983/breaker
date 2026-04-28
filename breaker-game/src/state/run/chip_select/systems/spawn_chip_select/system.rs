@@ -1,11 +1,17 @@
 use bevy::{ecs::hierarchy::ChildSpawnerCommands, prelude::*};
 
 use crate::{
-    mutators::protocols::resources::ProtocolOffer,
+    mutators::protocols::{
+        definition::ProtocolKind,
+        greed::{GreedConfig, GreedStacks},
+        resources::{ActiveProtocols, ProtocolOffer},
+    },
     shared::color_from_rgb,
     state::run::chip_select::{
         ChipOffering, ChipSelectConfig,
-        components::{ChipCard, ChipSelectScreen, ChipTimerText, ProtocolCard},
+        components::{
+            ChipCard, ChipSelectScreen, ChipTimerText, ProtocolCard, SkipButton, SkipIndicator,
+        },
         resources::{ChipOffers, ChipSelectSelection, ChipSelectTimer},
     },
 };
@@ -14,16 +20,26 @@ use crate::{
 ///
 /// Reads `ChipOffers` inserted by `generate_chip_offerings` (which runs earlier in the
 /// `OnEnter(ChipSelect)` chain). Does not interact with `ChipCatalog` directly.
+///
+/// Conditionally spawns the Greed skip row when `ActiveProtocols` contains
+/// `ProtocolKind::Greed`. `GreedStacks` and `GreedConfig` are read for the
+/// indicator display; both are `Option` because `GreedConfig` is inserted
+/// dynamically by `greed::activate()` (and tests may omit either).
 pub(crate) fn spawn_chip_select(
     mut commands: Commands,
     config: Res<ChipSelectConfig>,
     offers: Res<ChipOffers>,
     offer: Res<ProtocolOffer>,
+    active_protocols: Res<ActiveProtocols>,
+    greed_stacks: Option<Res<GreedStacks>>,
+    greed_config: Option<Res<GreedConfig>>,
 ) {
     commands.insert_resource(ChipSelectTimer {
         remaining: config.timer_secs,
     });
     commands.insert_resource(ChipSelectSelection::default());
+
+    let greed_active = active_protocols.contains(ProtocolKind::Greed);
 
     commands
         .spawn((
@@ -43,8 +59,49 @@ pub(crate) fn spawn_chip_select(
             spawn_title(parent);
             spawn_card_row(parent, &config, &offers.0);
             spawn_protocol_row(parent, &config, &offer);
+            if greed_active {
+                let stacks = greed_stacks.as_deref().copied();
+                let cfg = greed_config.as_deref().copied();
+                let indicator = format_skip_indicator(stacks, cfg);
+                spawn_skip_row(parent, &config, &indicator);
+            }
             spawn_prompt(parent);
         });
+}
+
+/// Visual constants shared by every card-shaped spawn (chip, protocol, skip).
+const CARD_BG: Color = Color::srgba(0.05, 0.05, 0.1, 0.9);
+
+/// Build the bordered, button-styled `Node` shared by every card-shaped UI
+/// element on the chip-select screen. Callers supply dimensions and inner
+/// padding; the rest of the layout (column flex, center alignment, 12px
+/// row gap, 2px border) is fixed because every card uses the same shell.
+/// If a future card needs a different row gap or border, prefer adding
+/// another helper over parameterizing this one — it's used by three callers
+/// today and should stay simple.
+fn card_node(width_px: f32, height_px: f32, padding_px: f32) -> Node {
+    Node {
+        width: Val::Px(width_px),
+        height: Val::Px(height_px),
+        flex_direction: FlexDirection::Column,
+        align_items: AlignItems::Center,
+        justify_content: JustifyContent::Center,
+        padding: UiRect::all(Val::Px(padding_px)),
+        row_gap: Val::Px(12.0),
+        border: UiRect::all(Val::Px(2.0)),
+        ..default()
+    }
+}
+
+/// Compose the Greed-skip indicator text from the current `GreedStacks` and
+/// `GreedConfig`. Falls back to `"+0%"` when either resource is missing.
+fn format_skip_indicator(stacks: Option<GreedStacks>, cfg: Option<GreedConfig>) -> String {
+    let skips = stacks.map_or(0, |s| s.skips);
+    let boost = match (stacks, cfg) {
+        (Some(s), Some(c)) => s.rarity_boost(c),
+        _ => 0.0,
+    };
+    format!("Skips: {skips} (+{boost:.0}% next)")
 }
 
 fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &ChipSelectConfig) {
@@ -98,19 +155,9 @@ fn spawn_card_row(
                 row.spawn((
                     ChipCard { index: i },
                     Button,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(280.0),
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::Center,
-                        justify_content: JustifyContent::Center,
-                        padding: UiRect::all(Val::Px(16.0)),
-                        row_gap: Val::Px(12.0),
-                        border: UiRect::all(Val::Px(2.0)),
-                        ..default()
-                    },
+                    card_node(200.0, 280.0, 16.0),
                     BorderColor::all(border_color),
-                    BackgroundColor(Color::srgba(0.05, 0.05, 0.1, 0.9)),
+                    BackgroundColor(CARD_BG),
                 ))
                 .with_children(|card| {
                     card.spawn((
@@ -159,19 +206,9 @@ fn spawn_protocol_row(
         .spawn((
             ProtocolCard,
             Button,
-            Node {
-                width: Val::Px(200.0),
-                height: Val::Px(280.0),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                padding: UiRect::all(Val::Px(16.0)),
-                row_gap: Val::Px(12.0),
-                border: UiRect::all(Val::Px(2.0)),
-                ..default()
-            },
+            card_node(200.0, 280.0, 16.0),
             BorderColor::all(normal_color),
-            BackgroundColor(Color::srgba(0.05, 0.05, 0.1, 0.9)),
+            BackgroundColor(CARD_BG),
         ))
         .with_children(|card| {
             card.spawn((
@@ -212,4 +249,50 @@ fn spawn_prompt(parent: &mut ChildSpawnerCommands<'_>) {
         },
         TextColor(Color::srgba(0.5, 0.5, 0.5, 1.0)),
     ));
+}
+
+fn spawn_skip_row(
+    parent: &mut ChildSpawnerCommands<'_>,
+    config: &ChipSelectConfig,
+    indicator_text: &str,
+) {
+    let normal_color = color_from_rgb(config.normal_color_rgb);
+
+    parent
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            column_gap: Val::Px(16.0),
+            ..default()
+        })
+        .with_children(|row| {
+            row.spawn((
+                SkipButton,
+                Button,
+                card_node(200.0, 64.0, 8.0),
+                BorderColor::all(normal_color),
+                BackgroundColor(CARD_BG),
+            ))
+            .with_children(|btn| {
+                btn.spawn((
+                    Text::new("SKIP"),
+                    TextFont {
+                        font_size: config.card_title_font_size,
+                        ..default()
+                    },
+                    TextColor(Color::WHITE),
+                ));
+            });
+
+            row.spawn((
+                SkipIndicator,
+                Text::new(indicator_text),
+                TextFont {
+                    font_size: config.card_description_font_size,
+                    ..default()
+                },
+                TextColor(Color::srgba(0.8, 0.7, 0.3, 1.0)),
+            ));
+        });
 }
