@@ -30,8 +30,8 @@ fn dealer_damage_boost_stack_is_ignored() {
 
     // Dealer's stack untouched.
     let mut dealer_stack = app.world_mut().get_mut::<DamageBoostStack>(dealer).unwrap();
-    assert_f32_eq(dealer_stack.aggregate_persistent(), 10.0);
-    assert_f32_eq(dealer_stack.aggregate_and_consume_one_shots(), 10.0);
+    assert_f32_eq(dealer_stack.aggregate_persistent(None), 10.0);
+    assert_f32_eq(dealer_stack.aggregate_and_consume_one_shots(None), 10.0);
 }
 
 #[test]

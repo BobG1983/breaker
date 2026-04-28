@@ -62,9 +62,9 @@ fn until_with_sequence_fires_all_reversible_effects_on_first_walk() {
         .expect("DamageBoostStack should exist");
     assert!(!dmg_stack.is_empty());
     assert!(
-        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (dmg_stack.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "DamageBoostStack aggregate should be 2.0, got {}",
-        dmg_stack.aggregate_persistent()
+        dmg_stack.aggregate_persistent(None)
     );
 }
 

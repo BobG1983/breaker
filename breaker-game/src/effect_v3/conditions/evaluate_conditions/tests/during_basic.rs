@@ -198,9 +198,9 @@ fn during_sequence_fires_all_effects_when_condition_true() {
         .expect("DamageBoost stack should exist");
     assert!(!damage_stack.is_empty());
     assert!(
-        (damage_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (damage_stack.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "DamageBoostStack aggregate should be 2.0, got {}",
-        damage_stack.aggregate_persistent()
+        damage_stack.aggregate_persistent(None)
     );
 }
 
@@ -245,7 +245,7 @@ fn during_sequence_reverses_all_effects_when_condition_becomes_false() {
         (world
             .get::<DamageBoostStack>(entity)
             .unwrap()
-            .aggregate_persistent()
+            .aggregate_persistent(None)
             - 2.0)
             .abs()
             < 1e-5,
@@ -272,7 +272,7 @@ fn during_sequence_reverses_all_effects_when_condition_becomes_false() {
         "DamageBoost stack should be empty after reversal"
     );
     assert!(
-        (damage_stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON,
+        (damage_stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON,
         "DamageBoostStack aggregate should be 1.0 (identity) after reversal"
     );
 }

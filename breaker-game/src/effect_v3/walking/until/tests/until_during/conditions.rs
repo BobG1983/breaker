@@ -226,8 +226,8 @@ fn until_with_during_sequence_inner_installs_correctly() {
         .expect("DamageBoostStack should exist");
     assert!(!damage_stack.is_empty());
     assert!(
-        (damage_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (damage_stack.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "DamageBoostStack aggregate should be 2.0 from Sequence inner, got {}",
-        damage_stack.aggregate_persistent()
+        damage_stack.aggregate_persistent(None)
     );
 }

@@ -96,7 +96,7 @@ mod tests {
             .get::<VulnerableStack>(entity)
             .expect("VulnerableStack should be inserted by fire");
         assert!(!stack.is_empty());
-        assert!((stack.aggregate_persistent() - 1.5).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 1.5).abs() <= f32::EPSILON);
     }
 
     #[test]
@@ -115,7 +115,7 @@ mod tests {
         .fire(entity, vulnerable_again_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 3.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 3.0).abs() <= f32::EPSILON);
     }
 
     // ── Behavior 9: `fire` twice same source multiplies aggregate ──
@@ -132,7 +132,7 @@ mod tests {
         config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 2.25).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 2.25).abs() < 1e-5);
     }
 
     // ── Behavior 10.a: `reverse(source)` removes entries by source ──
@@ -150,7 +150,7 @@ mod tests {
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!(stack.is_empty());
-        assert!((stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON);
     }
 
     // ── Behavior 10.b: NEW — `reverse` removes EVERY entry with that source ──
@@ -181,7 +181,7 @@ mod tests {
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!(stack.is_empty());
-        assert!((stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON);
     }
 
     // ── Behavior 11: `reverse` on a stackless entity is a silent no-op ──
@@ -225,7 +225,7 @@ mod tests {
         .reverse_all_by_source(entity, decay_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 0.5).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 0.5).abs() < 1e-5);
     }
 
     // ── Behavior 13: `reverse_all_by_source` on a stackless entity is noop ──
@@ -288,8 +288,8 @@ mod tests {
 
         let stack_a = world_a.get::<VulnerableStack>(entity_a).unwrap();
         let stack_b = world_b.get::<VulnerableStack>(entity_b).unwrap();
-        assert!((stack_a.aggregate_persistent() - 0.5).abs() < 1e-5);
-        assert!((stack_b.aggregate_persistent() - 0.5).abs() < 1e-5);
+        assert!((stack_a.aggregate_persistent(None) - 0.5).abs() < 1e-5);
+        assert!((stack_b.aggregate_persistent(None) - 0.5).abs() < 1e-5);
         assert_eq!(stack_a.is_empty(), stack_b.is_empty());
     }
 }

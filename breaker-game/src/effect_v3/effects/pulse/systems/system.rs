@@ -63,7 +63,7 @@ pub(crate) fn tick_pulse(mut query: PulseEmitterQuery, time: Res<Time>, mut comm
                 .range_per_level
                 .mul_add(stacks_f32, emitter.base_range);
             let base_damage = bolt_base_damage_opt.map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
-            let damage_mult = damage_stack_opt.map_or(1.0, DamageBoostStack::aggregate_persistent);
+            let damage_mult = damage_stack_opt.map_or(1.0, |s| s.aggregate_persistent(None));
 
             commands.spawn((
                 PulseRing,

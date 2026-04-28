@@ -283,9 +283,9 @@ fn reset_bolt_preserves_effect_state() {
         "DamageBoostStack should be non-empty after reset"
     );
     assert!(
-        (active_dmg.aggregate_persistent() - 1.5).abs() <= f32::EPSILON,
+        (active_dmg.aggregate_persistent(None) - 1.5).abs() <= f32::EPSILON,
         "DamageBoostStack aggregate should be 1.5 after reset, got {}",
-        active_dmg.aggregate_persistent()
+        active_dmg.aggregate_persistent(None)
     );
 
     let active_spd = world

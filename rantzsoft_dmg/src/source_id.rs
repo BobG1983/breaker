@@ -29,6 +29,33 @@ impl fmt::Display for SourceId {
     }
 }
 
+/// True iff a damage-boost (or vulnerability) entry whose filter is
+/// `entry_filter` should apply to a `DamageDealt<T>` whose origin is
+/// `emission_source`.
+///
+/// Strict-equality semantics — no instance-stripping, no namespace-prefix
+/// matching, no custom predicates. The four-row truth table:
+///
+/// | `entry_filter` | `emission_source` | result |
+/// |----------------|-------------------|--------|
+/// | `None`         | `None`            | `true` |
+/// | `None`         | `Some(_)`         | `true` |
+/// | `Some(f)`      | `Some(s)`         | `f == s` |
+/// | `Some(_)`      | `None`            | `false` |
+///
+/// In words: an unfiltered entry applies to every emission; a filtered
+/// entry applies only when the emission carries a matching source id (a
+/// `None` emission never matches a `Some(_)` filter).
+///
+/// Both arguments are passed by reference so callers retain ownership.
+#[must_use]
+pub fn entry_applies(entry_filter: Option<&SourceId>, emission_source: Option<&SourceId>) -> bool {
+    match entry_filter {
+        None => true,
+        Some(f) => emission_source.is_some_and(|s| f == s),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{borrow::Cow, collections::HashSet};
@@ -149,5 +176,75 @@ mod tests {
         let cloned = id.clone();
         assert_eq!(cloned, id);
         assert!(matches!(cloned.0, Cow::Owned(_)));
+    }
+
+    // ── Behavior 26: `entry_applies(None, None)` — filterless entry, sourceless emission ──
+
+    #[test]
+    fn entry_applies_none_filter_none_emission_returns_true() {
+        assert!(entry_applies(None, None));
+    }
+
+    // ── Behavior 27: `entry_applies(None, Some)` — filterless entry applies to any emission ──
+
+    #[test]
+    fn entry_applies_none_filter_any_emission_returns_true() {
+        let emission = SourceId::from("protocol:burnout");
+        assert!(entry_applies(None, Some(&emission)));
+    }
+
+    // ── Behavior 28: `entry_applies(Some(X), Some(X))` — filter matches emission ──
+
+    #[test]
+    fn entry_applies_matching_filter_and_emission_returns_true() {
+        let filter = SourceId::from("protocol:burnout");
+        let emission = SourceId::from("protocol:burnout");
+        assert!(entry_applies(Some(&filter), Some(&emission)));
+    }
+
+    #[test]
+    fn entry_applies_match_is_content_equality_across_cow_variants() {
+        // Edge case: explicit `let` bindings keep the SourceId values alive
+        // across the borrow into `entry_applies`. Filter is Cow::Borrowed
+        // (from &'static str); emission is Cow::Owned (from String). Pins
+        // that match is content-equality, NOT pointer/variant equality.
+        let filter = SourceId::from("protocol:burnout");
+        let emission = SourceId::from(String::from("protocol:burnout"));
+        assert!(entry_applies(Some(&filter), Some(&emission)));
+    }
+
+    // ── Behavior 29: `entry_applies(Some(X), Some(Y))` — non-matching filter+emission ──
+
+    #[test]
+    fn entry_applies_mismatched_filter_and_emission_returns_false() {
+        let filter = SourceId::from("protocol:burnout");
+        let emission = SourceId::from("protocol:debt_collector");
+        assert!(!entry_applies(Some(&filter), Some(&emission)));
+    }
+
+    #[test]
+    fn entry_applies_is_case_sensitive() {
+        // Edge case: case-sensitivity inherited from SourceId equality
+        // (Behavior 22 in this file). "protocol:burnout" vs
+        // "protocol:Burnout" must NOT match.
+        let filter = SourceId::from("protocol:burnout");
+        let emission = SourceId::from("protocol:Burnout");
+        assert!(!entry_applies(Some(&filter), Some(&emission)));
+    }
+
+    // ── Behavior 30: `entry_applies(Some(X), None)` — filtered entry never applies to source-less emission ──
+
+    #[test]
+    fn entry_applies_some_filter_none_emission_returns_false() {
+        let filter = SourceId::from("protocol:burnout");
+        assert!(!entry_applies(Some(&filter), None));
+    }
+
+    #[test]
+    fn entry_applies_some_filter_none_emission_holds_for_any_filter_id() {
+        // Edge case: a different filter id with `None` emission also
+        // returns false. Pins that NO filter id matches a None emission.
+        let filter = SourceId::from("protocol:debt_collector");
+        assert!(!entry_applies(Some(&filter), None));
     }
 }

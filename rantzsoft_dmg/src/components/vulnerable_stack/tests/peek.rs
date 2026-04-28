@@ -6,7 +6,7 @@ use crate::SourceId;
 #[test]
 fn aggregate_one_shots_empty_returns_one() {
     let stack = VulnerableStack::default();
-    assert_f32_eq(stack.aggregate_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 1.0);
 }
 
 #[test]
@@ -14,8 +14,8 @@ fn aggregate_one_shots_on_default_stack_does_not_panic_and_is_idempotent() {
     // Edge case for Behavior 86: a default-constructed stack must NOT
     // panic when called. Two consecutive calls both return 1.0.
     let stack = VulnerableStack::default();
-    assert_f32_eq(stack.aggregate_one_shots(), 1.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 1.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 1.0);
 }
 
 // ── Behavior 87: single one-shot returns the value ──
@@ -24,7 +24,7 @@ fn aggregate_one_shots_on_default_stack_does_not_panic_and_is_idempotent() {
 fn aggregate_one_shots_single_value_returns_that_value() {
     let mut stack = VulnerableStack::default();
     stack.add_one_shot(2.5);
-    assert_f32_eq(stack.aggregate_one_shots(), 2.5);
+    assert_f32_eq(stack.aggregate_one_shots(None), 2.5);
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn aggregate_one_shots_single_identity_value_returns_one_but_is_not_empty() {
     // AND is_empty() returns false.
     let mut stack = VulnerableStack::default();
     stack.add_one_shot(1.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 1.0);
     assert!(!stack.is_empty());
 }
 
@@ -46,7 +46,7 @@ fn aggregate_one_shots_multiple_values_returns_product() {
     stack.add_one_shot(1.5);
     stack.add_one_shot(3.0);
     // 2.0 * 1.5 * 3.0 = 9.0.
-    assert_f32_eq(stack.aggregate_one_shots(), 9.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 9.0);
 }
 
 #[test]
@@ -63,8 +63,8 @@ fn aggregate_one_shots_is_order_independent() {
     reverse.add_one_shot(1.5);
     reverse.add_one_shot(2.0);
 
-    assert_f32_eq(forward.aggregate_one_shots(), 9.0);
-    assert_f32_eq(reverse.aggregate_one_shots(), 9.0);
+    assert_f32_eq(forward.aggregate_one_shots(None), 9.0);
+    assert_f32_eq(reverse.aggregate_one_shots(None), 9.0);
 }
 
 // ── Behavior 89: peek does not consume ──
@@ -75,11 +75,11 @@ fn aggregate_one_shots_does_not_consume_across_repeated_calls() {
     stack.add_one_shot(2.0);
     stack.add_one_shot(3.0);
     // Both peek calls return 6.0.
-    assert_f32_eq(stack.aggregate_one_shots(), 6.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 6.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 6.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 6.0);
     // A subsequent consume ALSO returns 6.0 — confirms the peek did not
     // drain.
-    assert_f32_eq(stack.aggregate_and_consume_one_shots(), 6.0);
+    assert_f32_eq(stack.aggregate_and_consume_one_shots(None), 6.0);
 }
 
 #[test]
@@ -89,8 +89,8 @@ fn aggregate_one_shots_after_consume_returns_one() {
     let mut stack = VulnerableStack::default();
     stack.add_one_shot(2.0);
     stack.add_one_shot(3.0);
-    let _ = stack.aggregate_and_consume_one_shots();
-    assert_f32_eq(stack.aggregate_one_shots(), 1.0);
+    let _ = stack.aggregate_and_consume_one_shots(None);
+    assert_f32_eq(stack.aggregate_one_shots(None), 1.0);
 }
 
 // ── Behavior 90: `aggregate_one_shots` ignores the persistent lane ──
@@ -99,7 +99,7 @@ fn aggregate_one_shots_after_consume_returns_one() {
 fn aggregate_one_shots_ignores_persistent_lane() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("mark:fragility"), 5.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 1.0);
 }
 
 #[test]
@@ -109,8 +109,8 @@ fn aggregate_one_shots_isolated_from_persistent_when_both_populated() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("mark:fragility"), 5.0);
     stack.add_one_shot(2.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 2.0);
-    assert_f32_eq(stack.aggregate_persistent(), 5.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 2.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 5.0);
 }
 
 // ── Behavior 91: symmetric peek of both lanes is non-mutating ──
@@ -120,8 +120,8 @@ fn aggregate_one_shots_and_persistent_are_each_isolated() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("mark:fragility"), 6.0);
     stack.add_one_shot(13.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 13.0);
-    assert_f32_eq(stack.aggregate_persistent(), 6.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 13.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 6.0);
 }
 
 #[test]
@@ -130,8 +130,8 @@ fn aggregate_persistent_then_one_shots_are_each_isolated() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("mark:fragility"), 6.0);
     stack.add_one_shot(13.0);
-    assert_f32_eq(stack.aggregate_persistent(), 6.0);
-    assert_f32_eq(stack.aggregate_one_shots(), 13.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 6.0);
+    assert_f32_eq(stack.aggregate_one_shots(None), 13.0);
 }
 
 #[test]
@@ -141,7 +141,7 @@ fn aggregate_one_shots_idempotent_after_cross_method_calls() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("mark:fragility"), 6.0);
     stack.add_one_shot(13.0);
-    let _ = stack.aggregate_one_shots();
-    let _ = stack.aggregate_persistent();
-    assert_f32_eq(stack.aggregate_one_shots(), 13.0);
+    let _ = stack.aggregate_one_shots(None);
+    let _ = stack.aggregate_persistent(None);
+    assert_f32_eq(stack.aggregate_one_shots(None), 13.0);
 }

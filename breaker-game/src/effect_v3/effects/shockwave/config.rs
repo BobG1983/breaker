@@ -37,7 +37,7 @@ impl Fireable for ShockwaveConfig {
         // Snapshot damage multiplier from source entity's active boosts
         let damage_mult = world
             .get::<DamageBoostStack>(entity)
-            .map_or(1.0, DamageBoostStack::aggregate_persistent);
+            .map_or(1.0, |s| s.aggregate_persistent(None));
 
         // Calculate effective max radius from stacking
         let stacks_f32 = self.stacks.saturating_sub(1) as f32;
@@ -326,7 +326,7 @@ mod tests {
             .get::<DamageBoostStack>(source)
             .expect("source should carry a DamageBoostStack");
         assert!(!stack.is_empty());
-        assert!((stack.aggregate_persistent() - 2.0).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 2.0).abs() < 1e-5);
     }
 
     // #23
@@ -367,7 +367,7 @@ mod tests {
             .expect("source should carry a DamageBoostStack");
         // Two-entry aggregate check — proxy for len == 2 since the new
         // stack has no `len()` accessor.
-        assert!((stack.aggregate_persistent() - 6.0).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 6.0).abs() < 1e-5);
     }
 
     // #24

@@ -99,7 +99,7 @@ mod tests {
             .get::<DamageBoostStack>(entity)
             .expect("DamageBoostStack should be inserted by fire");
         assert!(!stack.is_empty());
-        assert!((stack.aggregate_persistent() - 2.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 2.0).abs() <= f32::EPSILON);
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
         .fire(entity, loop_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 3.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 3.0).abs() <= f32::EPSILON);
     }
 
     // ── Behavior 2: `fire` twice same source multiplies aggregate ──
@@ -136,7 +136,7 @@ mod tests {
         config.fire(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 4.0).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 4.0).abs() < 1e-5);
     }
 
     #[test]
@@ -154,7 +154,7 @@ mod tests {
         }
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 32.0).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 32.0).abs() < 1e-5);
     }
 
     // ── Behavior 3.a: `reverse(entity, source)` removes entries by source ──
@@ -172,7 +172,7 @@ mod tests {
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!(stack.is_empty());
-        assert!((stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON);
     }
 
     // ── Behavior 3.b: NEW — `reverse` removes EVERY entry with that source ──
@@ -209,7 +209,7 @@ mod tests {
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!(stack.is_empty());
-        assert!((stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON);
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         .reverse(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 1.5).abs() <= f32::EPSILON);
+        assert!((stack.aggregate_persistent(None) - 1.5).abs() <= f32::EPSILON);
     }
 
     // ── Behavior 4: `reverse` on a stackless entity is a silent no-op ──
@@ -296,7 +296,7 @@ mod tests {
         .reverse_all_by_source(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 1.5).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 1.5).abs() < 1e-5);
     }
 
     #[test]
@@ -317,7 +317,7 @@ mod tests {
         .reverse_all_by_source(entity, "nonexistent", &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
-        assert!((stack.aggregate_persistent() - 2.0).abs() < 1e-5);
+        assert!((stack.aggregate_persistent(None) - 2.0).abs() < 1e-5);
     }
 
     // ── Behavior 6: `reverse_all_by_source` on a stackless entity is noop ──
@@ -383,8 +383,8 @@ mod tests {
 
         let stack_a = world_a.get::<DamageBoostStack>(entity_a).unwrap();
         let stack_b = world_b.get::<DamageBoostStack>(entity_b).unwrap();
-        assert!((stack_a.aggregate_persistent() - 1.5).abs() < 1e-5);
-        assert!((stack_b.aggregate_persistent() - 1.5).abs() < 1e-5);
+        assert!((stack_a.aggregate_persistent(None) - 1.5).abs() < 1e-5);
+        assert!((stack_b.aggregate_persistent(None) - 1.5).abs() < 1e-5);
         assert_eq!(stack_a.is_empty(), stack_b.is_empty());
     }
 }

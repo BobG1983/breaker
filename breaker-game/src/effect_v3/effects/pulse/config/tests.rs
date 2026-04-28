@@ -308,7 +308,7 @@ fn tick_pulse_snapshots_single_entry_damage_boost_stack() {
         .get::<DamageBoostStack>(emitter)
         .expect("emitter should still carry a DamageBoostStack");
     assert!(!stack.is_empty());
-    assert!((stack.aggregate_persistent() - 2.0).abs() < 1e-5);
+    assert!((stack.aggregate_persistent(None) - 2.0).abs() < 1e-5);
 }
 
 // #23
@@ -364,7 +364,7 @@ fn tick_pulse_snapshots_two_entry_damage_boost_stack_as_product() {
         .expect("emitter should still carry a DamageBoostStack");
     // Two-entry aggregate check — proxy for `len == 2` since the new stack
     // has no `len()` accessor.
-    assert!((stack.aggregate_persistent() - 6.0).abs() < 1e-5);
+    assert!((stack.aggregate_persistent(None) - 6.0).abs() < 1e-5);
 }
 
 // #24

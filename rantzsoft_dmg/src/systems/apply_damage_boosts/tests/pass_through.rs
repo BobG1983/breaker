@@ -40,8 +40,8 @@ fn dealer_none_does_not_consume_unrelated_stacks() {
         .world_mut()
         .get_mut::<DamageBoostStack>(unrelated)
         .unwrap();
-    assert_f32_eq(stack.aggregate_persistent(), 99.0);
-    assert_f32_eq(stack.aggregate_and_consume_one_shots(), 99.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 99.0);
+    assert_f32_eq(stack.aggregate_and_consume_one_shots(None), 99.0);
 }
 
 #[test]
@@ -105,7 +105,7 @@ fn two_independent_dealers_apply_independently() {
     assert_f32_eq(drained[1].amount, 30.0);
 
     let d1_stack = app.world().get::<DamageBoostStack>(d1).unwrap();
-    assert_f32_eq(d1_stack.aggregate_persistent(), 2.0);
+    assert_f32_eq(d1_stack.aggregate_persistent(None), 2.0);
 }
 
 #[test]

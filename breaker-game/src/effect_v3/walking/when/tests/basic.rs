@@ -155,9 +155,9 @@ fn when_non_gate_sequence_inner_fires_immediately_not_armed() {
         .expect("DamageBoost should have fired");
     assert!(!dmg.is_empty());
     assert!(
-        (dmg.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (dmg.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "DamageBoostStack aggregate should be 2.0, got {}",
-        dmg.aggregate_persistent()
+        dmg.aggregate_persistent(None)
     );
     assert!(
         world.get::<StagedEffects>(entity).is_none(),

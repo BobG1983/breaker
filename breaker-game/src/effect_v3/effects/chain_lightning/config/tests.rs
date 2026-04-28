@@ -484,7 +484,7 @@ fn chain_lightning_damage_boost_snapshot_frozen_at_fire_time() {
         "source DamageBoostStack should be empty after reverse"
     );
     assert!(
-        (stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON,
+        (stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON,
         "source DamageBoostStack aggregate should be 1.0 after reverse"
     );
 

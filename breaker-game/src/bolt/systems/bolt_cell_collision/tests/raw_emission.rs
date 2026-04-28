@@ -437,7 +437,7 @@ fn full_pipeline_one_shot_boost_drains_exactly_once() {
         .world_mut()
         .get_mut::<DamageBoostStack>(bolt_entity)
         .expect("bolt should still have DamageBoostStack")
-        .aggregate_and_consume_one_shots();
+        .aggregate_and_consume_one_shots(None);
     assert!(
         (drained - 1.0).abs() < f32::EPSILON,
         "after tick, a fresh one-shot drain should return identity (1.0) — \

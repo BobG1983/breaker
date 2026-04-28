@@ -49,9 +49,9 @@ fn bare_fire_targeting_breaker_fires_damage_boost_immediately() {
         "DamageBoost should have been fired immediately on breaker"
     );
     assert!(
-        (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        (stack.aggregate_persistent(None) - 1.1).abs() < 1e-5,
         "single-entry aggregate should be 1.1, got {}",
-        stack.aggregate_persistent()
+        stack.aggregate_persistent(None)
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
@@ -117,9 +117,9 @@ fn multiple_stamps_with_fire_all_fire_immediately() {
         "DamageBoost should have been fired immediately"
     );
     assert!(
-        (damage.aggregate_persistent() - 1.05).abs() < 1e-5,
+        (damage.aggregate_persistent(None) - 1.05).abs() < 1e-5,
         "single-entry aggregate should be 1.05, got {}",
-        damage.aggregate_persistent()
+        damage.aggregate_persistent(None)
     );
 }
 

@@ -17,14 +17,28 @@ use crate::{DamageBoostStack, VulnerableStack};
 /// Both lanes (persistent AND one-shots) are counted on each stack.
 /// Neither lane is consumed — `&` borrows make consumption impossible at
 /// the type level.
+///
+/// Source-filtered entries (added via `add_filtered` /
+/// `add_one_shot_filtered`) are NOT counted by this preview — the preview
+/// has no `emission_source` to compare against, so it conservatively
+/// includes only filterless entries. When source-filtered boosts /
+/// vulnerabilities are present, the actual `apply_damage_boosts` /
+/// `apply_vulnerable` pipeline may produce a higher final value than this
+/// preview reports. This V1 trade-off avoids breaking the function
+/// signature; future revisions may add an optional `source` parameter if
+/// precise previews are required.
 #[must_use]
 pub fn preview_damage(
     base: f32,
     boosts: Option<&DamageBoostStack>,
     vuln: Option<&VulnerableStack>,
 ) -> f32 {
-    let boost_mult = boosts.map_or(1.0, |s| s.aggregate_persistent() * s.aggregate_one_shots());
-    let vuln_mult = vuln.map_or(1.0, |s| s.aggregate_persistent() * s.aggregate_one_shots());
+    let boost_mult = boosts.map_or(1.0, |s| {
+        s.aggregate_persistent(None) * s.aggregate_one_shots(None)
+    });
+    let vuln_mult = vuln.map_or(1.0, |s| {
+        s.aggregate_persistent(None) * s.aggregate_one_shots(None)
+    });
     base * boost_mult * vuln_mult
 }
 
@@ -90,7 +104,7 @@ mod tests {
         boost.add(SourceId::from("src:alpha"), 2.0);
         assert_f32_eq(preview_damage(10.0, Some(&boost), None), 20.0);
         assert_f32_eq(preview_damage(10.0, Some(&boost), None), 20.0);
-        assert_f32_eq(boost.aggregate_persistent(), 2.0);
+        assert_f32_eq(boost.aggregate_persistent(None), 2.0);
     }
 
     // ── Behavior 94: boost one-shot lane only ──
@@ -113,7 +127,7 @@ mod tests {
         boost.add_one_shot(2.0);
         assert_f32_eq(preview_damage(10.0, Some(&boost), None), 20.0);
         assert_f32_eq(preview_damage(10.0, Some(&boost), None), 20.0);
-        assert_f32_eq(boost.aggregate_and_consume_one_shots(), 2.0);
+        assert_f32_eq(boost.aggregate_and_consume_one_shots(None), 2.0);
     }
 
     // ── Behavior 95: vuln persistent lane only ──
@@ -135,7 +149,7 @@ mod tests {
         vuln.add(SourceId::from("mark:fragility"), 3.0);
         assert_f32_eq(preview_damage(10.0, None, Some(&vuln)), 30.0);
         assert_f32_eq(preview_damage(10.0, None, Some(&vuln)), 30.0);
-        assert_f32_eq(vuln.aggregate_persistent(), 3.0);
+        assert_f32_eq(vuln.aggregate_persistent(None), 3.0);
     }
 
     // ── Behavior 96: vuln one-shot lane only ──
@@ -158,7 +172,7 @@ mod tests {
         vuln.add_one_shot(3.0);
         assert_f32_eq(preview_damage(10.0, None, Some(&vuln)), 30.0);
         assert_f32_eq(preview_damage(10.0, None, Some(&vuln)), 30.0);
-        assert_f32_eq(vuln.aggregate_and_consume_one_shots(), 3.0);
+        assert_f32_eq(vuln.aggregate_and_consume_one_shots(None), 3.0);
     }
 
     // ── Behavior 97: full chain — both stacks, both lanes populated ──
@@ -198,12 +212,12 @@ mod tests {
 
         // After the three previews, consume returns the original one-shot
         // values — proves they were never drained.
-        assert_f32_eq(boost.aggregate_and_consume_one_shots(), 1.5);
-        assert_f32_eq(vuln.aggregate_and_consume_one_shots(), 1.25);
+        assert_f32_eq(boost.aggregate_and_consume_one_shots(None), 1.5);
+        assert_f32_eq(vuln.aggregate_and_consume_one_shots(None), 1.25);
 
         // Persistent lanes are untouched by either peek or consume.
-        assert_f32_eq(boost.aggregate_persistent(), 2.0);
-        assert_f32_eq(vuln.aggregate_persistent(), 3.0);
+        assert_f32_eq(boost.aggregate_persistent(None), 2.0);
+        assert_f32_eq(vuln.aggregate_persistent(None), 3.0);
     }
 
     #[test]
@@ -224,8 +238,8 @@ mod tests {
         let _ = preview_damage(10.0, Some(&boost), Some(&vuln));
         let _ = preview_damage(10.0, Some(&boost), Some(&vuln));
 
-        let _ = boost.aggregate_and_consume_one_shots();
-        let _ = vuln.aggregate_and_consume_one_shots();
+        let _ = boost.aggregate_and_consume_one_shots(None);
+        let _ = vuln.aggregate_and_consume_one_shots(None);
 
         assert_f32_eq(preview_damage(10.0, Some(&boost), Some(&vuln)), 60.0);
     }
@@ -252,5 +266,98 @@ mod tests {
         // reach the 1.0 * 1.0 terminal state through different code paths.
         let vuln = VulnerableStack::default();
         assert_f32_eq(preview_damage(10.0, None, Some(&vuln)), 10.0);
+    }
+
+    // ── Behavior 100: preview excludes filtered entries ──
+    //
+    // Under V1 source filtering, `preview_damage` passes `None` to the
+    // underlying aggregates. Filterless entries always count, filtered
+    // entries are always skipped — the preview becomes a conservative
+    // lower bound when source-filtered entries are present on either
+    // stack.
+
+    #[test]
+    fn preview_damage_excludes_filtered_boost_entries() {
+        let mut boost = DamageBoostStack::default();
+        boost.add(SourceId::from("src:alpha"), 2.0); // filterless persistent — counted
+        boost.add_filtered(
+            SourceId::from("src:beta"),
+            5.0,
+            SourceId::from("protocol:burnout"),
+        ); // filtered persistent — NOT counted
+        boost.add_one_shot(3.0); // filterless one-shot — counted (peeked)
+        boost.add_one_shot_filtered(7.0, SourceId::from("protocol:burnout")); // filtered one-shot — NOT counted
+
+        // 10.0 * 2.0 (filterless persistent) * 3.0 (filterless one-shot) = 60.0.
+        // Filtered 5.0 and 7.0 entries skipped.
+        assert_f32_eq(preview_damage(10.0, Some(&boost), None), 60.0);
+    }
+
+    #[test]
+    fn preview_damage_does_not_consume_or_mutate_boost_lanes() {
+        // Edge case for Behavior 100 (boost-side non-consumption): after
+        // the preview call, persistent lane is untouched (filterless 2.0
+        // visible via aggregate_persistent(None)) AND one-shot lane is
+        // untouched (filterless 3.0 visible via aggregate_one_shots(None)).
+        // The filtered entries are still present too, but invisible to
+        // None-emission aggregates; their non-consumption is implicit
+        // because the filterless ones are still observable.
+        let mut boost = DamageBoostStack::default();
+        boost.add(SourceId::from("src:alpha"), 2.0);
+        boost.add_filtered(
+            SourceId::from("src:beta"),
+            5.0,
+            SourceId::from("protocol:burnout"),
+        );
+        boost.add_one_shot(3.0);
+        boost.add_one_shot_filtered(7.0, SourceId::from("protocol:burnout"));
+
+        let _ = preview_damage(10.0, Some(&boost), None);
+
+        // Persistent lane: filterless 2.0 still observable.
+        assert_f32_eq(boost.aggregate_persistent(None), 2.0);
+        // One-shot lane: filterless 3.0 still observable (peek did not
+        // drain).
+        assert_f32_eq(boost.aggregate_one_shots(None), 3.0);
+    }
+
+    #[test]
+    fn preview_damage_excludes_filtered_vuln_entries() {
+        // Mirror of the boost-side test on `VulnerableStack`. Pins that
+        // the filtered-skip semantics is symmetric across both stacks.
+        let mut vuln = VulnerableStack::default();
+        vuln.add(SourceId::from("src:alpha"), 2.0); // filterless persistent — counted
+        vuln.add_filtered(
+            SourceId::from("src:beta"),
+            5.0,
+            SourceId::from("protocol:burnout"),
+        ); // filtered persistent — NOT counted
+        vuln.add_one_shot(3.0); // filterless one-shot — counted (peeked)
+        vuln.add_one_shot_filtered(7.0, SourceId::from("protocol:burnout")); // filtered one-shot — NOT counted
+
+        // 10.0 * 2.0 (filterless persistent) * 3.0 (filterless one-shot) = 60.0.
+        // Filtered 5.0 and 7.0 entries skipped.
+        assert_f32_eq(preview_damage(10.0, None, Some(&vuln)), 60.0);
+    }
+
+    #[test]
+    fn preview_damage_does_not_consume_or_mutate_vuln_lanes() {
+        // Edge case for the vuln-side mirror: after the preview call, both
+        // lanes are untouched (filterless 2.0 / 3.0 still observable via
+        // aggregate_persistent(None) / aggregate_one_shots(None)).
+        let mut vuln = VulnerableStack::default();
+        vuln.add(SourceId::from("src:alpha"), 2.0);
+        vuln.add_filtered(
+            SourceId::from("src:beta"),
+            5.0,
+            SourceId::from("protocol:burnout"),
+        );
+        vuln.add_one_shot(3.0);
+        vuln.add_one_shot_filtered(7.0, SourceId::from("protocol:burnout"));
+
+        let _ = preview_damage(10.0, None, Some(&vuln));
+
+        assert_f32_eq(vuln.aggregate_persistent(None), 2.0);
+        assert_f32_eq(vuln.aggregate_one_shots(None), 3.0);
     }
 }

@@ -14,7 +14,7 @@ fn remove_by_source_removes_every_matching_entry() {
     }
     stack.remove_by_source(&SourceId::from("m:a"));
     // Only the two m:b 2.0 entries survive: 2.0 * 2.0 = 4.0.
-    assert_f32_eq(stack.aggregate_persistent(), 4.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 4.0);
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn remove_by_source_of_every_source_leaves_stack_empty() {
     }
     stack.remove_by_source(&SourceId::from("m:a"));
     stack.remove_by_source(&SourceId::from("m:b"));
-    assert_f32_eq(stack.aggregate_persistent(), 1.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.0);
     assert!(stack.is_empty());
 }
 
@@ -41,7 +41,7 @@ fn remove_by_source_absent_is_noop() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("m:a"), 1.5);
     stack.remove_by_source(&SourceId::from("m:absent"));
-    assert_f32_eq(stack.aggregate_persistent(), 1.5);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.5);
 }
 
 #[test]
@@ -50,5 +50,5 @@ fn remove_by_source_on_default_stack_does_not_panic() {
     // must not panic — aggregate remains 1.0 afterwards.
     let mut stack = VulnerableStack::default();
     stack.remove_by_source(&SourceId::from("m:anything"));
-    assert_f32_eq(stack.aggregate_persistent(), 1.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.0);
 }

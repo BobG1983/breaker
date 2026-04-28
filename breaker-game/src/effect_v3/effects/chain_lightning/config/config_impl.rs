@@ -37,7 +37,7 @@ impl Fireable for ChainLightningConfig {
             .map_or(DEFAULT_BOLT_BASE_DAMAGE, |d| d.0);
         let damage_boost = world
             .get::<DamageBoostStack>(entity)
-            .map_or(1.0, DamageBoostStack::aggregate_persistent);
+            .map_or(1.0, |s| s.aggregate_persistent(None));
 
         let chip = EffectSourceChip::from_source_str(source);
 

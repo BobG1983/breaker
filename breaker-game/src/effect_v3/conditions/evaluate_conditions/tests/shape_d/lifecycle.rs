@@ -190,9 +190,9 @@ fn shape_d_multiple_entries_track_participants_independently_by_source() {
         .get::<DamageBoostStack>(impactee)
         .expect("impactee should carry a DamageBoostStack");
     assert!(
-        (impactee_dmg.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (impactee_dmg.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "impactee DamageBoostStack aggregate should be 2.0, got {}",
-        impactee_dmg.aggregate_persistent()
+        impactee_dmg.aggregate_persistent(None)
     );
 
     // Disarm — both entries disarm
@@ -216,7 +216,7 @@ fn shape_d_multiple_entries_track_participants_independently_by_source() {
         "impactee's DamageBoost stack should be empty after disarm"
     );
     assert!(
-        (impactee_stack.aggregate_persistent() - 1.0).abs() <= f32::EPSILON,
+        (impactee_stack.aggregate_persistent(None) - 1.0).abs() <= f32::EPSILON,
         "impactee DamageBoostStack aggregate should collapse to 1.0 after disarm"
     );
 

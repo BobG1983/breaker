@@ -123,7 +123,7 @@ pub use messages::{DamageDealt, DespawnEntity, Destroyed, HealDealt, KillYoursel
 pub use plugin::RantzDmgPlugin;
 pub use preview::preview_damage;
 pub use sets::DmgSystems;
-pub use source_id::SourceId;
+pub use source_id::{SourceId, entry_applies};
 // Per-`T` pipeline systems are NOT re-exported at the crate root. External
 // consumers must reach them via `RantzDmgAppExt::register_dmgable::<T>()`.
 // See the compile_fail doctests at the top of this file.

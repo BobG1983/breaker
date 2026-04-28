@@ -8,7 +8,7 @@ use crate::SourceId;
 #[test]
 fn aggregate_persistent_empty_returns_one() {
     let stack = VulnerableStack::default();
-    assert_f32_eq(stack.aggregate_persistent(), 1.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.0);
 }
 
 #[test]
@@ -17,7 +17,7 @@ fn aggregate_persistent_with_only_one_shots_returns_one() {
     // aggregate_persistent.
     let mut stack = VulnerableStack::default();
     stack.add_one_shot(9.9);
-    assert_f32_eq(stack.aggregate_persistent(), 1.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.0);
 }
 
 // ── Behavior 77: `Default::default()` produces an empty stack ──
@@ -26,7 +26,7 @@ fn aggregate_persistent_with_only_one_shots_returns_one() {
 fn default_produces_empty_stack() {
     let stack = VulnerableStack::default();
     assert!(stack.is_empty());
-    assert_f32_eq(stack.aggregate_persistent(), 1.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.0);
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn default_consume_one_shots_returns_one_and_leaves_empty() {
     // Edge case for Behavior 77: running consume on the default stack
     // returns 1.0 and leaves it empty.
     let mut stack = VulnerableStack::default();
-    assert_f32_eq(stack.aggregate_and_consume_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_and_consume_one_shots(None), 1.0);
     assert!(stack.is_empty());
 }
 

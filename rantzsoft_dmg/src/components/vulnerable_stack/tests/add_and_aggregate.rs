@@ -7,7 +7,7 @@ use crate::SourceId;
 fn add_appends_single_entry_to_persistent() {
     let mut stack = VulnerableStack::default();
     stack.add(SourceId::from("mark:fragility"), 1.5);
-    assert_f32_eq(stack.aggregate_persistent(), 1.5);
+    assert_f32_eq(stack.aggregate_persistent(None), 1.5);
     assert!(!stack.is_empty());
 }
 
@@ -31,7 +31,7 @@ fn same_source_added_five_times_aggregates_to_mult_pow_five() {
     // Pins the Vec semantic: if a future implementer swaps to
     // `HashMap<SourceId, f32>`, this aggregate would collapse to 3.0.
     // 3.0_f32.powi(5) == 243.0.
-    assert_f32_eq(stack.aggregate_persistent(), 243.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 243.0);
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn interleaved_sources_produce_product_of_all_entries() {
     stack.add(SourceId::from("m:a"), 2.0);
     stack.add(SourceId::from("m:b"), 1.25);
     stack.add(SourceId::from("m:a"), 2.0);
-    assert_f32_eq(stack.aggregate_persistent(), 5.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 5.0);
 }
 
 // ── Behavior 70: mixed sources and mixed multipliers multiply all entries ──
@@ -53,7 +53,7 @@ fn mixed_sources_and_multipliers_multiply_all_entries() {
     stack.add(SourceId::from("m:b"), 2.0);
     stack.add(SourceId::from("m:c"), 4.0);
     // 1.5 * 2.0 * 4.0 = 12.0.
-    assert_f32_eq(stack.aggregate_persistent(), 12.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 12.0);
 }
 
 #[test]
@@ -74,6 +74,6 @@ fn aggregate_is_order_independent() {
     // on BOTH sides independently. Comparing forward vs reverse directly
     // would pass trivially against the RED stub (both return 0.0), so we
     // pin each side to 12.0 to keep the RED-gate signal meaningful.
-    assert_f32_eq(forward.aggregate_persistent(), 12.0);
-    assert_f32_eq(reverse.aggregate_persistent(), 12.0);
+    assert_f32_eq(forward.aggregate_persistent(None), 12.0);
+    assert_f32_eq(reverse.aggregate_persistent(None), 12.0);
 }

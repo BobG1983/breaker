@@ -138,9 +138,9 @@ fn until_time_expires_with_sequence_reverses_all_effects_on_natural_expiry() {
         "DamageBoost must be applied once on arm"
     );
     assert!(
-        (dmg_stack.aggregate_persistent() - 1.5).abs() < 1e-5,
+        (dmg_stack.aggregate_persistent(None) - 1.5).abs() < 1e-5,
         "DamageBoost aggregate must be 1.5 after arm — got {}",
-        dmg_stack.aggregate_persistent()
+        dmg_stack.aggregate_persistent(None)
     );
 
     let timers = app

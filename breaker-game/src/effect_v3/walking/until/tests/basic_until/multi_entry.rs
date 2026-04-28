@@ -143,9 +143,9 @@ fn until_removal_does_not_affect_other_bound_effects_entries() {
         .expect("DamageBoostStack should exist from When firing");
     assert!(!dmg_stack.is_empty());
     assert!(
-        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (dmg_stack.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "When tree should have fired DamageBoost with multiplier 2.0, got aggregate {}",
-        dmg_stack.aggregate_persistent()
+        dmg_stack.aggregate_persistent(None)
     );
 
     // BoundEffects should only contain chip_b
@@ -219,9 +219,9 @@ fn multiple_until_entries_track_independently() {
         .get::<DamageBoostStack>(entity)
         .expect("DamageBoostStack should exist after both fire");
     assert!(
-        (dmg_stack.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (dmg_stack.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "DamageBoostStack aggregate should be 2.0 after fire, got {}",
-        dmg_stack.aggregate_persistent()
+        dmg_stack.aggregate_persistent(None)
     );
 
     // Second walk: Bumped — only chip_a reverses
@@ -251,9 +251,9 @@ fn multiple_until_entries_track_independently() {
         .get::<DamageBoostStack>(entity)
         .expect("chip_b DamageBoost should still be active");
     assert!(
-        (dmg_stack_after.aggregate_persistent() - 2.0).abs() < 1e-5,
+        (dmg_stack_after.aggregate_persistent(None) - 2.0).abs() < 1e-5,
         "chip_b DamageBoost should still aggregate to 2.0 (BoltLostOccurred is its gate), got {}",
-        dmg_stack_after.aggregate_persistent()
+        dmg_stack_after.aggregate_persistent(None)
     );
 
     let remaining = &world.get::<BoundEffects>(entity).unwrap().0;

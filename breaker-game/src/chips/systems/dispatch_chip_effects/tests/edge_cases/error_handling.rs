@@ -44,9 +44,9 @@ fn unknown_chip_name_does_not_panic() {
         .expect("Valid chip should have fired");
     assert!(!stack.is_empty());
     assert!(
-        (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        (stack.aggregate_persistent(None) - 1.1).abs() < 1e-5,
         "Valid chip should have fired a single 1.1 multiplier; got aggregate {}",
-        stack.aggregate_persistent()
+        stack.aggregate_persistent(None)
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();
@@ -75,9 +75,9 @@ fn missing_chip_catalog_resource_does_not_panic() {
         .get::<DamageBoostStack>(proof_breaker)
         .expect("Proof: system works with catalog");
     assert!(
-        !stack.is_empty() && (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        !stack.is_empty() && (stack.aggregate_persistent(None) - 1.1).abs() < 1e-5,
         "Proof: DamageBoostStack should hold a single 1.1 entry, got aggregate {}",
-        stack.aggregate_persistent()
+        stack.aggregate_persistent(None)
     );
 
     // --- Now test without catalog ---
@@ -130,9 +130,9 @@ fn missing_chip_inventory_resource_does_not_panic() {
         .get::<DamageBoostStack>(proof_breaker)
         .expect("Proof: system works with inventory");
     assert!(
-        !stack.is_empty() && (stack.aggregate_persistent() - 1.1).abs() < 1e-5,
+        !stack.is_empty() && (stack.aggregate_persistent(None) - 1.1).abs() < 1e-5,
         "Proof: DamageBoostStack should hold a single 1.1 entry, got aggregate {}",
-        stack.aggregate_persistent()
+        stack.aggregate_persistent(None)
     );
 
     // --- Now test without inventory ---
@@ -172,9 +172,9 @@ fn missing_chip_inventory_resource_does_not_panic() {
         .get::<DamageBoostStack>(breaker)
         .expect("DamageBoost should fire even without inventory");
     assert!(
-        !stack.is_empty() && (stack.aggregate_persistent() - 1.5).abs() < 1e-5,
+        !stack.is_empty() && (stack.aggregate_persistent(None) - 1.5).abs() < 1e-5,
         "DamageBoost should fire once with multiplier 1.5; got aggregate {}",
-        stack.aggregate_persistent()
+        stack.aggregate_persistent(None)
     );
 }
 
@@ -197,9 +197,9 @@ fn no_messages_pending_no_entities_modified() {
         .get::<DamageBoostStack>(breaker)
         .expect("Proof: system dispatches on message");
     assert!(
-        (stack.aggregate_persistent() - 1.5).abs() < 1e-5,
+        (stack.aggregate_persistent(None) - 1.5).abs() < 1e-5,
         "Proof: single-fire aggregate should be 1.5, got {}",
-        stack.aggregate_persistent()
+        stack.aggregate_persistent(None)
     );
 
     app.world_mut()
@@ -214,9 +214,9 @@ fn no_messages_pending_no_entities_modified() {
         .get::<DamageBoostStack>(breaker)
         .expect("DamageBoostStack should persist across the no-op update");
     assert!(
-        (stack_after.aggregate_persistent() - 1.5).abs() < 1e-5,
+        (stack_after.aggregate_persistent(None) - 1.5).abs() < 1e-5,
         "Empty pending selections must not mutate the stack; aggregate should remain 1.5, got {}",
-        stack_after.aggregate_persistent()
+        stack_after.aggregate_persistent(None)
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();

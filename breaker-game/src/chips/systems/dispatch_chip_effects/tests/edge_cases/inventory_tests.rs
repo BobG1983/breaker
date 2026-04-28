@@ -120,9 +120,9 @@ fn multiple_chip_selections_in_same_frame_all_processed() {
         .get::<DamageBoostStack>(breaker)
         .expect("Chip A's DamageBoost should have been applied");
     assert!(
-        (damage.aggregate_persistent() - 1.1).abs() < 1e-5,
+        (damage.aggregate_persistent(None) - 1.1).abs() < 1e-5,
         "Chip A's DamageBoost should produce aggregate 1.1, got {}",
-        damage.aggregate_persistent()
+        damage.aggregate_persistent(None)
     );
 
     let speed = app
@@ -169,9 +169,9 @@ fn same_chip_selected_twice_in_one_frame_both_processed() {
     // 1.1 * 1.1 = 1.21 — proxy for "two entries are stacked" in lieu of
     // the removed `.len()` accessor.
     assert!(
-        (damage.aggregate_persistent() - 1.21).abs() < 1e-5,
+        (damage.aggregate_persistent(None) - 1.21).abs() < 1e-5,
         "Both selections should stack; aggregate should be 1.1 * 1.1 = 1.21, got {}",
-        damage.aggregate_persistent()
+        damage.aggregate_persistent(None)
     );
 
     let inventory = app.world().resource::<ChipInventory>();

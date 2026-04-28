@@ -32,6 +32,12 @@ mod damage;
 #[path = "pipeline_integration/edge.rs"]
 mod edge;
 
+#[path = "pipeline_integration/filter_boost.rs"]
+mod filter_boost;
+
+#[path = "pipeline_integration/filter_vulnerable.rs"]
+mod filter_vulnerable;
+
 #[path = "pipeline_integration/heal.rs"]
 mod heal;
 

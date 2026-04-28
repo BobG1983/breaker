@@ -25,7 +25,7 @@ fn persistent_only_stack_multiplies_and_retains() {
 
     // Persistent lane retained.
     let stack = app.world().get::<DamageBoostStack>(dealer).unwrap();
-    assert_f32_eq(stack.aggregate_persistent(), 2.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 2.0);
 }
 
 #[test]
@@ -75,7 +75,7 @@ fn multi_entry_persistent_multiplies_by_product() {
     assert_f32_eq(drained[0].amount, 60.0);
 
     let stack = app.world().get::<DamageBoostStack>(dealer).unwrap();
-    assert_f32_eq(stack.aggregate_persistent(), 6.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 6.0);
 }
 
 #[test]

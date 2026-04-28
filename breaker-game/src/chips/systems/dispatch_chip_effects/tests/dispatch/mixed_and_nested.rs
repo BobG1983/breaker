@@ -65,9 +65,9 @@ fn mixed_fire_and_when_fire_fires_when_stamps() {
         "DamageBoost should have been fired immediately"
     );
     assert!(
-        (damage.aggregate_persistent() - 1.2).abs() < 1e-5,
+        (damage.aggregate_persistent(None) - 1.2).abs() < 1e-5,
         "single-entry aggregate should be 1.2, got {}",
-        damage.aggregate_persistent()
+        damage.aggregate_persistent(None)
     );
 
     let bound = app.world().get::<BoundEffects>(breaker).unwrap();

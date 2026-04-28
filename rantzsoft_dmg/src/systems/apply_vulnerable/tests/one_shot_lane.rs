@@ -23,7 +23,7 @@ fn one_shot_only_multiplies_and_drains() {
     assert_f32_eq(drained[0].amount, 10.0);
 
     let mut stack = app.world_mut().get_mut::<VulnerableStack>(target).unwrap();
-    assert_f32_eq(stack.aggregate_and_consume_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_and_consume_one_shots(None), 1.0);
 }
 
 #[test]

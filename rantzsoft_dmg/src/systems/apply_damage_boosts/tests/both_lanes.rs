@@ -26,8 +26,8 @@ fn both_lanes_populated_multiplies_by_product() {
 
     // Post-tick: persistent retained, one-shots drained.
     let mut stack = app.world_mut().get_mut::<DamageBoostStack>(dealer).unwrap();
-    assert_f32_eq(stack.aggregate_persistent(), 2.0);
-    assert_f32_eq(stack.aggregate_and_consume_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 2.0);
+    assert_f32_eq(stack.aggregate_and_consume_one_shots(None), 1.0);
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn both_lanes_multi_entry_multiplies_by_product_of_products() {
     assert_f32_eq(drained[0].amount, 120.0);
 
     let stack = app.world().get::<DamageBoostStack>(dealer).unwrap();
-    assert_f32_eq(stack.aggregate_persistent(), 10.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 10.0);
 }
 
 #[test]

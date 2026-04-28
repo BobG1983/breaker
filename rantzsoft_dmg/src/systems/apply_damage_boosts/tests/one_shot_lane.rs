@@ -24,7 +24,7 @@ fn one_shot_only_stack_multiplies_and_drains() {
 
     // One-shot lane drained.
     let mut stack = app.world_mut().get_mut::<DamageBoostStack>(dealer).unwrap();
-    assert_f32_eq(stack.aggregate_and_consume_one_shots(), 1.0);
+    assert_f32_eq(stack.aggregate_and_consume_one_shots(None), 1.0);
 }
 
 #[test]

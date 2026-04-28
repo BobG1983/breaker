@@ -23,7 +23,7 @@ fn persistent_only_multiplies_and_retains() {
     assert_f32_eq(drained[0].amount, 8.0);
 
     let stack = app.world().get::<VulnerableStack>(target).unwrap();
-    assert_f32_eq(stack.aggregate_persistent(), 2.0);
+    assert_f32_eq(stack.aggregate_persistent(None), 2.0);
 }
 
 #[test]
