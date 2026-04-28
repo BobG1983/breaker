@@ -17,35 +17,31 @@ Do NOT assume a Bevy version. If build errors appear to be Bevy-related, check `
 
 ## Process
 
-### Game Crate Tests
-```
-cargo dtest 2>&1
-```
-- Report: total tests run, passed, failed, ignored.
-- For each failure: test name, file location if identifiable, and the assertion/panic message.
-- If compilation fails before tests run, report it as a build failure (not test failure).
+### How to read cargo output without losing information
 
-### rantzsoft_spatial2d Tests
-```
-cargo spatial2dtest 2>&1
-```
-- Report separately (different crate).
-- Same format: total run, passed, failed, ignored.
+**NEVER pipe cargo output to `head` or `tail`** — they hide everything outside their window. A failed test or compile error frequently has critical information at both ends of the output (compile errors at the top, failure list at the bottom); head/tail discards one or the other.
 
-### rantzsoft_physics2d Tests
-```
-cargo physics2dtest 2>&1
-```
-- Report separately (different crate).
-- Same format: total run, passed, failed, ignored.
+**Use `grep` to filter cargo output to the actionable lines.** Grep is the right tool for this: it reduces output volume without hiding anything that matches the pattern. Every matching line reaches your context; use `-A`/`-B` for surrounding context.
 
-### Scenario Runner Tests
+### Run the workspace test suite
+
+```bash
+cargo all-dtest 2>&1 | grep -E "^test result:|FAILED$|^test [^ ]+ \.\.\. FAILED|^failures:|^---- .* stdout ----|panicked at|^error\[E[0-9]+\]|^error:" -A 3
 ```
-cargo dstest 2>&1
-```
-- Report separately from game crate tests (different crate, different alias).
-- Same format: total run, passed, failed, ignored.
-- Same fix spec hint format for failures.
+
+Pattern breakdown:
+- `^test result:` — one line per crate with totals
+- `FAILED$` and `^test [^ ]+ \.\.\. FAILED` — individual failing tests
+- `^---- .* stdout ----` and `panicked at` — panic blocks; `-A 3` grabs the assertion message
+- `^error\[E[0-9]+\]` / `^error:` — compile errors with `-A 3` for the source-line snippet
+
+`cargo all-dtest` runs every workspace crate's tests under the project's required feature flags in a single invocation. Per `.claude/rules/cargo.md`, this is the canonical command — do NOT run the per-crate aliases (`cargo dtest`, `cargo spatial2dtest`, etc.) one by one unless `cargo all-dtest` is broken or the user explicitly asked for a targeted run.
+
+If you need more context around a specific failure, run a second targeted grep with a tighter pattern (e.g., the test fn name) and a wider `-A`/`-B`. Never re-run cargo just to see more output — the second invocation will rebuild and waste minutes.
+
+Report: total tests run, passed, failed, ignored — broken down by crate (each crate emits its own `test result:` line). For each failure, extract the test name, location (file from the panic line), and the assertion/panic message.
+
+If compilation fails before any tests run, no `test result:` lines will appear — treat the entire run as a build failure.
 
 For each failing test, append a `**Fix spec hint:**` block:
 

@@ -8,13 +8,13 @@ Used during the delegated implementation pipeline (see `delegating-to-subagents.
 
 | Agent | Purpose | When to use |
 |-------|---------|-------------|
-| **planning-writer-specs-tests** | Writes behavioral test specs to `.claude/specs/` | Starting a new feature — SPEC phase (parallel with specs-code) |
-| **planning-writer-specs-code** | Writes implementation specs to `.claude/specs/` | Starting a new feature — SPEC phase (parallel with specs-tests) |
+| **planning-writer-specs-tests** | Writes behavioral test specs to `.claude/specs/` | Starting a new feature — TEST SPEC phase (before writer-tests) |
 | **planning-reviewer-specs-tests** | Pressure-tests test specs for missing behaviors, incorrect values, scope | After test spec is written — before writer-tests |
-| **planning-reviewer-specs-code** | Pressure-tests implementation specs for feasibility, alignment, patterns | After impl spec is written — before writer-code |
-| **writer-tests** | Writes failing tests from a test spec file (RED phase) | After specs are reviewed and clean |
-| **writer-code** | Implements production code to pass failing tests (GREEN phase) | After RED gate passes |
+| **writer-tests** | Writes failing tests from a test spec file (RED phase) | After test spec is reviewed and clean |
 | **reviewer-tests** | Verifies writer-tests output matches spec behaviors | After each writer-tests completes, before RED gate |
+| **planning-writer-specs-code** | Writes implementation specs to `.claude/specs/`, reading the failing tests on disk as the contract | CODE SPEC phase — **after RED gate passes**, before writer-code |
+| **planning-reviewer-specs-code** | Pressure-tests implementation specs against the actual failing tests | After impl spec is written — before writer-code |
+| **writer-code** | Implements production code to pass failing tests (GREEN phase) | After code spec is reviewed and clean |
 
 ## Runner Agents
 

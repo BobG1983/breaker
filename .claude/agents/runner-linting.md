@@ -17,43 +17,41 @@ Do NOT assume a Bevy version. If clippy errors appear to be Bevy-related, check 
 
 ## Process
 
-Run these checks **in this order**:
+### How to read cargo output without losing information
+
+**NEVER pipe cargo output to `head` or `tail`** — they hide everything outside their window. Clippy errors and warnings can appear anywhere in the output; head/tail throws away whatever falls outside the window.
+
+**Use `grep` to filter cargo output to the actionable lines.** Grep is the right tool for this: it reduces output volume without hiding anything that matches the pattern. Every matching line reaches your context; use `-A`/`-B` to grab surrounding context.
+
+### Steps
+
+Run in this order:
 
 ### 1. Format
-```
+
+```bash
 cargo fmt 2>&1
+cargo fmt --check 2>&1 | grep -E "^Diff in |^error" -A 5 || echo "fmt clean"
 ```
-- Run `cargo fmt` to auto-format in place. Then run `cargo fmt --check` to confirm nothing remains.
-- If files were formatted, list them in the report.
 
-### 2. Clippy — Game Crate
-```
-cargo dclippy 2>&1
-```
-- Report warnings and errors separately.
-- For each warning/error: file:line, the lint name, and a one-line summary.
-- Count total warnings and errors.
+`cargo fmt` auto-formats in place. `cargo fmt --check` reports anything that still needs formatting (and exits non-zero if it found diffs). If files were reformatted, list them in the report (use `git status --short`).
 
-### 3. Clippy — rantzsoft_spatial2d
-```
-cargo spatial2dclippy 2>&1
-```
-- Report separately.
-- Same format: warnings and errors, file:line, lint name, one-line summary.
+### 2. Clippy — full workspace
 
-### 4. Clippy — rantzsoft_physics2d
+```bash
+cargo all-dclippy 2>&1 | grep -E "^error\[E[0-9]+\]|^error:|^warning:|^\s*Compiling [a-z_-]+|^\s*Checking [a-z_-]+" -A 3
 ```
-cargo physics2dclippy 2>&1
-```
-- Report separately.
-- Same format.
 
-### 5. Clippy — Scenario Runner Crate
-```
-cargo dsclippy 2>&1
-```
-- Report separately from game crate clippy.
-- Same format: warnings and errors, file:line, lint name, one-line summary.
+Pattern breakdown:
+- `^error\[E[0-9]+\]` / `^error:` — clippy errors, `-A 3` grabs the suggestion block
+- `^warning:` — clippy warnings, `-A 3` grabs the suggestion
+- `Compiling` / `Checking` — crate boundary markers so you can attribute each finding to the right crate
+
+`cargo all-dclippy` runs clippy across every workspace crate with the project's required feature flags in a single invocation. Per `.claude/rules/cargo.md`, this is the canonical command — do NOT run the per-crate aliases (`cargo dclippy`, `cargo spatial2dclippy`, etc.) one by one unless `cargo all-dclippy` is broken or the user explicitly asked for a targeted run.
+
+If you need more context around a specific finding, run a second targeted grep with a tighter pattern (e.g., the lint name or file path) and wider `-A`/`-B`. Never re-run cargo just to see more output — the second invocation will rebuild and waste minutes.
+
+Report warnings and errors separately. Count totals per crate (the `Compiling` / `Checking` boundary lines mark which crate each finding came from).
 
 For each clippy **error** (not warning) from either crate, append a `**Fix spec hint:**` block:
 

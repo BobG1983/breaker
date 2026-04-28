@@ -1,11 +1,18 @@
 # Delegating to Sub-Agents
 
-All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The **planning-writer-specs** → **planning-reviewer-specs** → **writer-tests** → **writer-code** pipeline produces the code. Spec agents write to `.claude/specs/`; writers read from there.
+All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The pipeline runs **test specs first, all the way to RED, before code specs are written** — the failing tests on disk are the contract the impl spec is written against.
+
+```
+test spec → test-spec review → writer-tests → reviewer-tests → RED gate
+  → code spec → code-spec review → writer-code → GREEN gate
+```
+
+Spec agents write to `.claude/specs/`; writers read from there.
 
 ## The Flow
 
 See `.claude/rules/tdd.md` for the TDD cycle definition, RED/GREEN gate procedures, and when to commit.
-See `.claude/rules/spec-workflow.md` for the spec revision loop (steps 3-6) and briefing requirements.
+See `.claude/rules/spec-workflow.md` for the spec revision loop and briefing requirements.
 See `.claude/rules/spec-format-tests.md` and `.claude/rules/spec-format-code.md` for spec templates.
 See `.claude/rules/routing-failures.md` for routing failures to fix agents.
 See `.claude/rules/routing-repeated-failures.md` for when to stop retrying and escalate.
@@ -13,45 +20,60 @@ See `.claude/rules/verification-tiers.md` for Basic, Standard, and Full verifica
 See `.claude/rules/git.md` for git usage and rules.
 
 ```
-1. Main agent describes the feature, identifies parallel waves
-2. Research wave (when triggered — see below)                                  ── optional
-3. Launch planning-writer-specs-tests + planning-writer-specs-code             ── SPEC phase
-   per wave (in parallel — both write to .claude/specs/)
-4. Launch planning-reviewer-specs-tests + planning-reviewer-specs-code         ── SPEC REVIEW
-   as each spec completes (in parallel)
-5. Main agent triages reviews, sends revisions back to spec writers
-6. Repeat 4–5 until both reviewers confirm specs are clean
-7. Main agent reviews final spec summaries, creates shared prerequisites
-8. Launch writer-tests per wave (reads spec from .claude/specs/)               ── RED phase
-9. Launch reviewer-tests as each writer-tests completes (in parallel)
-10. After ALL reviewer-tests pass: single runner-tests                         ── RED gate
-11. Launch ALL writer-codes in parallel (reads spec from .claude/specs/)       ── GREEN phase
-12. After ALL writer-codes complete: single runner-tests                       ── GREEN gate
-13. Basic Verification Tier                                                   ─┐
-14. Route failures → fix agents → Basic Verification Tier after each fix       │ REFACTOR
-15. /simplify on changed code → Basic Verification Tier if changes             │
-16. Repeat 13–15 until Basic Verification Tier is clean and /simplify is clean │
-17. Wiring (lib.rs, game.rs, shared.rs) → Basic Verification Tier            ─┘
-18. Standard Verification Tier                                                 ── commit gate
-19. Route failures → fix agents → Basic Verification Tier → repeat from 13
-20. Commit
-21. Full Verification Tier                                                     ── pre-merge gate
-22. Route failures → fix agents → Basic Verification Tier → Standard → Full
-23. Merge according to git rules
+ 1. Main agent describes the feature, identifies parallel waves
+ 2. Research wave (when triggered — see below)                                  ── optional
+ 3. Shared prerequisites (cross-wave types/messages, if any)                    ── prereq
+ 4. Launch planning-writer-specs-tests per wave (in parallel)                   ── TEST SPEC
+    Each writes its test spec to .claude/specs/<wave>-<feature>-tests.md
+ 5. Launch planning-reviewer-specs-tests as each test spec completes            ── TEST SPEC REVIEW
+    (in parallel)
+ 6. Main agent triages reviews, sends revisions back to test-spec writers
+ 7. Repeat 5–6 until every test spec is clean
+ 8. Launch writer-tests per wave (reads test spec from .claude/specs/)          ── RED phase
+    in parallel
+ 9. Launch reviewer-tests as each writer-tests completes (in parallel)
+10. After ALL reviewer-tests pass: single runner-tests                          ── RED gate
+11. Launch planning-writer-specs-code per wave (in parallel)                    ── CODE SPEC
+    Each reads BOTH the test spec AND the failing tests on disk; writes its
+    impl spec to .claude/specs/<wave>-<feature>-code.md
+12. Launch planning-reviewer-specs-code as each code spec completes             ── CODE SPEC REVIEW
+    (in parallel). Reviewer cross-checks the impl plan against the actual
+    failing tests, not just the test spec.
+13. Main agent triages reviews, sends revisions back to code-spec writers
+14. Repeat 12–13 until every code spec is clean
+15. Launch ALL writer-codes in parallel (reads code spec from .claude/specs/)   ── GREEN phase
+16. After ALL writer-codes complete: single runner-tests                        ── GREEN gate
+17. Basic Verification Tier                                                    ─┐
+18. Route failures → fix agents → Basic Verification Tier after each fix        │ REFACTOR
+19. /simplify on changed code → Basic Verification Tier if changes              │
+20. Repeat 17–19 until Basic Verification Tier is clean and /simplify is clean  │
+21. Wiring (lib.rs, game.rs, shared.rs) → Basic Verification Tier             ─┘
+22. Standard Verification Tier                                                  ── commit gate
+23. Route failures → fix agents → Basic Verification Tier → repeat from 17
+24. Commit
+25. Full Verification Tier                                                      ── pre-merge gate
+26. Route failures → fix agents → Basic Verification Tier → Standard → Full
+27. Merge according to git rules
 ```
 
 Update session-state after every agent notification — see `.claude/rules/session-state.md`.
 
-### Key principle: maximize parallelism, serialize only cargo
+### Why test spec → RED → code spec (not parallel specs)
 
-- **Spec writers**: planning-writer-specs-tests + planning-writer-specs-code run in parallel (no cargo)
-- **Spec reviewers**: planning-reviewer-specs-tests + planning-reviewer-specs-code run in parallel (no cargo)
-- **Writer-tests**: launch as each test spec is finalized (no cargo)
-- **Reviewer-tests**: launch as each writer-tests completes (no cargo)
+Writing the impl spec **after** the failing tests exist on disk lets the impl spec writer reference concrete test functions, exact assertions, and real file paths instead of inferring the contract from prose. It eliminates cross-spec drift (the tests pin the contract; the impl spec just describes how to satisfy them). The code-spec reviewer's job becomes "does this impl plan satisfy these specific failing tests?" rather than "do two prose documents agree?". Wave-level parallelism is unchanged — different waves still run their pipelines independently.
+
+### Key principle: maximize parallelism within phases, serialize only cargo
+
+- **Test-spec writers**: one per wave, in parallel (no cargo)
+- **Test-spec reviewers**: one per wave, in parallel (no cargo)
+- **Writer-tests**: one per wave, in parallel (no cargo)
+- **Reviewer-tests**: launch as each writer-tests completes, in parallel (no cargo)
 - **RED gate**: single `runner-tests` after ALL reviewer-tests pass (cargo — serialized)
-- **Writer-codes**: run in parallel after RED gate (no cargo)
+- **Code-spec writers**: one per wave, in parallel — but ONLY after RED gate (no cargo)
+- **Code-spec reviewers**: one per wave, in parallel (no cargo)
+- **Writer-codes**: one per wave, in parallel (no cargo)
 - **GREEN gate**: single `runner-tests` after ALL writer-codes complete (cargo — serialized)
-- **Planning ahead**: launch spec writers for upcoming phases while current implementation is in flight
+- **Planning ahead**: launch test-spec writers for upcoming phases while current implementation is in flight
 
 ## Parallel Waves
 
@@ -70,7 +92,7 @@ When producing a plan, the main agent **MUST** identify which parts of the work 
 - Wave 4: cross-domain updates (collision system reads)
 - Main agent creates shared prerequisites (query aliases) before all waves launch
 
-Each wave runs its own spec → review → writer-tests → reviewer-tests pipeline in parallel. Then ALL waves batch into a single RED gate, single GREEN gate, and single verification sweep.
+Each wave runs its own test-spec → test-spec-review → writer-tests → reviewer-tests pipeline in parallel. Then ALL waves batch into a single RED gate. After RED, each wave runs its own code-spec → code-spec-review → writer-code pipeline in parallel. Then ALL waves batch into a single GREEN gate, and a single verification sweep.
 
 ## Research Wave (Step 2)
 

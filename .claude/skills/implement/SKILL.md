@@ -89,27 +89,27 @@ Record wave structure and decisions in session-state.
 
 If waves share types, messages, or query aliases — create them now before specs begin. This may be a direct edit (simple type definitions) or a mini spec → writer cycle for anything non-trivial.
 
-### Step 4 — Spec phase (per wave, parallel)
+### Step 4 — Test spec phase (per wave, parallel)
 
-For each wave, launch in parallel:
+For each wave, launch:
 - **planning-writer-specs-tests** — writes test spec to `.claude/specs/<wave>-<feature>-tests.md`
-- **planning-writer-specs-code** — writes impl spec to `.claude/specs/<wave>-<feature>-code.md`
 
-Brief each spec writer with ALL required context per `spec-workflow.md` Briefing Spec Writers section. Include research results from Step 2 if applicable.
+Multiple waves run their test-spec writers in parallel.
+
+Brief each writer with ALL required context per `spec-workflow.md` Briefing Spec Writers section. Include research results from Step 2 if applicable.
 
 Update session-state as each completes.
 
-### Step 5 — Spec review loop
+### Step 5 — Test spec review loop
 
-As each spec completes, launch its reviewer in parallel:
+As each test spec completes, launch its reviewer in parallel:
 - **planning-reviewer-specs-tests** — pressure-tests the test spec
-- **planning-reviewer-specs-code** — pressure-tests the impl spec
 
 Triage findings per `spec-workflow.md` Spec Revision Loop:
 1. Dismiss false positives
-2. Route valid feedback back to the spec writer
+2. Route valid feedback back to the test-spec writer
 3. Re-launch reviewer if BLOCKING or IMPORTANT findings were revised
-4. **Do NOT proceed to Step 6 until BOTH specs are confirmed clean**
+4. **Do NOT proceed to Step 6 until every test spec is confirmed clean**
 
 Update session-state after each agent notification.
 
@@ -125,11 +125,33 @@ For each wave:
 - Tests MUST fail (if any pass → investigate before proceeding)
 - If tests don't compile → route back to writer-tests with compiler error
 
-Update session-state RED Gate column after the gate.
+Update session-state RED Gate column after the gate. Record the actual failing test file path(s) — the next step needs them.
 
-### Step 7 — GREEN phase
+### Step 7 — Code spec phase (per wave, parallel)
 
-After RED gate passes:
+After the RED gate passes, the failing tests on disk are the contract. Launch:
+- **planning-writer-specs-code** per wave (in parallel) — writes impl spec to `.claude/specs/<wave>-<feature>-code.md`
+
+Brief each writer with:
+- The test spec file path
+- The failing test file path(s) from Step 6 — the agent MUST read these
+- Confirmation that tests compile and fail (RED gate passed)
+- All standard briefing items per `spec-workflow.md`
+
+Update session-state as each completes.
+
+### Step 8 — Code spec review loop
+
+As each code spec completes, launch its reviewer in parallel:
+- **planning-reviewer-specs-code** — pressure-tests the impl spec against the actual failing tests
+
+Same triage loop as Step 5. **Do NOT proceed to Step 9 until every code spec is confirmed clean.**
+
+Update session-state after each agent notification.
+
+### Step 9 — GREEN phase
+
+After every code spec is clean:
 1. Launch ALL **writer-codes** in parallel (one per wave, reads spec from `.claude/specs/<wave>-<feature>-code.md`)
 2. After ALL complete, launch a single **runner-tests** (GREEN gate)
 
@@ -139,7 +161,7 @@ After RED gate passes:
 
 Update session-state GREEN column after the gate.
 
-### Step 8 — REFACTOR phase
+### Step 10 — REFACTOR phase
 
 ```
 /verify basic
@@ -152,18 +174,18 @@ Wiring (lib.rs, game.rs, shared.rs if needed)
 
 Repeat until `/verify basic` is clean and `/simplify` finds nothing.
 
-### Step 9 — Commit gate
+### Step 11 — Commit gate
 
 Run `/verify standard`.
 
 Fix any failures per `routing-failures.md`, re-running `/verify basic` after each fix, then `/verify standard` again.
 
-### Step 10 - Repeat 
+### Step 12 — Repeat
 
 1. Mark the work as complete in `session-state.md` and the plan file
-2. Repeat Steps 4-9 until the **entire** plan is complete
+2. Repeat Steps 4–11 until the **entire** plan is complete
 
-### Step 11 — Commit
+### Step 13 — Commit
 
 When the final `/verify standard` passes for the entire plan:
 1. Stage *all* files

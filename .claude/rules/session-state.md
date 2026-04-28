@@ -25,12 +25,12 @@ Every one of these events requires an immediate session-state update:
 | Agent completes | Update |
 |----------------|--------|
 | planning-writer-specs-tests | Specs table → Test Spec column |
-| planning-writer-specs-code | Specs table → Code Spec column |
-| planning-reviewer-specs-tests | Specs table → Test Review column |
-| planning-reviewer-specs-code | Specs table → Code Review column |
+| planning-reviewer-specs-tests | Specs table → Test-Spec Review column |
 | writer-tests | Specs table → Writer-Tests column |
 | reviewer-tests | Specs table → Test Review column |
 | runner-tests (RED gate) | Specs table → RED Gate column |
+| planning-writer-specs-code | Specs table → Code Spec column |
+| planning-reviewer-specs-code | Specs table → Code-Spec Review column |
 | writer-code | Specs table → Writer-Code column |
 | runner-tests (GREEN gate) | Specs table → GREEN column |
 | runner-linting | Verification Results table |
@@ -39,6 +39,8 @@ Every one of these events requires an immediate session-state update:
 | Any reviewer (Standard tier) | Verification Results table |
 | Any guard (Full tier) | Verification Results table |
 | Fix agent | Active Failures → update attempt count and result |
+
+The Specs table columns appear in **pipeline order** (left to right): test spec is written and reviewed first, tests are written and reviewed, the RED gate fires, then the code spec is written and reviewed, then writer-code, then GREEN. See `.claude/rules/delegating-to-subagents.md` for the full flow.
 
 ## Format
 
@@ -71,7 +73,7 @@ Keep under 80 lines. Use this exact structure:
 - REVISED: [old decision] → [new decision] — [why]
 
 ## Spec Progress
-| Domain | Test Spec | Code Spec | Spec Review | Writer-Tests | Test Review | RED Gate | Writer-Code | GREEN | Notes |
+| Domain | Test Spec | Test-Spec Review | Writer-Tests | Test Review | RED Gate | Code Spec | Code-Spec Review | Writer-Code | GREEN | Notes |
 
 ## Verification Results
 | Agent | Status | Action Needed |
