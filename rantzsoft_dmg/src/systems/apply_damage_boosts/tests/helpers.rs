@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use super::super::system::apply_damage_boosts;
-use crate::{messages::DamageDealt, traits::Dmgable};
+use crate::{SourceId, messages::DamageDealt, traits::Dmgable};
 
 #[derive(Component)]
 pub(super) struct TestT;
@@ -72,8 +72,8 @@ pub(super) fn mk_msg(dealer: Option<Entity>, amount: f32) -> DamageDealt<TestT> 
 }
 
 /// Constructs a `DamageDealt` with an explicit `attributed_to` override. Dealer-only
-/// `mk_msg` above always sets `attributed_to: None`, so this variant is needed for
-/// the W2 coverage.
+/// `mk_msg` above always sets `attributed_to: None`, so this variant is needed by
+/// attribution tests that need both `dealer` and `attributed_to` set.
 pub(super) fn mk_msg_full(
     dealer: Option<Entity>,
     attributed_to: Option<Entity>,
@@ -85,6 +85,25 @@ pub(super) fn mk_msg_full(
         target: Entity::PLACEHOLDER,
         amount,
         source: None,
+        _marker: PhantomData,
+    }
+}
+
+/// Constructs a `DamageDealt` with an explicit emission `source`. Used by the
+/// system-level source-filter coverage to verify that `apply_damage_boosts`
+/// passes `msg.source.as_ref()` into both aggregate calls so filtered entries
+/// scope correctly.
+pub(super) fn mk_msg_with_source(
+    dealer: Option<Entity>,
+    source: Option<SourceId>,
+    amount: f32,
+) -> DamageDealt<TestT> {
+    DamageDealt::<TestT> {
+        dealer,
+        attributed_to: None,
+        target: Entity::PLACEHOLDER,
+        amount,
+        source,
         _marker: PhantomData,
     }
 }

@@ -134,7 +134,7 @@ DamageBoostStack on bolt entity
 DamageDealt<Cell>.amount scaled before apply_damage::<Cell>
 ```
 
-**Preview helper** — `rantzsoft_dmg::preview_damage(base, boosts, vuln) -> f32` produces a non-consuming peek at the final damage value (counts one-shots without consuming them). Used by `bolt_cell_collision` to predict lethality for pierce decisions without racing the pipeline's own consumption.
+**Preview helper** — `rantzsoft_dmg::preview_damage(base, boosts, vuln) -> f32` produces a non-consuming peek at the final damage value (counts one-shots without consuming them). Used by `bolt_cell_collision` to predict lethality for pierce decisions without racing the pipeline's own consumption. **V1 limitation**: the preview passes `None` as the emission source to both `aggregate_persistent` and `aggregate_and_consume_one_shots`, so entries added via `add_filtered` / `add_one_shot_filtered` are never counted — the preview becomes a conservative lower bound when source-filtered boosts or vulnerabilities are present.
 
 **Rules:**
 

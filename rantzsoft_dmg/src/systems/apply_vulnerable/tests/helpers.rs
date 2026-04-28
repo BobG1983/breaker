@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use bevy::prelude::*;
 
 use super::super::system::apply_vulnerable;
-use crate::{messages::DamageDealt, traits::Dmgable};
+use crate::{SourceId, messages::DamageDealt, traits::Dmgable};
 
 #[derive(Component)]
 pub(super) struct TestT;
@@ -60,6 +60,26 @@ pub(super) fn mk_msg(dealer: Option<Entity>, target: Entity, amount: f32) -> Dam
         target,
         amount,
         source: None,
+        _marker: PhantomData,
+    }
+}
+
+/// Constructs a `DamageDealt` with an explicit emission `source`. Used by the
+/// system-level source-filter coverage to verify that `apply_vulnerable`
+/// passes `msg.source.as_ref()` into both aggregate calls so filtered entries
+/// scope correctly.
+pub(super) fn mk_msg_with_source(
+    dealer: Option<Entity>,
+    target: Entity,
+    source: Option<SourceId>,
+    amount: f32,
+) -> DamageDealt<TestT> {
+    DamageDealt::<TestT> {
+        dealer,
+        attributed_to: None,
+        target,
+        amount,
+        source,
         _marker: PhantomData,
     }
 }

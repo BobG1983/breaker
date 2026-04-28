@@ -15,7 +15,10 @@ type LiveCellQuery<'w, 's> =
 /// one `DamageDealt<Cell>` per live cell whose center lies inside the beam's
 /// half-width along the forward axis. Damage amount is the raw
 /// `req.base_damage` — the pipeline applies boosts/vuln in
-/// `ApplyDamageBoosts` / `ApplyVulnerable` later in the same tick.
+/// `ApplyDamageBoosts` / `ApplyVulnerable` later in the same tick. Forwarding
+/// `req.source` into `DamageDealt.source` is what enables `DamageBoostStack`
+/// and `VulnerableStack` entries registered with `add_filtered` /
+/// `add_one_shot_filtered` to scope their contribution to this emission type.
 ///
 /// Runs in `FixedUpdate` `.in_set(DmgSystems::EmitDamage)`.
 ///

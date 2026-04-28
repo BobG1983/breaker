@@ -39,6 +39,29 @@ source. `Armed` marks a source as the firing context for an armed effect.
 "Shape 4"). Install-keys are opaque to readers — they are matched only by
 full-string equality during teardown (`walking/until/system.rs`).
 
+## Filter predicate
+
+`entry_applies(entry_filter: Option<&SourceId>, emission_source: Option<&SourceId>) -> bool`
+is a public free function re-exported from the crate root. It is the single
+implementation of the four-row filter truth table used by `DamageBoostStack`
+and `VulnerableStack` when aggregating entries against a `DamageDealt<T>`
+emission:
+
+| `entry_filter` | `emission_source` | result |
+|----------------|-------------------|--------|
+| `None` | anything | `true` — filterless entry always applies |
+| `Some(f)` | `Some(s)` and `f == s` | `true` — filter matches emission |
+| `Some(f)` | `Some(s)` and `f != s` | `false` — filter does not match |
+| `Some(f)` | `None` | `false` — filtered entry never applies to a sourceless emission |
+
+**Strict equality** — matching is content-equality on the full `SourceId`
+string. No prefix matching, no namespace-stripping, no wildcard. Case-sensitive.
+
+`entry_applies` is the only place this logic lives. Both stacks share it to
+prevent the two from drifting independently. Callers outside the crate that
+need to test whether an entry would apply may call this function directly
+rather than reimplementing the truth table.
+
 ## Reader helpers
 
 Format-aware readers live alongside the builder so format strings appear in
