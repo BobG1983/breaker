@@ -17,7 +17,8 @@ use crate::{SourceId, source_id::entry_applies};
 //
 // let _ = VulnerableStack::default().clone(); // must fail to compile — VulnerableStack does not derive Clone
 
-/// Persistent-lane entry for `VulnerableStack`. Crate-private — tests must
+/// Persistent-lane entry: source for retraction, multiplier, and optional
+/// emission-source filter (per `entry_applies`). Crate-private — tests must
 /// observe behavior via aggregate methods, not by inspecting fields.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PersistentEntry {
@@ -26,15 +27,17 @@ pub(crate) struct PersistentEntry {
     pub(crate) filter:     Option<SourceId>,
 }
 
-/// One-shot-lane entry for `VulnerableStack`. Crate-private — tests must
-/// observe behavior via aggregate methods, not by inspecting fields.
+/// One-shot-lane entry: untagged multiplier and optional emission-source
+/// filter (per `entry_applies`). Crate-private — tests must observe behavior
+/// via aggregate methods, not by inspecting fields.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct OneShotEntry {
     pub(crate) multiplier: f32,
     pub(crate) filter:     Option<SourceId>,
 }
 
-/// Target-side stack of incoming-damage multipliers.
+/// Target-side stack of incoming-damage multipliers. Symmetric counterpart
+/// of `DamageBoostStack` (which sits on dealers).
 ///
 /// Two disjoint lanes:
 /// - `persistent`: tagged entries with optional source-filter. Callers

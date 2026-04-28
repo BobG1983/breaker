@@ -9,9 +9,9 @@ use crate::{SourceId, source_id::entry_applies};
 //
 // let _ = DamageBoostStack::default().clone(); // must fail to compile — DamageBoostStack does not derive Clone
 
-/// A persistent-lane entry: tagged with its source for retraction, carries a
-/// multiplier, and an optional filter that scopes which `emission_source`
-/// values the entry applies to.
+/// Persistent-lane entry: source for retraction, multiplier, and optional
+/// emission-source filter (per `entry_applies`). Crate-private — tests must
+/// observe behavior via aggregate methods, not by inspecting fields.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct PersistentEntry {
     pub(crate) source:     SourceId,
@@ -19,22 +19,26 @@ pub(crate) struct PersistentEntry {
     pub(crate) filter:     Option<SourceId>,
 }
 
-/// A one-shot-lane entry: bare multiplier with an optional filter that scopes
-/// which `emission_source` values the entry applies to.
+/// One-shot-lane entry: untagged multiplier and optional emission-source
+/// filter (per `entry_applies`). Crate-private — tests must observe behavior
+/// via aggregate methods, not by inspecting fields.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct OneShotEntry {
     pub(crate) multiplier: f32,
     pub(crate) filter:     Option<SourceId>,
 }
 
-/// Dealer-side stack of damage multipliers.
+/// Dealer-side stack of outgoing-damage multipliers. Symmetric counterpart
+/// of `VulnerableStack` (which sits on targets).
 ///
 /// Two disjoint lanes:
-/// - `persistent`: tagged `PersistentEntry` records. Callers retract
-///   themselves by `SourceId`. Appended — duplicate sources are NOT
-///   collapsed, so `N` calls to `add(source, m)` contribute `m^N`.
-/// - `one_shots`: untagged `OneShotEntry` records. Drained (cleared) by
-///   `aggregate_and_consume_one_shots`.
+/// - `persistent`: tagged entries with optional source-filter. Callers
+///   retract themselves by `SourceId` (matching the `source` field, NOT the
+///   `filter` field). Appended — duplicate sources are NOT collapsed, so
+///   `N` calls to `add(source, m)` contribute `m^N`.
+/// - `one_shots`: untagged-source multipliers with optional source-filter.
+///   Drained (cleared) by `aggregate_and_consume_one_shots` ONLY for entries
+///   whose filter applies to the emission source.
 ///
 /// Both lanes initialise empty (`Vec::new()`) via `#[derive(Default)]`.
 #[derive(Component, Debug, Default)]
@@ -46,7 +50,7 @@ pub struct DamageBoostStack {
 impl DamageBoostStack {
     /// Append a persistent multiplier tagged with its source. Duplicate
     /// sources are NOT collapsed — each call adds an entry. The entry has
-    /// no filter — it applies to every emission.
+    /// no filter (`filter: None`) and applies to all emissions.
     pub fn add(&mut self, source: SourceId, multiplier: f32) {
         self.persistent.push(PersistentEntry {
             source,
@@ -68,14 +72,14 @@ impl DamageBoostStack {
 
     /// Retract every persistent entry whose source matches. Takes a
     /// reference to `SourceId` so callers keep ownership of the key.
-    /// Filter-blind — matches by `source` field only.
+    /// Matches by the `source` field only — does NOT inspect `filter`.
     pub fn remove_by_source(&mut self, source: &SourceId) {
         self.persistent.retain(|entry| &entry.source != source);
     }
 
     /// Append a one-shot multiplier. Consumed on the next call to
-    /// `aggregate_and_consume_one_shots`. The entry has no filter — it
-    /// applies to every emission.
+    /// `aggregate_and_consume_one_shots`. The entry has no filter
+    /// (`filter: None`) and applies to all emissions.
     pub fn add_one_shot(&mut self, multiplier: f32) {
         self.one_shots.push(OneShotEntry {
             multiplier,
@@ -83,9 +87,9 @@ impl DamageBoostStack {
         });
     }
 
-    /// Append a one-shot multiplier scoped to emissions whose `source` field
-    /// equals `filter`. Consumed only when a matching emission is processed;
-    /// non-matching emissions preserve the entry on the lane.
+    /// Append a one-shot multiplier with an emission-source filter. Consumed
+    /// only when a matching emission is processed; non-matching emissions
+    /// preserve the entry on the lane.
     pub fn add_one_shot_filtered(&mut self, multiplier: f32, filter: SourceId) {
         self.one_shots.push(OneShotEntry {
             multiplier,
@@ -94,46 +98,45 @@ impl DamageBoostStack {
     }
 
     /// Multiplicative aggregate of every persistent entry whose filter
-    /// applies to `emission_source` (filterless entries always apply;
-    /// filtered entries apply only when their filter equals
-    /// `emission_source`). Empty (or fully-filtered-out) returns `1.0`
-    /// (multiplicative identity).
+    /// applies to `emission_source` (per `entry_applies`). Empty stack — or
+    /// stack with no applicable entries — returns `1.0` (multiplicative
+    /// identity).
     #[must_use]
     pub fn aggregate_persistent(&self, emission_source: Option<&SourceId>) -> f32 {
         self.persistent
             .iter()
-            .filter(|e| entry_applies(e.filter.as_ref(), emission_source))
-            .map(|e| e.multiplier)
+            .filter(|entry| entry_applies(entry.filter.as_ref(), emission_source))
+            .map(|entry| entry.multiplier)
             .product()
     }
 
-    /// Multiplicative aggregate of every one-shot entry whose filter
-    /// applies to `emission_source`. Matching entries are CONSUMED;
-    /// non-matching entries are PRESERVED for a future call. Empty (or
-    /// fully-filtered-out) returns `1.0` (multiplicative identity).
+    /// Multiplicative aggregate of every one-shot entry whose filter applies
+    /// to `emission_source`, AND consumes (removes) those applicable entries
+    /// in place. Non-applicable entries MUST be retained. Empty queue — or
+    /// queue with no applicable entries — returns `1.0`.
     pub fn aggregate_and_consume_one_shots(&mut self, emission_source: Option<&SourceId>) -> f32 {
-        let mut product = 1.0_f32;
+        let mut product: f32 = 1.0;
         self.one_shots.retain(|entry| {
             if entry_applies(entry.filter.as_ref(), emission_source) {
                 product *= entry.multiplier;
-                false // consume — drop from the lane
+                false // applicable → consume (drop from Vec)
             } else {
-                true // preserve — wait for a matching emission
+                true // not applicable → retain
             }
         });
         product
     }
 
-    /// Peek-only sibling of `aggregate_and_consume_one_shots`. Multiplicative
-    /// aggregate of every one-shot entry whose filter applies to
-    /// `emission_source` WITHOUT consuming any entry. Empty (or
-    /// fully-filtered-out) returns `1.0` (multiplicative identity).
+    /// Multiplicative aggregate of every one-shot entry whose filter applies
+    /// to `emission_source` WITHOUT consuming any. Peek-only sibling of
+    /// `aggregate_and_consume_one_shots`. Empty queue — or queue with no
+    /// applicable entries — returns `1.0`.
     #[must_use]
     pub fn aggregate_one_shots(&self, emission_source: Option<&SourceId>) -> f32 {
         self.one_shots
             .iter()
-            .filter(|e| entry_applies(e.filter.as_ref(), emission_source))
-            .map(|e| e.multiplier)
+            .filter(|entry| entry_applies(entry.filter.as_ref(), emission_source))
+            .map(|entry| entry.multiplier)
             .product()
     }
 
