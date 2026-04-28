@@ -107,12 +107,7 @@ mod tests {
         app
     }
 
-    fn press_key(app: &mut App, key: KeyCode) {
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(key);
-        app.update();
-    }
+    use crate::shared::test_utils::press_key;
 
     // ── Navigation tests (existing, preserved) ──────────────────────────
 

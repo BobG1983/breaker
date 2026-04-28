@@ -141,13 +141,45 @@ mod tests {
     use super::*;
 
     fn headless_app() -> App {
+        use bevy::{
+            audio::AudioPlugin,
+            gilrs::GilrsPlugin,
+            log::LogPlugin,
+            render::{
+                RenderPlugin,
+                settings::{RenderCreation, WgpuSettings},
+            },
+            winit::WinitPlugin,
+        };
+
         let mut app = App::new();
-        app.add_plugins((
-            MinimalPlugins,
-            bevy::state::app::StatesPlugin,
-            bevy::asset::AssetPlugin::default(),
-            bevy::input::InputPlugin,
-        ))
+        app.add_plugins(
+            DefaultPlugins
+                .set(RenderPlugin {
+                    synchronous_pipeline_compilation: true,
+                    render_creation: RenderCreation::Automatic(WgpuSettings {
+                        backends: None,
+                        ..default()
+                    }),
+                    ..default()
+                })
+                // No event loop / window in tests.
+                .disable::<WinitPlugin>()
+                // GilrsPlugin opens the host gamepad subsystem and panics in
+                // test environments lacking a controller daemon.
+                .disable::<GilrsPlugin>()
+                // AudioPlugin tries to open an audio device.
+                .disable::<AudioPlugin>()
+                // LogPlugin installs a global tracing subscriber; the second
+                // parallel test in a process panics on "global logger already
+                // set".
+                .disable::<LogPlugin>(),
+        )
+        // Game::default() (not headless()) — DefaultPlugins already provides
+        // the asset types HeadlessAssetsPlugin would otherwise register, and
+        // RenderSetupPlugin (in Game::default) is needed for camera_spawns.
+        // DebugPlugin disabled because it expects dev-tools wiring not
+        // present under tests.
         .add_plugins(
             Game::default()
                 .build()

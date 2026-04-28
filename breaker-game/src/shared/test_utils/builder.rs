@@ -3,9 +3,17 @@
 use std::{marker::PhantomData, time::Duration};
 
 use bevy::{
+    audio::AudioPlugin,
     ecs::schedule::{IntoScheduleConfigs, ScheduleLabel},
+    gilrs::GilrsPlugin,
+    log::LogPlugin,
     prelude::*,
+    render::{
+        RenderPlugin,
+        settings::{RenderCreation, WgpuSettings},
+    },
     time::TimeUpdateStrategy,
+    winit::WinitPlugin,
 };
 use rantzsoft_dmg::{Dmgable, RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
@@ -86,11 +94,18 @@ pub(crate) struct TestAppBuilder<S: StateStatus = NoStates, D: DmgStatus = NoDmg
 }
 
 impl TestAppBuilder<NoStates, NoDmg> {
-    /// Creates a new builder with `MinimalPlugins` registered and Bevy's
-    /// `TimeUpdateStrategy` pinned to `ManualDuration(Duration::ZERO)`.
+    /// Creates a new builder with headless `DefaultPlugins` registered and
+    /// Bevy's `TimeUpdateStrategy` pinned to `ManualDuration(Duration::ZERO)`.
+    ///
+    /// Headless `DefaultPlugins` matches production more closely than
+    /// `MinimalPlugins`: `StatesPlugin`, `AssetPlugin`, `InputPlugin`,
+    /// `RenderPlugin`, `SpritePlugin`, etc. are all registered, so tests
+    /// don't have to manually wire each one. `RenderPlugin` is configured
+    /// with `backends: None` so no GPU is initialised, and `WinitPlugin` is
+    /// disabled so no event loop / window is created.
     ///
     /// Pinning the time-update strategy is load-bearing for parallel-test
-    /// determinism. `MinimalPlugins` registers `TimeUpdateStrategy::Automatic`
+    /// determinism. `DefaultPlugins` registers `TimeUpdateStrategy::Automatic`
     /// by default, which calls `Instant::now()` on every `app.update()` and
     /// feeds wall-clock elapsed time into `Time<Fixed>::overstep`. Under
     /// parallel test load, the 4 `app.update()` calls in `in_state_*`
@@ -107,7 +122,28 @@ impl TestAppBuilder<NoStates, NoDmg> {
     #[must_use]
     pub(crate) fn new() -> Self {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
+        app.add_plugins(
+            DefaultPlugins
+                .set(RenderPlugin {
+                    synchronous_pipeline_compilation: true,
+                    render_creation: RenderCreation::Automatic(WgpuSettings {
+                        backends: None,
+                        ..default()
+                    }),
+                    ..default()
+                })
+                // No event loop / window in tests.
+                .disable::<WinitPlugin>()
+                // GilrsPlugin opens the host gamepad subsystem and panics in
+                // test environments lacking a controller daemon (CI, sandbox).
+                .disable::<GilrsPlugin>()
+                // AudioPlugin tries to open an audio device.
+                .disable::<AudioPlugin>()
+                // LogPlugin installs a global tracing subscriber; the second
+                // parallel test in a process panics on "global logger already
+                // set".
+                .disable::<LogPlugin>(),
+        );
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
         Self {
             app,
@@ -119,9 +155,9 @@ impl TestAppBuilder<NoStates, NoDmg> {
 
 impl<D: DmgStatus> TestAppBuilder<NoStates, D> {
     /// Registers the full state hierarchy (`AppState` + all sub-states).
+    /// `StatesPlugin` itself is provided by `DefaultPlugins` (added in `new`).
     #[must_use]
     pub(crate) fn with_state_hierarchy(mut self) -> TestAppBuilder<WithStates, D> {
-        self.app.add_plugins(bevy::state::app::StatesPlugin);
         self.app.init_state::<AppState>();
         self.app.add_sub_state::<GameState>();
         self.app.add_sub_state::<MenuState>();

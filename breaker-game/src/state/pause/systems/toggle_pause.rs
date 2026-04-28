@@ -38,14 +38,7 @@ mod tests {
 
     /// Simulates a single Escape key press-and-release cycle.
     fn tap_escape(app: &mut App) {
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::Escape);
-        app.update();
-        // Release and clear so next frame sees a clean state
-        let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
-        input.release(KeyCode::Escape);
-        input.clear();
+        crate::shared::test_utils::press_key(app, KeyCode::Escape);
     }
 
     #[test]

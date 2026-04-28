@@ -130,12 +130,7 @@ fn test_app_with_offers_and_protocol_offer(offers: ChipOffers, protocol: Protoco
     app
 }
 
-fn press_key(app: &mut App, key: KeyCode) {
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .press(key);
-    app.update();
-}
+use crate::shared::test_utils::press_key;
 
 #[test]
 fn right_advances_selection() {

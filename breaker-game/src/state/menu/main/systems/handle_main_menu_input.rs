@@ -109,14 +109,7 @@ mod tests {
         app
     }
 
-    /// Simulates a `just_pressed` key event by pressing the key then running
-    /// one update. No `InputPlugin` means no `PreUpdate` clear interference.
-    fn press_key(app: &mut App, key: KeyCode) {
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(key);
-        app.update();
-    }
+    use crate::shared::test_utils::press_key;
 
     #[test]
     fn single_down_press_advances_selection() {

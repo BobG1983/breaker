@@ -170,7 +170,6 @@ mod tests {
             .insert_resource(test_registry())
             .with_system(Update, propagate_node_layout_changes)
             .build();
-        app.add_plugins(AssetPlugin::default());
         app.init_asset::<ColorMaterial>();
         app.init_asset::<Mesh>();
         app

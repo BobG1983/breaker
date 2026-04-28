@@ -84,18 +84,7 @@ fn test_app_with_offers(offers: HazardOffers) -> App {
     test_app_with_offers_and_selection(offers, HazardSelectSelection { card_index: 0 })
 }
 
-fn press_key(app: &mut App, key: KeyCode) {
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .press(key);
-    app.update();
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .release(key);
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .clear();
-}
+use crate::shared::test_utils::press_key;
 
 // ── Domain D.1: menu_right advances card_index by 1 ──────────────────────
 

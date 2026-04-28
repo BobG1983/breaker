@@ -240,10 +240,7 @@ fn dispatch_after_handle_input_consumes_same_frame_message() {
         )
         .build();
 
-    app.world_mut()
-        .resource_mut::<ButtonInput<KeyCode>>()
-        .press(KeyCode::Enter);
-    app.update();
+    crate::shared::test_utils::press_key(&mut app, KeyCode::Enter);
 
     let active = app.world().resource::<ActiveHazards>();
     assert_eq!(

@@ -94,7 +94,6 @@ mod tests {
             .with_resource::<CellTypeRegistry>()
             .with_system(Update, propagate_cell_type_changes)
             .build();
-        app.add_plugins(AssetPlugin::default());
         app.init_asset::<ColorMaterial>();
         app
     }

@@ -56,8 +56,8 @@ let mut app = TestAppBuilder::new()            // MinimalPlugins registered
 
 | Method | Available on | Effect |
 |--------|-------------|--------|
-| `new()` | — | Creates builder with `MinimalPlugins` |
-| `with_state_hierarchy()` | `NoStates` | Adds `StatesPlugin` + all sub-states → transitions to `WithStates` |
+| `new()` | — | Creates builder with **headless `DefaultPlugins`** (`RenderPlugin` configured with `backends: None`; `WinitPlugin`, `GilrsPlugin`, `AudioPlugin`, `LogPlugin` disabled — they open real devices or globals incompatible with parallel tests) |
+| `with_state_hierarchy()` | `NoStates` | Registers all sub-states (`StatesPlugin` itself comes from `DefaultPlugins`) → transitions to `WithStates` |
 | `in_state_node_playing()` | `WithStates` | Drives to `NodeState::Playing` via four `NextState` + `app.update()` steps |
 | `in_state_chip_selecting()` | `WithStates` | Drives to `ChipSelectState::Selecting` via four steps |
 | `with_physics()` | any | Adds `RantzPhysics2dPlugin` |
@@ -84,6 +84,33 @@ tick(&mut app);   // advances exactly one FixedUpdate timestep
 ```
 
 Lives in `shared/test_utils/tick_helper.rs`. Single definition in the codebase — the 73 duplicate copies are replaced with imports.
+
+### Keyboard input — `press_key`
+
+Lives in `shared/test_utils/input.rs`. Tests must NOT mutate
+`ButtonInput<KeyCode>` directly via `press()` — `InputPlugin`'s
+`keyboard_input_system` runs in `PreUpdate` and clears `just_pressed` at
+frame start, so the direct mutation is wiped out before the
+`Update`-schedule system under test reads it.
+
+`press_key(app, key_code)` writes a press event AND a release event for the
+key in the same frame, then runs one `app.update()`. Tap semantics: the
+system observes `just_pressed` during this frame, and the key is left in
+the not-pressed state so a subsequent call fires `just_pressed` again.
+
+```rust
+press_key(&mut app, KeyCode::ArrowDown);
+let selection = app.world().resource::<MainMenuSelection>();
+assert_eq!(selection.selected, MenuItem::Settings);
+```
+
+### Spawn-order text inspection
+
+Bevy `Query::iter()` order is per-archetype. Under `DefaultPlugins`, UI
+required-components scatter spawned text across multiple archetypes, so
+sorting by `Entity` ID does NOT yield spawn order. To inspect spawned UI
+text in spawn order, walk the parent's `Children` tree depth-first — see
+`run_end/.../tests/helpers.rs::collect_texts` for the canonical pattern.
 
 ### `MessageCollector<M>`
 
