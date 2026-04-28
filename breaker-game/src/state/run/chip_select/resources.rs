@@ -74,8 +74,9 @@ pub(super) struct ChipSelectTimer {
     pub remaining: f32,
 }
 
-/// Which row of the chip-select screen currently has focus — the chip card
-/// row or the single protocol card below it.
+/// Which row of the chip-select screen currently has focus — one of three:
+/// the chip card row, the single protocol card below it, or the Greed skip
+/// row (only reachable when `ActiveProtocols::contains(ProtocolKind::Greed)`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(super) enum SelectionRow {
     /// Focus is on a chip card in the chip row.

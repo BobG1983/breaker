@@ -93,15 +93,26 @@ fn card_node(width_px: f32, height_px: f32, padding_px: f32) -> Node {
     }
 }
 
-/// Compose the Greed-skip indicator text from the current `GreedStacks` and
-/// `GreedConfig`. Falls back to `"+0%"` when either resource is missing.
+/// Compose the Greed-skip indicator text. Three cases:
+/// 1. `GreedConfig` present, no skips yet → teach the rate per skip so the
+///    player learns the gamble before they take it.
+/// 2. `GreedConfig` present, at least one skip → show the projected boost
+///    on the *next* offering.
+/// 3. `GreedConfig` absent → fall back to `+0% next` (degenerate state —
+///    Greed was activated but never had its config inserted; shouldn't
+///    happen in production but the helper stays panic-free).
 fn format_skip_indicator(stacks: Option<GreedStacks>, cfg: Option<GreedConfig>) -> String {
     let skips = stacks.map_or(0, |s| s.skips);
-    let boost = match (stacks, cfg) {
-        (Some(s), Some(c)) => s.rarity_boost(c),
-        _ => 0.0,
-    };
-    format!("Skips: {skips} (+{boost:.0}% next)")
+    match cfg {
+        Some(c) if skips == 0 => {
+            format!("Skips: 0 (+{:.0}% per skip)", c.rarity_boost_per_skip)
+        }
+        Some(c) => {
+            let boost = stacks.map_or(0.0, |s| s.rarity_boost(c));
+            format!("Skips: {skips} (+{boost:.0}% next)")
+        }
+        None => format!("Skips: {skips} (+0% next)"),
+    }
 }
 
 fn spawn_timer_display(parent: &mut ChildSpawnerCommands<'_>, config: &ChipSelectConfig) {

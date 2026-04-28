@@ -43,20 +43,18 @@ impl GreedStacks {
 ## Systems
 
 ### `greed_on_skip`
-- **Schedule**: `Update`.
-- **run_if**: `protocol_active(ProtocolKind::Greed)` + `in_state(ChipSelectState::Selecting)`.
-- **Behavior**: Reads `ChipOfferSkipped`. Increments `GreedStacks.skips` by 1. Triggers the chip-select screen close (same state transition as picking a chip).
+- **Schedule**: `Update`. Wired ungated (no `run_if`); enforces the `ActiveProtocols` gate in-body via `reader.clear()` + return when Greed is inactive.
+- **Behavior**: Reads `ChipOfferSkipped`. Increments `GreedStacks.skips` by 1. Does NOT close the chip-select screen — that is handled by `handle_chip_input`'s `SelectionRow::Skip` confirm arm, which calls `state_writer.write(ChangeState::new())` before emitting the message.
 
 ### `greed_modify_rarity_weights` (not a system — a read from chip-select)
 - The chip-select domain's `generate_chip_offerings` system reads `Option<Res<GreedStacks>>` + `Option<Res<GreedConfig>>` when rolling rarity. If present, it shifts the distribution: for each skip, higher-rarity probabilities go up by `rarity_boost_per_skip`%. This is a **read** by chip-select of Greed's resource — allowed.
 
-### `greed_cleanup_run`
-- **Schedule**: On run-end cleanup.
-- **Behavior**: Resets `GreedStacks` to default. Does not carry across runs.
+### Cleanup
+- `GreedStacks` is cleared by `reset_run_state` as part of `RunInventories::clear_all`. Does not carry across runs. There is no separate `greed_cleanup_run` system.
 
 ### UI integration
-- The chip-select screen renders a Skip button + current skip count when Greed is active (UI reads `Res<ActiveProtocols>`).
-- Skip button click emits `ChipOfferSkipped` from the chip-select UI input handler.
+- The chip-select screen renders a Skip row (button marker + indicator text) when Greed is active (conditional spawn reads `Res<ActiveProtocols>`).
+- The Skip row is navigated via keyboard: `handle_chip_input` gains a `SelectionRow::Skip` arm; pressing confirm while focused on the Skip row emits `ChipOfferSkipped`. No separate click pipeline is used — the chip-select screen is keyboard-only.
 
 ## Pipeline position (dmg crate)
 
