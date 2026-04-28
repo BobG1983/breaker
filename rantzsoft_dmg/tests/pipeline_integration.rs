@@ -26,7 +26,7 @@
 // `pipeline_integration/` as the spec prescribes while resolving the
 // modules correctly.
 
-#[path = "pipeline_integration/damage.rs"]
+#[path = "pipeline_integration/damage/mod.rs"]
 mod damage;
 
 #[path = "pipeline_integration/edge.rs"]
