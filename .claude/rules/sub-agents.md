@@ -69,6 +69,12 @@ Used during pre-planning research (see `delegating-to-subagents.md` step 2) and 
 | **researcher-crates** | Evaluates crate options against project criteria | Choosing a new dependency |
 | **researcher-git** | Analyzes git history for a file, function, or feature area | Modifying code with non-obvious history |
 
+## Debugger
+
+| Agent | Purpose | When to use |
+|-------|---------|-------------|
+| **debugger** | Systematic root-cause analysis via the DEBUG protocol — hypotheses, Five Whys, regression spec hint output | Spawned by `/investigate`, especially after the 3-attempt circuit-break or for failures spanning multiple components |
+
 ## Scenario Agents
 
 | Agent | Purpose | When to use |

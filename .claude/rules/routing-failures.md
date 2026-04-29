@@ -29,14 +29,14 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | Confidence | Route |
 |---|---|
 | High | Regression spec hint → **writer-tests** → **writer-code** |
-| Low | Main agent reads src first → writes spec → **writer-tests** → **writer-code** |
+| Low | `/investigate` (spawns `debugger`) → regression spec hint → **writer-tests** → **writer-code** |
 
 ## reviewer-correctness bugs
 
 | Confidence | Route |
 |---|---|
 | High | Regression spec hint → **writer-tests** → **writer-code** |
-| Low | Main agent investigates → writes spec → **writer-tests** → **writer-code** |
+| Low | `/investigate` (spawns `debugger`) → regression spec hint → **writer-tests** → **writer-code** |
 
 ## reviewer-completeness findings
 

@@ -22,7 +22,8 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 6. Read `.claude/rules/spec-format-tests.md` for the format requirements
 7. **Read the test spec file** at the path provided in your prompt
 8. Read the domain code referenced in the spec — understand what already exists
-9. **If an implementation spec file exists** (path in your prompt), read it for cross-spec alignment
+
+You run BEFORE the RED gate. The implementation spec is written AFTER the RED gate, so it does not exist yet — do not look for it.
 
 ## What You Check
 
@@ -49,12 +50,9 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 - Are reference files pointed to real, existing files?
 - Is the test file location specified?
 
-### Cross-Spec Alignment (when implementation spec exists)
-- Does every behavior in the test spec have a corresponding element in the implementation spec?
-- Do type names match between specs?
-- Are test file locations consistent?
-
 **Note:** Design pillar review (speed, tension, decisions, synergy, etc.) is NOT your responsibility. The **guard-game-design** agent handles that during the Full Verification Tier.
+
+**Note:** Cross-spec alignment is NOT your responsibility — the implementation spec is written AFTER the RED gate, by which time the failing tests on disk are the contract. `planning-reviewer-specs-code` cross-checks the impl spec against the actual failing tests, not against this test spec.
 
 ## Output Format
 
@@ -73,9 +71,6 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 ### Missing Behaviors
 [behaviors the spec should include but doesn't — with Given/When/Then for each]
 [or "None." if complete]
-
-### Cross-Spec Alignment
-[alignment issues with implementation spec — or "N/A" if impl spec not yet available]
 
 ### Scope Assessment
 [too big / right-sized / too small — with recommendation if wrong-sized]

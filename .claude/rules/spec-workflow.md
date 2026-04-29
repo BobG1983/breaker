@@ -93,6 +93,25 @@ Only AFTER the RED gate passes are code specs written. The failing tests on disk
    - **Update session-state** after each completes
 3. Code-spec revision loop until every code spec is clean
 
+## Phase 4 — GREEN
+
+After every code spec is clean, drive to GREEN:
+
+1. Launch **writer-code** per wave (in parallel) — reads its impl spec AND the failing tests
+2. Single **runner-tests** GREEN gate after ALL writer-codes complete
+3. Route any failing tests back to writer-code via fix spec hints (see `.claude/rules/routing-failures.md`)
+4. **Update session-state** after each agent notification
+
+## Full Sequence
+
+```
+test spec  →  review test spec (loop)
+            →  writer-tests  →  reviewer-tests  →  RED gate (runner-tests)
+            →  code spec    →  review code spec (loop)
+            →  writer-code  →  GREEN gate (runner-tests)
+            →  REFACTOR
+```
+
 ## Spec Revision Loop
 
 The same loop applies to test specs (in Phase 1) and code specs (in Phase 3):

@@ -1,8 +1,8 @@
 ---
 name: writer-tests
-description: "Use this agent to write failing tests from a behavioral spec before implementation begins. The writer-tests translates behavioral descriptions into concrete Rust/Bevy test code that compiles but fails, establishing the TDD red phase. Always used as the first half of the writer-tests → writer-code pair. The main agent reviews test output before launching the writer-code.\n\nExamples:\n\n- Before implementing a new system:\n  Assistant: \"Let me use the writer-tests agent to create failing tests from this behavioral spec.\"\n\n- When delegating domain implementation:\n  Assistant: \"Launching writer-tests for bolt and cells domains in parallel — each gets a behavioral spec.\"\n\n- After the main agent writes a behavioral spec:\n  Assistant: \"Spec ready. Let me use the writer-tests to translate this into failing tests.\""
+description: "Use this agent to write failing tests from an approved test spec, establishing the TDD RED phase. Runs after the test spec has been written and reviewed clean. Followed by reviewer-tests, then the RED gate (runner-tests). Only after the RED gate passes does the code spec phase begin (planning-writer-specs-code → planning-reviewer-specs-code → writer-code).\n\nExamples:\n\n- After the test spec has been reviewed clean:\n  Assistant: \"Test spec approved. Launching writer-tests to produce failing tests.\"\n\n- When delegating domain implementation:\n  Assistant: \"Launching writer-tests for bolt and cells domains in parallel — each reads its approved test spec.\"\n\n- During RED gate fix loop:\n  Assistant: \"Tests didn't compile. Routing back to writer-tests with the compiler error.\""
 tools: Read, Write, Edit, Bash, Glob, Grep
-model: opus
+model: sonnet
 color: purple
 ---
 

@@ -1,6 +1,7 @@
 {
   "showThinkingSummaries": true,
   "effortLevel": "high",
+  "model": "sonnet",
   "env": {
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": 50
   },

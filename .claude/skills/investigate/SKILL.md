@@ -1,19 +1,26 @@
 ---
 name: investigate
-description: Methodical problem-solving workflow for debugging issues. Use when attempting to resolve bugs, errors, failing tests, failing scenarios, or unexpected behavior.
+description: Methodical root-cause analysis for bugs, failing tests, failing scenarios, or unexpected behavior. The orchestrator does NOT run the DEBUG protocol itself — it spawns the `debugger` subagent (Opus) for hypothesis work, runs targeted tests / researcher agents on the debugger's recommendation, feeds results back, and routes the final regression spec hint through the standard fix pipeline.
 ---
 
-# Systematic Debugging
+# Investigate
 
-A structured approach to debugging that prevents premature solutions and ensures root cause identification.
+A structured workflow for debugging that puts heavy reasoning on `debugger` (Opus) while the orchestrator (Sonnet) coordinates spawns and routes the eventual fix.
+
+## Rules
+
+- **The orchestrator does NOT run the DEBUG protocol itself.** Hypothesis generation, ranking, Five Whys, and root-cause confirmation are all `debugger`'s job.
+- **All agents launch with `run_in_background: true`** — no exceptions
+- **Update `.claude/state/session-state.md` and `.claude/state/investigation-state.md`** after every agent notification
+- **Pass hint blocks verbatim** to fix agents — never rephrase
+- **Circuit-break on the debugger too**: if 3 consecutive debugger spawns fail to converge on a root cause, stop the loop and surface to the user
 
 ## Purpose
 
-Replace ad-hoc debugging with a systematic process that:
-1. Gathers evidence before making changes
-2. Identifies root cause, not just symptoms
-3. Prevents introducing new bugs while fixing
-4. Documents findings for future reference
+1. Gather evidence before changing code
+2. Identify root cause, not just symptoms
+3. Prevent introducing new bugs while fixing
+4. Document findings for future investigations (debugger memory)
 
 ## When to Use
 
@@ -21,174 +28,121 @@ Replace ad-hoc debugging with a systematic process that:
 - Errors that don't make sense
 - Issues that have "already been fixed" before
 - Problems spanning multiple components
-- Performance issues
-- Failing Unit Tests
-- Failing Scenarios
-- Escalation from `/verify`, `/implement`, or `/quickfix` after circuit breaking (3 failed attempts)
+- Failing unit tests
+- Failing scenarios
+- Escalation from `/verify`, `/implement`, or `/quickfix` after circuit-breaking (3 failed fix attempts on the same failure — see `.claude/rules/routing-repeated-failures.md`)
 
 ## When NOT to Use
 
-- You're planning new work, not debugging existing behavior — use `/plan` then `/implement`
+- You're planning new work, not debugging existing behavior — use `/start-dev` then `/implement`
+- The fix is obvious and you can describe it in a sentence — use `/quickfix`
+- A reviewer surfaced a finding with high-confidence routing in `.claude/rules/routing-failures.md` — route it directly, no investigation needed
 
-## The DEBUG Protocol
+## Procedure
 
-### D - Define the Problem
+### Step 1 — Capture failure context
 
-Before touching code, clearly define:
+Gather what you have:
 
-```markdown
-## Problem Definition
+- Failure type: failing test, failing scenario, build error, runtime panic, unexpected behavior
+- Exact error message / test output / scenario violation
+- File path and line of the failure if known
+- Recent changes (last 3–5 commits on the touched files): `git log -5 --oneline path/to/file.rs`
+- Prior fix attempts (if any) — names of agents spawned, what they tried, what failed
 
-**Observed Behavior**: [What is actually happening]
-**Expected Behavior**: [What should happen]
-**Reproduction Steps**:
-1. [Step 1]
-2. [Step 2]
-3. [Result]
+Do NOT start hypothesizing yourself. You are gathering raw evidence for the debugger.
 
-**Environment**: [Tests, Game, Crate, Scenario Runner]
-**Frequency**: [Always / Sometimes / Rare]
-**Recent Changes**: [What changed recently that might relate]
-```
+### Step 2 — Initialize investigation state
 
-### E - Explore the Evidence
+Create or update `.claude/state/investigation-state.md` with the captured context (the debugger reads/updates this file across iterations).
 
-Gather information systematically:
+If `session-state.md` exists, add the investigation to its **Active Investigations** section per `.claude/rules/session-state.md`. If session-state doesn't exist, create a minimal one with just the investigation entry.
 
-**FIRST ALWAYS:** Check the full console output, or related log files
+### Step 3 — Launch the debugger
 
-**THEN:** Use Research Agents or Explore (where no dedicated researcher exists) to trace execution paths, resources used, etc.
+Brief the `debugger` subagent with:
+- The captured failure context from Step 1
+- Path to `.claude/state/investigation-state.md`
+- Path(s) to relevant source / test files
+- Any prior fix attempts and why they failed (if escalated from a circuit-break)
 
-1. **Console/Logs**: Check the console, compiler output, or log files
-2. **ECS State**: Inspect entity components, resources, and system ordering
-3. **Scenario Runner**: Run targeted scenarios to reproduce the issue
-4. **Code Path**: Trace the execution path through systems and commands
-5. **Git History**: Check recent changes to the affected files
+**Do NOT brief with your own hypotheses.** The debugger generates hypotheses; you are not its peer reviewer.
 
-```
-@researcher-codebase: What is the data flow for this function?
-@researcher-git: What is the edit history for this file?
-```
+### Step 4 — Iteration loop
 
-### B - Build Hypotheses
+The debugger returns a **Next Action** in its summary. Execute it, then re-launch the debugger with the result. Possible next actions:
 
-Generate multiple possible causes:
+| Debugger says | Orchestrator does |
+|---------------|-------------------|
+| "Spawn `runner-tests` against test path X" | Spawn `runner-tests` for that specific test, capture pass/fail + output |
+| "Spawn `researcher-codebase` to trace data flow Z" | Spawn the researcher with the specific question, capture findings |
+| "Spawn `researcher-impact` for type T" | Spawn the researcher, capture reference list |
+| "Spawn `researcher-git` for file F" | Spawn the researcher, capture history |
+| "Spawn `researcher-bevy-api` for API X" | Spawn the researcher, capture verification |
+| "Spawn `researcher-rust-errors` for error E" | Spawn the researcher, capture diagnosis |
+| "Re-launch debugger with [evidence]" | Spawn `debugger` again, briefing with the new evidence |
+| "Root cause confirmed; regression spec hint at investigation-state.md" | Exit loop → Step 5 |
 
-```markdown
-## Hypotheses (ranked by likelihood)
+After each spawn:
+1. **Update session-state and investigation-state FIRST** (per `.claude/rules/session-state.md`)
+2. Re-launch the debugger with: prior state file path + the new evidence (test output, researcher report)
+3. Track loop iteration count
 
-1. **[Most likely]**: [Description]
-   - Evidence for: [...]
-   - Evidence against: [...]
-   - Test: [What test could we write that would fail if this hypothesis was true?]
+**Circuit-breaker on the debugger**: if 3 consecutive debugger spawns fail to advance the investigation (no hypothesis disproven, no new lead, no convergence), stop the loop and report STUCK to the user with the full investigation-state for human review.
 
-2. **[Second likely]**: [Description]
-   - Evidence for: [...]
-   - Evidence against: [...]
-   - Test: [What test could we write that would fail if this hypothesis was true?]
+### Step 5 — Route the regression spec hint
 
-3. **[Less likely]**: [Description]
-   - Evidence for: [...]
-   - Evidence against: [...]
-   - Test: [What test could we write that would fail if this hypothesis was true?]
-```
+When the debugger returns a confirmed root cause and a filled regression spec hint:
 
-### U - Uncover Root Cause
+1. Read the hint from `investigation-state.md`
+2. Route per `.claude/rules/routing-failures.md`:
+   - **Code-level bug, high confidence** → `writer-tests` (with the regression spec hint as briefing) → RED gate → `writer-code` → GREEN gate
+   - **Code-level bug, low confidence** → re-launch `debugger` with a request for stronger evidence
+   - **Scenario-level bug** → `writer-scenarios` to add a regression scenario, then `writer-code` if a code fix is also needed
+   - **Spec-level bug** (the test was wrong) → write a test revision spec, route to `writer-tests`
 
-Test hypotheses systematically:
+3. Run **Basic Verification Tier** (`/verify basic`) after the fix lands
 
-1. Start with most likely hypothesis
-2. Write a test that represents the desired behavior
-3. Execute that test only, record results
-4. If the test passes, move to next hypothesis - a passing test means things are behaving correctly
-5. Continue until root cause confirmed or you run out of hypotheses
-6. If you run out of hypotheses start the whole skill over again
+### Step 6 — Resolve
 
-**The Five Whys**:
-- Why did this happen? → [Answer 1]
-- Why did [Answer 1] happen? → [Answer 2]
-- Why did [Answer 2] happen? → [Answer 3]
-- Why did [Answer 3] happen? → [Answer 4]
-- Why did [Answer 4] happen? → [Probably Root Cause - **This is a new hypothesis**]
+Once `/verify basic` is clean:
 
-### G - Generate Fix
+1. Update `investigation-state.md` status to `resolved` with the fix commit / file:line
+2. Move the entry from `Active Investigations` to `Resolved` in `session-state.md`
+3. Continue the parent flow that escalated to `/investigate` (if any)
 
-Only after root cause is confirmed:
+### Step 7 — Stuck
 
-```markdown
-## Fix Plan
+If the circuit-breaker fires (3 unproductive debugger spawns), or if the debugger returns "no plausible hypotheses remain":
 
-**Root Cause**: [Confirmed cause]
-**Fix Approach**: [How to fix]
-**Files to Change**:
-- [file1]: [change]
-- [file2]: [change]
-
-**Risk Assessment**:
-- Blast radius: [What else might be affected]
-- Rollback plan: [How to undo if needed]
-
-**Verification**:
-- [ ] Original issue resolved
-- [ ] No new issues introduced
-- [ ] Related functionality still works
-- [ ] New tests added to confirm regression never happens
-```
-
-**ALWAYS**:
-- Use research agents to confirm blast radius.
-- Use research agents to confirm API use is correct.
-- Use the full TDD cycle to implement the fix
+1. Update `investigation-state.md` status to `stuck`
+2. Move the entry to `Stuck` in `session-state.md`
+3. Surface to the user with: full investigation-state, all hypotheses tested, all evidence gathered, what's blocking convergence
 
 ## Anti-Patterns to Avoid
 
-| Anti-Pattern | Why Bad | Instead |
+| Anti-Pattern | Why bad | Instead |
 |--------------|---------|---------|
-| **Shotgun debugging** | Random changes, new bugs | Systematic hypothesis testing |
-| **Assuming the cause** | Fix wrong thing | Gather evidence first |
-| **Only fixing symptom** | Bug returns | Find root cause |
-| **No verification** | Incomplete fix | Test thoroughly |
-| **No documentation** | Future confusion | Document findings |
+| Orchestrator hypothesizing | Sonnet doing Opus-quality reasoning | Spawn `debugger` (Opus) for hypotheses |
+| Skipping evidence | Unfounded fix → bug returns | Let debugger drive evidence-gathering |
+| Fixing while investigating | Mixes phases, hides the root cause | Investigate first, then route the hint |
+| Ad-hoc grep across the codebase | Wastes tokens, rarely finds the issue | Spawn `researcher-codebase` on debugger's recommendation |
+| Re-launching debugger without new evidence | Wastes Opus tokens, no progress | Run the test/researcher first; THEN re-launch |
+| Continuing past 3 unproductive spawns | Burning tokens with no progress | Trigger circuit-breaker; escalate to user |
 
 ## Quick Reference
 
 ```
-1. DEFINE: What's happening vs what should happen?
-2. EXPLORE: Console, ECS state, scenarios, code path
-3. BUILD: 2-3 hypotheses ranked by likelihood
-4. UNCOVER: Test hypotheses, use Five Whys
-5. GENERATE: Fix only after root cause confirmed
-```
-
-## Output Format
-
-**ALWAYS:**
-- Create `.claude/state/investigation-state.md` with the debug report below
-- Add the investigation to the Active Investigations section in `.claude/state/session-state.md` (create session-state if it doesn't exist)
-- Update the investigation-state file as information changes, hypotheses are tested, tests written, fixes generated, etc.
-
-
-```markdown
-## Debug Report: [Issue Title]
-
-### Problem
-- **Observed**: [symptom]
-- **Expected**: [correct behavior]
-- **Repro**: [steps]
-
-### Investigation
-- **Console**: [findings]
-- **ECS State**: [findings]
-- **Code Path**: [findings]
-
-### Root Cause
-[Confirmed root cause with evidence]
-
-### Fix
-- **Approach**: [how fixed]
-- **Files Changed**: [list]
-- **Verification**: [how verified]
-
-### Prevention
-[How to prevent this class of bug in future]
+1. Capture failure context (raw evidence only — no hypothesizing)
+2. Init investigation-state.md
+3. Spawn debugger (Opus) — it owns DEBUG (D-E-B-U-G)
+4. Loop:
+   - Read debugger's Next Action
+   - Spawn the recommended runner / researcher
+   - Update state files
+   - Re-launch debugger with the new evidence
+   - Stop when regression spec hint is filled (or 3-spawn circuit-break)
+5. Route the regression spec hint via routing-failures.md
+6. /verify basic after the fix
+7. Resolve → continue parent flow / Stuck → surface to user
 ```
