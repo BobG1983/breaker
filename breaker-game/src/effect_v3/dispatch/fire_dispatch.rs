@@ -66,6 +66,7 @@ mod tests {
             types::AttractionType,
         },
         shared::{PlayfieldConfig, rng::GameRng},
+        state::run::node::messages::ReduceNodeTimer,
     };
 
     #[test]
@@ -218,6 +219,7 @@ mod tests {
         // them), so register the W7 emitter messages explicitly here.
         app.add_message::<ExplodeEmissionRequested>();
         app.add_message::<PiercingBeamEmissionRequested>();
+        app.add_message::<ReduceNodeTimer>();
 
         let types = all_effect_types();
         assert_eq!(
