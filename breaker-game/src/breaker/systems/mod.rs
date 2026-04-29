@@ -11,6 +11,7 @@ mod move_breaker;
 mod spawn_breaker;
 pub(crate) mod sync_breaker_scale;
 mod tilt_visual;
+mod update_previous_dash_state;
 
 pub(crate) use breaker_cell_collision::breaker_cell_collision;
 pub(crate) use breaker_wall_collision::breaker_wall_collision;
@@ -23,3 +24,4 @@ pub(crate) use handle_bolt_lost::handle_bolt_lost;
 pub(crate) use move_breaker::move_breaker;
 pub(crate) use sync_breaker_scale::sync_breaker_scale;
 pub use tilt_visual::animate_tilt_visual;
+pub(crate) use update_previous_dash_state::update_previous_dash_state;

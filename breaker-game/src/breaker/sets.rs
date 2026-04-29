@@ -13,6 +13,12 @@ pub enum BreakerSystems {
     GradeBump,
     /// The `update_breaker_state` system — updates breaker state machine each tick.
     UpdateState,
+    /// The `update_previous_dash_state` system — copies current `DashState`
+    /// into `PreviousDashState` once per tick, after `UpdateState` has run.
+    /// Systems scheduled `.after(UpdateState).before(UpdatePreviousState)` can
+    /// read both the current `DashState` and the previous-tick snapshot
+    /// simultaneously, enabling per-tick transition detection.
+    UpdatePreviousState,
     /// The `breaker_cell_collision` system — detects breaker-cell overlap.
     CellCollision,
 }

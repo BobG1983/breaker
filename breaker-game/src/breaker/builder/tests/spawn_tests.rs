@@ -3,7 +3,9 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::helpers::test_breaker_definition;
 use crate::{
-    breaker::components::{BoltLossBehavior, BreakerBaseY, PrimaryBreaker},
+    breaker::components::{
+        BoltLossBehavior, BreakerBaseY, DashState, PreviousDashState, PrimaryBreaker,
+    },
     effect_v3::{
         effects::LoseLifeConfig,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -265,7 +267,7 @@ fn spawn_inserts_bolt_loss_behavior_default_life_loss_one() {
     );
 }
 
-// ── Behavior 42: spawn() inserts BoltLossBehavior component from definition ──
+// ── Wave 3 Behavior 18 (variant): spawn() propagates non-default BoltLossBehavior ──
 
 #[test]
 fn spawn_propagates_bolt_loss_behavior_from_definition() {
@@ -296,5 +298,94 @@ fn spawn_propagates_bolt_loss_behavior_from_definition() {
         BoltLossBehavior::TimeLoss(5.0),
         "spawned breaker should propagate BoltLossBehavior::TimeLoss(5.0) from its definition, got {:?}",
         *behavior,
+    );
+}
+
+// ── Wave 4 Behaviors 10, 11: spawn() inserts PreviousDashState::default() ──
+
+#[test]
+fn spawn_inserts_previous_dash_state_default_idle_primary() {
+    let def = test_breaker_definition();
+
+    let mut app = test_app();
+    app.add_systems(Update, move |mut commands: Commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut commands);
+    });
+    app.update();
+
+    let mut query = app.world_mut().query_filtered::<Entity, With<Breaker>>();
+    let entities: Vec<Entity> = query.iter(app.world()).collect();
+    assert_eq!(entities.len(), 1, "should have spawned exactly 1 entity");
+    let entity = entities[0];
+
+    let previous = app
+        .world()
+        .get::<PreviousDashState>(entity)
+        .expect("spawned primary breaker should have PreviousDashState component");
+    assert_eq!(
+        previous.0,
+        DashState::Idle,
+        "spawned primary breaker should have PreviousDashState(Idle) (== PreviousDashState::default()), got {:?}",
+        previous.0,
+    );
+
+    // Edge case: DashState::default() and PreviousDashState::default() agree
+    // at spawn — first FixedUpdate tick will report no transition (matches
+    // Behavior 8).
+    let state = app
+        .world()
+        .get::<DashState>(entity)
+        .expect("spawned primary breaker should have DashState component");
+    assert_eq!(
+        *state,
+        DashState::Idle,
+        "spawned primary breaker should have DashState::Idle so first-tick window reports no transition",
+    );
+}
+
+#[test]
+fn spawn_inserts_previous_dash_state_default_idle_extra() {
+    let def = test_breaker_definition();
+
+    let mut app = test_app();
+    app.add_systems(Update, move |mut commands: Commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .extra()
+            .spawn(&mut commands);
+    });
+    app.update();
+
+    let mut query = app.world_mut().query_filtered::<Entity, With<Breaker>>();
+    let entities: Vec<Entity> = query.iter(app.world()).collect();
+    assert_eq!(entities.len(), 1, "should have spawned exactly 1 entity");
+    let entity = entities[0];
+
+    let previous = app
+        .world()
+        .get::<PreviousDashState>(entity)
+        .expect("spawned extra breaker should have PreviousDashState component");
+    assert_eq!(
+        previous.0,
+        DashState::Idle,
+        "spawned extra breaker should have PreviousDashState(Idle) (== PreviousDashState::default()), got {:?}",
+        previous.0,
+    );
+
+    // Edge case: DashState::default() and PreviousDashState::default() agree
+    // at spawn.
+    let state = app
+        .world()
+        .get::<DashState>(entity)
+        .expect("spawned extra breaker should have DashState component");
+    assert_eq!(
+        *state,
+        DashState::Idle,
+        "spawned extra breaker should have DashState::Idle so first-tick window reports no transition",
     );
 }

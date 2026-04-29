@@ -5,6 +5,7 @@ mod bump;
 mod core;
 mod dash;
 mod movement;
+mod previous_dash_state;
 mod state;
 
 pub use core::{
@@ -22,6 +23,7 @@ pub use dash::{
     SettleDuration, SettleTiltEase,
 };
 pub use movement::{BreakerAcceleration, BreakerDeceleration, BreakerTilt, DecelEasing};
+pub use previous_dash_state::PreviousDashState;
 pub use state::{DashState, DashStateTimer};
 
 pub use crate::shared::components::{BaseHeight, BaseWidth};
