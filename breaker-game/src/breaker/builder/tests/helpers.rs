@@ -1,6 +1,6 @@
 use bevy::math::curve::easing::EaseFunction;
 
-use crate::breaker::definition::BreakerDefinition;
+use crate::breaker::{components::BoltLossBehavior, definition::BreakerDefinition};
 
 /// Creates a `BreakerDefinition` matching `BreakerDefinition::default()` values,
 /// so existing component assertions remain valid.
@@ -8,7 +8,6 @@ pub(super) fn test_breaker_definition() -> BreakerDefinition {
     ron::de::from_str(
         r#"(
             name: "TestBreaker",
-            bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
             salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
             effects: [],
         )"#,
@@ -59,13 +58,6 @@ pub(super) fn custom_breaker_definition() -> BreakerDefinition {
         color_rgb:                 [0.2, 2.0, 3.0],
         life_pool:                 None,
         effects:                   vec![],
-        bolt_lost:                 RootNode::Stamp(
-            StampTarget::Breaker,
-            Tree::When(
-                Trigger::BoltLostOccurred,
-                Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
-            ),
-        ),
         salvo_hit:                 RootNode::Stamp(
             StampTarget::Breaker,
             Tree::When(
@@ -73,6 +65,7 @@ pub(super) fn custom_breaker_definition() -> BreakerDefinition {
                 Box::new(Tree::Fire(EffectType::LoseLife(LoseLifeConfig {}))),
             ),
         ),
+        bolt_loss_behavior:        BoltLossBehavior::LifeLoss(1),
         min_w:                     None,
         max_w:                     None,
         min_h:                     None,

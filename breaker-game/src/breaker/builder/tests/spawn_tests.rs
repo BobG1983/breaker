@@ -3,7 +3,7 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 
 use super::helpers::test_breaker_definition;
 use crate::{
-    breaker::components::{BreakerBaseY, PrimaryBreaker},
+    breaker::components::{BoltLossBehavior, BreakerBaseY, PrimaryBreaker},
     effect_v3::{
         effects::LoseLifeConfig,
         types::{EffectType, RootNode, StampTarget, Tree, Trigger},
@@ -134,7 +134,7 @@ fn spawn_does_not_dispatch_effects_when_empty() {
     if let Some(bound) = bound {
         assert!(
             bound.0.len() <= 2,
-            "BoundEffects should have at most 2 entries (bolt_lost + salvo_hit) when effects is empty, got {}",
+            "BoundEffects should have at most 2 entries (salvo_hit) when effects is empty, got {}",
             bound.0.len()
         );
     }
@@ -176,4 +176,125 @@ fn spawn_passes_source_none_to_dispatch() {
             "chip name should be empty string (source: None)"
         );
     }
+}
+
+// ── Wave 3 Behavior 18: spawned breaker carries BoltLossBehavior matching its definition ──
+
+#[test]
+fn spawn_inserts_bolt_loss_behavior_time_loss_seven_point_five() {
+    let mut def = test_breaker_definition();
+    def.bolt_loss_behavior = BoltLossBehavior::TimeLoss(7.5);
+
+    let mut app = test_app();
+    app.add_systems(Update, move |mut commands: Commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut commands);
+    });
+    app.update();
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&BoltLossBehavior, With<Breaker>>();
+    let behaviors: Vec<BoltLossBehavior> = query.iter(app.world()).copied().collect();
+    assert_eq!(
+        behaviors.len(),
+        1,
+        "expected exactly one Breaker with BoltLossBehavior, got {}",
+        behaviors.len(),
+    );
+    assert_eq!(
+        behaviors[0],
+        BoltLossBehavior::TimeLoss(7.5),
+        "spawned breaker should have BoltLossBehavior::TimeLoss(7.5), got {:?}",
+        behaviors[0],
+    );
+}
+
+#[test]
+fn spawn_inserts_bolt_loss_behavior_none() {
+    let mut def = test_breaker_definition();
+    def.bolt_loss_behavior = BoltLossBehavior::None;
+
+    let mut app = test_app();
+    app.add_systems(Update, move |mut commands: Commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut commands);
+    });
+    app.update();
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&BoltLossBehavior, With<Breaker>>();
+    let behaviors: Vec<BoltLossBehavior> = query.iter(app.world()).copied().collect();
+    assert_eq!(behaviors.len(), 1, "expected exactly one BoltLossBehavior");
+    assert_eq!(behaviors[0], BoltLossBehavior::None);
+}
+
+#[test]
+fn spawn_inserts_bolt_loss_behavior_default_life_loss_one() {
+    // test_breaker_definition() uses BreakerDefinition::default() values, so
+    // bolt_loss_behavior defaults to LifeLoss(1).
+    let def = test_breaker_definition();
+
+    let mut app = test_app();
+    app.add_systems(Update, move |mut commands: Commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut commands);
+    });
+    app.update();
+
+    let mut query = app
+        .world_mut()
+        .query_filtered::<&BoltLossBehavior, With<Breaker>>();
+    let behaviors: Vec<BoltLossBehavior> = query.iter(app.world()).copied().collect();
+    assert_eq!(behaviors.len(), 1, "expected exactly one BoltLossBehavior");
+    assert_eq!(
+        behaviors[0],
+        BoltLossBehavior::LifeLoss(1),
+        "default BreakerDefinition should produce LifeLoss(1), got {:?}",
+        behaviors[0],
+    );
+}
+
+// ── Behavior 42: spawn() inserts BoltLossBehavior component from definition ──
+
+#[test]
+fn spawn_propagates_bolt_loss_behavior_from_definition() {
+    let mut def = test_breaker_definition();
+    def.bolt_loss_behavior = BoltLossBehavior::TimeLoss(5.0);
+
+    let mut app = test_app();
+    app.add_systems(Update, move |mut commands: Commands| {
+        Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut commands);
+    });
+    app.update();
+
+    let mut query = app.world_mut().query_filtered::<Entity, With<Breaker>>();
+    let entities: Vec<Entity> = query.iter(app.world()).collect();
+    assert_eq!(entities.len(), 1, "should have spawned exactly 1 entity");
+    let entity = entities[0];
+
+    let behavior = app
+        .world()
+        .get::<BoltLossBehavior>(entity)
+        .expect("spawned entity should have BoltLossBehavior component");
+    assert_eq!(
+        *behavior,
+        BoltLossBehavior::TimeLoss(5.0),
+        "spawned breaker should propagate BoltLossBehavior::TimeLoss(5.0) from its definition, got {:?}",
+        *behavior,
+    );
 }

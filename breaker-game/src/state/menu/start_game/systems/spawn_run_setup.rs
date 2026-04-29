@@ -122,7 +122,6 @@ fn description_for(name: &str) -> &'static str {
     match name {
         "Aegis" => "Lives-based. Lose a life on bolt-loss. Bump boosts bolt speed.",
         "Chrono" => "Time-penalty. Bolt-loss costs time. Bump boosts bolt speed.",
-        "Prism" => "Multi-bolt. Perfect bump spawns extra bolts.",
         _ => "Unknown breaker.",
     }
 }
@@ -134,7 +133,7 @@ mod tests {
 
     fn make_breaker(name: &str) -> BreakerDefinition {
         ron::de::from_str(&format!(
-            r#"(name: "{name}", life_pool: None, bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
+            r#"(name: "{name}", life_pool: None, salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#,
         ))
         .expect("test RON should parse")
     }
@@ -208,5 +207,35 @@ mod tests {
             .iter(app.world())
             .count();
         assert_eq!(screen_count, 1);
+    }
+
+    // ── Wave 3 Behavior 17: description_for("Prism") falls through to wildcard arm ──
+
+    #[test]
+    fn description_for_prism_returns_unknown_breaker() {
+        assert_eq!(
+            description_for("Prism"),
+            "Unknown breaker.",
+            "description_for(\"Prism\") must fall through to the wildcard arm \
+             — Prism breaker retired in Wave 3.",
+        );
+    }
+
+    #[test]
+    fn description_for_aegis_still_returns_aegis_string() {
+        // Regression guard: removing the Prism arm must not break sibling cases.
+        assert_eq!(
+            description_for("Aegis"),
+            "Lives-based. Lose a life on bolt-loss. Bump boosts bolt speed.",
+        );
+    }
+
+    #[test]
+    fn description_for_chrono_still_returns_chrono_string() {
+        // Regression guard: removing the Prism arm must not break sibling cases.
+        assert_eq!(
+            description_for("Chrono"),
+            "Time-penalty. Bolt-loss costs time. Bump boosts bolt speed.",
+        );
     }
 }

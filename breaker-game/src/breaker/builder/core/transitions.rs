@@ -237,8 +237,8 @@ impl<V, R> BreakerBuilder<NoDimensions, NoMovement, NoDashing, NoSpread, NoBump,
             .life_pool
             .map_or(LivesSetting::Infinite, LivesSetting::Count);
         self.optional.effects = Some(def.effects.clone());
-        self.optional.bolt_lost = Some(def.bolt_lost.clone());
         self.optional.salvo_hit = Some(def.salvo_hit.clone());
+        self.optional.bolt_loss_behavior = Some(def.bolt_loss_behavior);
         self.optional.color_rgb = Some(def.color_rgb);
 
         BreakerBuilder {

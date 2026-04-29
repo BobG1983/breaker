@@ -4,7 +4,7 @@ use crate::breaker::definition::BreakerDefinition;
 
 #[test]
 fn minimal_ron_parses_with_all_defaults() {
-    let ron_str = r#"(name: "TestBreaker", bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#;
+    let ron_str = r#"(name: "TestBreaker", salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#;
     let def: BreakerDefinition = ron::de::from_str(ron_str).expect("minimal RON should parse");
     let defaults = BreakerDefinition::default();
 
@@ -74,7 +74,6 @@ fn ron_with_explicit_gameplay_fields_parses() {
         height: 25.0,
         max_speed: 600.0,
         reflection_spread: 60.0,
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
         salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
@@ -101,7 +100,6 @@ fn ron_with_explicit_min_max_size_parses() {
         max_w: Some(200.0),
         min_h: None,
         max_h: Some(50.0),
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
         salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
@@ -146,25 +144,11 @@ fn chrono_breaker_ron_parses_with_expanded_definition() {
     assert!(!def.effects.is_empty());
 }
 
-// ── Behavior 49: prism.breaker.ron parses with expanded BreakerDefinition ──
-
-#[test]
-fn prism_breaker_ron_parses_with_expanded_definition() {
-    let ron_str = include_str!("../../../../assets/breakers/prism.breaker.ron");
-    let def: BreakerDefinition =
-        ron::de::from_str(ron_str).expect("prism.breaker.ron should parse");
-
-    assert_eq!(def.name, "Prism");
-    assert_eq!(def.bolt, "Bolt");
-    assert_eq!(def.life_pool, None);
-    assert!(!def.effects.is_empty());
-}
-
 // ── Behavior 50: BreakerDefinition no longer has stat_overrides field ──
 
 #[test]
 fn old_format_with_stat_overrides_fails_to_parse() {
-    let ron_str = r#"(name: "Test", stat_overrides: (), bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#;
+    let ron_str = r#"(name: "Test", stat_overrides: (), salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))), effects: [])"#;
     let result = ron::de::from_str::<BreakerDefinition>(ron_str);
     assert!(
         result.is_err(),

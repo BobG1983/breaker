@@ -390,88 +390,8 @@ fn definition_uses_explicit_min_max_when_provided() {
 }
 
 // ==========================================================================
-// Wave 6C: definition() stamps bolt_lost and salvo_hit
+// Wave 6C: definition() stamps salvo_hit
 // ==========================================================================
-
-// ── Behavior 35: definition() stores bolt_lost from BreakerDefinition ──
-
-#[test]
-fn definition_stamps_bolt_lost_tree_in_bound_effects() {
-    use crate::effect_v3::{
-        storage::BoundEffects,
-        types::{Tree, Trigger},
-    };
-
-    let ron_str = r#"(
-        name: "TestBreaker",
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
-        effects: [],
-    )"#;
-    let def: crate::breaker::definition::BreakerDefinition =
-        ron::de::from_str(ron_str).expect("RON should parse");
-
-    let mut world = World::new();
-    let entity = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .spawn(&mut world.commands());
-    world.flush();
-
-    let bound = world
-        .get::<BoundEffects>(entity)
-        .expect("entity should have BoundEffects");
-
-    // Check that BoltLostOccurred tree is present in BoundEffects
-    let has_bolt_lost = bound
-        .0
-        .iter()
-        .any(|(_, tree)| matches!(tree, Tree::When(Trigger::BoltLostOccurred, _)));
-    assert!(
-        has_bolt_lost,
-        "BoundEffects should contain a When(BoltLostOccurred, ...) tree from bolt_lost"
-    );
-}
-
-#[test]
-fn definition_stamps_bolt_lost_even_with_empty_effects() {
-    use crate::effect_v3::{
-        storage::BoundEffects,
-        types::{Tree, Trigger},
-    };
-
-    let ron_str = r#"(
-        name: "TestBreaker",
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
-        effects: [],
-    )"#;
-    let def: crate::breaker::definition::BreakerDefinition =
-        ron::de::from_str(ron_str).expect("RON should parse");
-
-    let mut world = World::new();
-    let entity = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .spawn(&mut world.commands());
-    world.flush();
-
-    let bound = world
-        .get::<BoundEffects>(entity)
-        .expect("entity should have BoundEffects");
-
-    let bolt_lost_count = bound
-        .0
-        .iter()
-        .filter(|(_, tree)| matches!(tree, Tree::When(Trigger::BoltLostOccurred, _)))
-        .count();
-    assert!(
-        bolt_lost_count >= 1,
-        "bolt_lost should be stamped even when effects is empty"
-    );
-}
 
 // ── Behavior 36: definition() stores salvo_hit from BreakerDefinition ──
 
@@ -484,7 +404,6 @@ fn definition_stamps_salvo_hit_tree_in_bound_effects() {
 
     let ron_str = r#"(
         name: "TestBreaker",
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
         salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 3.0))))),
         effects: [],
     )"#;
@@ -513,10 +432,10 @@ fn definition_stamps_salvo_hit_tree_in_bound_effects() {
     );
 }
 
-// ── Behavior 37: definition() stamps bolt_lost, salvo_hit, AND effects all together ──
+// ── Behavior 37: definition() stamps salvo_hit AND effects together ──
 
 #[test]
-fn definition_stamps_bolt_lost_salvo_hit_and_effects_together() {
+fn definition_stamps_salvo_hit_and_effects_together() {
     use crate::effect_v3::{
         storage::BoundEffects,
         types::{EntityKind, Tree, Trigger},
@@ -524,7 +443,6 @@ fn definition_stamps_bolt_lost_salvo_hit_and_effects_together() {
 
     let ron_str = r#"(
         name: "TestBreaker",
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
         salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [
             Stamp(Bolt, When(PerfectBumped, Fire(SpeedBoost((multiplier: 1.5))))),
@@ -545,17 +463,13 @@ fn definition_stamps_bolt_lost_salvo_hit_and_effects_together() {
         .get::<BoundEffects>(entity)
         .expect("entity should have BoundEffects");
 
-    // Should have at least 3 trees: bolt_lost + salvo_hit + the SpeedBoost effect
+    // Should have at least 2 trees: salvo_hit + the SpeedBoost effect
     assert!(
-        bound.0.len() >= 3,
-        "BoundEffects should have at least 3 trees (bolt_lost + salvo_hit + effect), got {}",
+        bound.0.len() >= 2,
+        "BoundEffects should have at least 2 trees (salvo_hit + effect), got {}",
         bound.0.len()
     );
 
-    let has_bolt_lost = bound
-        .0
-        .iter()
-        .any(|(_, tree)| matches!(tree, Tree::When(Trigger::BoltLostOccurred, _)));
     let has_salvo_hit = bound
         .0
         .iter()
@@ -565,7 +479,6 @@ fn definition_stamps_bolt_lost_salvo_hit_and_effects_together() {
         .iter()
         .any(|(_, tree)| matches!(tree, Tree::When(Trigger::PerfectBumped, _)));
 
-    assert!(has_bolt_lost, "bolt_lost tree should be stamped");
     assert!(has_salvo_hit, "salvo_hit tree should be stamped");
     assert!(
         has_speed_boost,
@@ -574,12 +487,11 @@ fn definition_stamps_bolt_lost_salvo_hit_and_effects_together() {
 }
 
 #[test]
-fn definition_stamps_only_bolt_lost_and_salvo_hit_when_effects_empty() {
+fn definition_stamps_only_salvo_hit_when_effects_empty() {
     use crate::effect_v3::storage::BoundEffects;
 
     let ron_str = r#"(
         name: "TestBreaker",
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
         salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
         effects: [],
     )"#;
@@ -598,52 +510,11 @@ fn definition_stamps_only_bolt_lost_and_salvo_hit_when_effects_empty() {
         .get::<BoundEffects>(entity)
         .expect("entity should have BoundEffects");
 
-    // With empty effects, should have exactly 2 trees: bolt_lost + salvo_hit
+    // With empty effects, should have exactly 1 tree: salvo_hit
     assert_eq!(
         bound.0.len(),
-        2,
-        "BoundEffects should have exactly 2 trees when effects is empty, got {}",
+        1,
+        "BoundEffects should have exactly 1 tree when effects is empty, got {}",
         bound.0.len()
-    );
-}
-
-// ── Behavior 38: bolt_lost tree is NOT duplicated in effects array ──
-
-#[test]
-fn definition_does_not_duplicate_bolt_lost_tree() {
-    use crate::effect_v3::{
-        storage::BoundEffects,
-        types::{Tree, Trigger},
-    };
-
-    let ron_str = r#"(
-        name: "TestBreaker",
-        bolt_lost: Stamp(Breaker, When(BoltLostOccurred, Fire(LoseLife(())))),
-        salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(LoseLife(())))),
-        effects: [],
-    )"#;
-    let def: crate::breaker::definition::BreakerDefinition =
-        ron::de::from_str(ron_str).expect("RON should parse");
-
-    let mut world = World::new();
-    let entity = Breaker::builder()
-        .definition(&def)
-        .headless()
-        .primary()
-        .spawn(&mut world.commands());
-    world.flush();
-
-    let bound = world
-        .get::<BoundEffects>(entity)
-        .expect("entity should have BoundEffects");
-
-    let bolt_lost_count = bound
-        .0
-        .iter()
-        .filter(|(_, tree)| matches!(tree, Tree::When(Trigger::BoltLostOccurred, _)))
-        .count();
-    assert_eq!(
-        bolt_lost_count, 1,
-        "BoltLostOccurred tree should appear exactly once, not duplicated, got {bolt_lost_count}",
     );
 }

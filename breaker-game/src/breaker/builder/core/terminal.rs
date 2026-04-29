@@ -201,6 +201,18 @@ fn apply_hp(commands: &mut Commands, entity: Entity, optional: &OptionalBreakerD
     }
 }
 
+/// Insert `BoltLossBehavior` on the entity if the builder carries one (set by
+/// `.definition()`). Defaulted to `BoltLossBehavior::default()` when not set
+/// so every spawned breaker has the component.
+fn apply_bolt_loss_behavior(
+    commands: &mut Commands,
+    entity: Entity,
+    optional: &OptionalBreakerData,
+) {
+    let behavior = optional.bolt_loss_behavior.unwrap_or_default();
+    commands.entity(entity).insert(behavior);
+}
+
 // ── spawn() terminal impls ────────────────────────────────────────────────
 
 impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Rendered, Primary> {
@@ -227,6 +239,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             ))
             .id();
         apply_hp(commands, entity, &self.optional);
+        apply_bolt_loss_behavior(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -259,6 +272,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             ))
             .id();
         apply_hp(commands, entity, &self.optional);
+        apply_bolt_loss_behavior(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -284,6 +298,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             .spawn((core, PrimaryBreaker, CleanupOnExit::<RunState>::default()))
             .id();
         apply_hp(commands, entity, &self.optional);
+        apply_bolt_loss_behavior(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -309,6 +324,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             .spawn((core, ExtraBreaker, CleanupOnExit::<NodeState>::default()))
             .id();
         apply_hp(commands, entity, &self.optional);
+        apply_bolt_loss_behavior(commands, entity, &self.optional);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -317,14 +333,14 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
     }
 }
 
-/// Stamps `bolt_lost` and `salvo_hit` required-effect trees onto the entity.
+/// Stamps the `salvo_hit` required-effect tree onto the entity.
 fn stamp_required_effects(commands: &mut Commands, entity: Entity, optional: &OptionalBreakerData) {
-    for root in optional.bolt_lost.iter().chain(optional.salvo_hit.iter()) {
-        if let RootNode::Stamp(_target, tree) = root {
-            commands.stamp_effect(entity, String::new(), tree.clone());
-        }
-        // Spawn root nodes register observers — not handled at builder spawn time.
+    if let Some(root) = &optional.salvo_hit
+        && let RootNode::Stamp(_target, tree) = root
+    {
+        commands.stamp_effect(entity, String::new(), tree.clone());
     }
+    // Spawn root nodes register observers — not handled at builder spawn time.
 }
 
 /// For each `Stamp(target, tree)` in `effects`, calls `stamp_effect` on the entity.

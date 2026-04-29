@@ -2,7 +2,7 @@
 
 use bevy::{math::curve::easing::EaseFunction, prelude::*};
 
-use crate::effect_v3::types::RootNode;
+use crate::{breaker::components::BoltLossBehavior, effect_v3::types::RootNode};
 
 // ── Typestate markers ───────────────────────────────────────────────────────
 
@@ -188,8 +188,9 @@ pub(crate) struct OptionalBreakerData {
     pub(crate) override_y_position:        Option<f32>,
     pub(crate) override_max_speed:         Option<f32>,
     pub(crate) override_reflection_spread: Option<f32>,
-    pub(crate) bolt_lost:                  Option<RootNode>,
     pub(crate) salvo_hit:                  Option<RootNode>,
+    /// `BoltLossBehavior` carried in from `.definition()`. Inserted on spawn.
+    pub(crate) bolt_loss_behavior:         Option<BoltLossBehavior>,
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────

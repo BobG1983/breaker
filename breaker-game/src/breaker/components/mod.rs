@@ -1,5 +1,6 @@
 //! Breaker domain components.
 
+mod bolt_loss_behavior;
 mod bump;
 mod core;
 mod dash;
@@ -11,6 +12,7 @@ pub use core::{
     PrimaryBreaker,
 };
 
+pub use bolt_loss_behavior::BoltLossBehavior;
 pub use bump::{
     BumpEarlyWindow, BumpFeedback, BumpFeedbackState, BumpLateWindow, BumpPerfectCooldown,
     BumpPerfectWindow, BumpState, BumpWeakCooldown,

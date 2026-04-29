@@ -9,9 +9,9 @@ use crate::{
         messages::{BreakerSpawned, BumpWhiffed, NoBump},
         systems::{
             animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
-            breaker_wall_collision, grade_bump, move_breaker, perfect_bump_dash_cancel,
-            spawn_bump_grade_text, spawn_whiff_text, sync_breaker_scale, trigger_bump_visual,
-            update_breaker_state, update_bump,
+            breaker_wall_collision, grade_bump, handle_bolt_lost, move_breaker,
+            perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text, sync_breaker_scale,
+            trigger_bump_visual, update_breaker_state, update_bump,
         },
     },
     effect_v3::EffectV3Systems,
@@ -73,6 +73,9 @@ impl Plugin for BreakerPlugin {
                         .after(BreakerSystems::Move)
                         .in_set(BreakerSystems::CellCollision),
                     breaker_wall_collision.after(BreakerSystems::Move),
+                    handle_bolt_lost
+                        .after(BoltSystems::BoltLost)
+                        .before(NodeSystems::ReduceNodeTimer),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )

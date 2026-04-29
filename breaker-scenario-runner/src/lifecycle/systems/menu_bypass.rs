@@ -2,7 +2,7 @@
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 use breaker::{
-    breaker::{BreakerDefinition, BreakerRegistry, SelectedBreaker},
+    breaker::{BreakerDefinition, BreakerRegistry, SelectedBreaker, components::BoltLossBehavior},
     chips::{ChipCatalog, inventory::ChipInventory},
     effect_v3::types::{RootNode, StampTarget, Tree},
     shared::RunSeed,
@@ -61,6 +61,7 @@ pub fn bypass_menu_to_playing(
                 bolt: "Bolt".to_owned(),
                 life_pool: None,
                 effects: vec![],
+                bolt_loss_behavior: BoltLossBehavior::None,
                 ..BreakerDefinition::default()
             },
         );
@@ -200,5 +201,66 @@ pub fn seed_initial_chips(
         } else {
             warn!("initial_chips: chip '{}' not found in catalog", chip_name);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // ── Wave 3 Behavior 19: Godmode BreakerDefinition literal sets
+    //                        the bolt-loss-behavior field to None explicitly ──
+    //
+    // The `bypass_menu_to_playing` system has 6+ params and a `BypassExtras`
+    // SystemParam wrapper; building a full harness to drive the system is
+    // heavy. Use a code-grep test against the source text instead — it
+    // catches drift in the production literal regardless of formatting
+    // changes around it (substring search).
+    //
+    // The needle is built at runtime from disjoint pieces so the literal
+    // substring does NOT appear anywhere in this file's source text. Without
+    // this dance the test would trivially pass at RED because the assert
+    // message itself would supply the substring `include_str!` reads back.
+
+    /// Source text of `menu_bypass.rs` — `include_str!` resolves at compile
+    /// time, so this assertion fires as soon as the file changes.
+    const MENU_BYPASS_SOURCE: &str = include_str!("menu_bypass.rs");
+
+    /// Builds the expected production-literal field declaration without
+    /// writing it as a single string anywhere in this file.
+    fn expected_field_declaration() -> String {
+        // Pieces are joined at runtime; no single source-string contains the
+        // full substring we're searching for. Concatenations are runtime so
+        // `include_str!` cannot read back the full needle.
+        let field = ["bolt", "loss", "behavior"].join("_");
+        let ty_prefix = ["BoltLoss", "Behavior"].concat();
+        let ty = ty_prefix + "::None";
+        format!("{field}: {ty}")
+    }
+
+    #[test]
+    fn godmode_breaker_definition_literal_sets_bolt_loss_behavior_none() {
+        // The production Godmode literal must contain the explicit
+        // bolt-loss-behavior field set to None — relying on
+        // `..BreakerDefinition::default()` would fall through to
+        // `LifeLoss(1)`, which is wrong for Godmode.
+        let needle = expected_field_declaration();
+        assert!(
+            MENU_BYPASS_SOURCE.contains(&needle),
+            "menu_bypass.rs Godmode literal must contain `{needle}` so \
+             Godmode opts out of life-loss explicitly. Currently the literal \
+             relies on `..BreakerDefinition::default()` which yields \
+             `LifeLoss(1)`.",
+        );
+    }
+
+    #[test]
+    fn godmode_breaker_literal_still_names_godmode() {
+        // Regression guard: confirm we're matching against the right block.
+        // Build the needle at runtime via Debug-format so the searched
+        // substring isn't present anywhere else in this file's source text.
+        let needle = format!("{}: {:?}", "name", "Godmode");
+        assert!(
+            MENU_BYPASS_SOURCE.contains(&needle),
+            "menu_bypass.rs should still declare the Godmode breaker name field",
+        );
     }
 }

@@ -6,6 +6,7 @@ mod bump;
 mod bump_feedback;
 mod bump_visual;
 mod dash;
+mod handle_bolt_lost;
 mod move_breaker;
 mod spawn_breaker;
 pub(crate) mod sync_breaker_scale;
@@ -18,6 +19,7 @@ pub(crate) use bump::{forward_grade, grade_bump, retroactive_grade, update_bump}
 pub use bump_feedback::{spawn_bump_grade_text, spawn_whiff_text};
 pub use bump_visual::{animate_bump_visual, trigger_bump_visual};
 pub(crate) use dash::update_breaker_state;
+pub(crate) use handle_bolt_lost::handle_bolt_lost;
 pub(crate) use move_breaker::move_breaker;
 pub(crate) use sync_breaker_scale::sync_breaker_scale;
 pub use tilt_visual::animate_tilt_visual;
