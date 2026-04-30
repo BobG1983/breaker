@@ -231,12 +231,6 @@ pub enum MutationKind {
         /// Multiplier value to set on the spawned `RiskyDamageBoost`.
         multiplier: f32,
     },
-    /// Clear all entity entries from `RecklessDashDoubledBolts`, then insert
-    /// a dummy entity ID to make the set non-empty.
-    ///
-    /// Used by the `reckless_dash_orphaned` self-test to verify the resource
-    /// path fires a violation when the protocol is absent.
-    InjectRecklessDashDoubledBolts,
     /// Spawn an entity carrying `EchoNetwork` (empty echoes deque).
     ///
     /// Used by the `echo_strike_orphaned` self-test to inject the component

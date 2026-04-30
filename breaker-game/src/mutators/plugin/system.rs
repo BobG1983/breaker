@@ -27,7 +27,6 @@ use crate::{
             fission::FissionCounter,
             greed::GreedStacks,
             messages::ProtocolSelected,
-            reckless_dash::RecklessDashDoubledBolts,
             resources::{ActiveProtocols, ProtocolOffer, UnlockedProtocols, protocol_active},
             siphon::SiphonStreak,
             systems::{dispatch_protocol_selection, generate_protocol_offering},
@@ -69,7 +68,6 @@ fn wire_protocols(app: &mut App) {
         .init_resource::<GreedStacks>()
         .init_resource::<SiphonStreak>()
         .init_resource::<FissionCounter>()
-        .init_resource::<RecklessDashDoubledBolts>()
         .add_message::<ProtocolSelected>()
         .add_systems(
             OnEnter(ChipSelectState::Selecting),

@@ -1,27 +1,33 @@
-//! Group F — `wire` wiring + run-condition gates (Behaviors 41–55, 63).
+//! Group F — `wire` wiring + run-condition gates (Behaviors 24–28, 41–48, 53–55).
 //!
 //! Pins that `wire`-wired systems run under the correct schedules, gated
 //! by `protocol_active(RecklessDash)` + `in_state(NodeState::Playing)` on
-//! the three `FixedUpdate` reader systems, that same-tick ordering anchors
-//! work, that the schedule is harness-safe under missing resources + quiet
-//! ticks, and that `wire` does NOT initialise `RecklessDashDoubledBolts`
-//! (plugin owns init).
+//! the `FixedUpdate` systems, that same-tick ordering anchors work, that the
+//! schedule is harness-safe under missing resources + quiet ticks.
+//!
+//! Behaviors 24–28 pin the Wave-5 wire contract for `reckless_dash_on_dash_transition`:
+//! gating, negative gating, absence of the deleted `reckless_dash_double_penalty`
+//! and `reckless_dash_cleanup_node` systems, and absence of `RecklessDashDoubledBolts`.
 
 use bevy::prelude::*;
 
 use super::{
-    super::system::{RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, wire},
+    super::system::{RecklessDashConfig, RiskyDamageBoost, wire},
     helpers::{
         build_reckless_dash_app, build_reckless_dash_app_in_chip_selecting,
         build_reckless_dash_app_no_config, captured_bolt_lost, collected_reckless_dash_damage,
-        risky_boost, seed_active_protocols_with_reckless_dash, spawn_bolt_with_base_damage,
-        spawn_breaker_dashing, spawn_cell_empty, write_bolt_impact_cell, write_bolt_lost,
-        write_bump_performed,
+        force_dash_state, risky_boost, seed_active_protocols_with_reckless_dash,
+        spawn_bolt_with_base_damage, spawn_breaker_dashing, spawn_breaker_for_transition,
+        spawn_cell_empty, write_bolt_impact_cell, write_bolt_lost, write_bump_performed,
     },
 };
 use crate::{
     bolt::sets::BoltSystems,
-    breaker::{messages::BumpGrade, sets::BreakerSystems},
+    breaker::{
+        components::{BoltLossBehavior, DashState},
+        messages::BumpGrade,
+        sets::BreakerSystems,
+    },
     mutators::protocols::resources::ActiveProtocols,
     prelude::*,
 };
@@ -240,96 +246,6 @@ fn register_wires_amplify_to_consume_bolt_impact_cell_same_tick() {
     );
 }
 
-// ── Behavior 49 — double_penalty wired + gated on active + Playing ─────────-
-
-#[test]
-fn register_wires_double_penalty_gated_on_active_and_playing() {
-    let mut app = build_reckless_dash_app();
-    seed_canonical(&mut app);
-    let breaker = spawn_breaker_dashing(&mut app, 1.0, 0.5);
-    let bolt = spawn_bolt_with_base_damage(&mut app, 10.0);
-
-    write_bolt_lost(&mut app, bolt, breaker);
-    tick(&mut app);
-
-    assert_eq!(
-        captured_bolt_lost(&app).len(),
-        2,
-        "double_penalty must run via wire → extra BoltLost emitted"
-    );
-}
-
-// ── Behavior 50 — double_penalty gated off when inactive ───────────────────-
-
-#[test]
-fn double_penalty_gated_off_when_reckless_dash_not_active() {
-    let mut app = build_reckless_dash_app();
-    // Do NOT seed ActiveProtocols.
-    let breaker = spawn_breaker_dashing(&mut app, 1.0, 0.5);
-    let bolt = spawn_bolt_with_base_damage(&mut app, 10.0);
-
-    write_bolt_lost(&mut app, bolt, breaker);
-    tick(&mut app);
-
-    assert_eq!(
-        captured_bolt_lost(&app).len(),
-        1,
-        "no duplicate when Reckless Dash inactive"
-    );
-}
-
-// ── Behavior 51 — double_penalty gated off when NodeState != Playing ───────-
-
-#[test]
-fn double_penalty_gated_off_when_node_state_not_playing() {
-    let mut app = build_reckless_dash_app_in_chip_selecting();
-    seed_canonical(&mut app);
-    let breaker = spawn_breaker_dashing(&mut app, 1.0, 0.5);
-    let bolt = spawn_bolt_with_base_damage(&mut app, 10.0);
-
-    write_bolt_lost(&mut app, bolt, breaker);
-    tick(&mut app);
-
-    assert_eq!(
-        captured_bolt_lost(&app).len(),
-        1,
-        "no duplicate in ChipSelecting"
-    );
-}
-
-// ── Behavior 52 — double_penalty consumes BoltLost same tick ───────────────-
-
-#[test]
-fn register_wires_double_penalty_to_consume_bolt_lost_same_tick() {
-    let mut app = build_reckless_dash_app();
-    seed_canonical(&mut app);
-    let breaker = spawn_breaker_dashing(&mut app, 1.0, 0.5);
-    let bolt = spawn_bolt_with_base_damage(&mut app, 10.0);
-
-    // Ghost producer in BoltSystems::BoltLost writes BoltLost once.
-    app.add_systems(
-        FixedUpdate,
-        (move |mut w: MessageWriter<BoltLost>, mut done: Local<bool>| {
-            if *done {
-                return;
-            }
-            w.write(BoltLost { bolt, breaker });
-            *done = true;
-        })
-        .in_set(BoltSystems::BoltLost)
-        .run_if(in_state(NodeState::Playing)),
-    );
-
-    tick(&mut app);
-
-    assert_eq!(
-        captured_bolt_lost(&app).len(),
-        2,
-        "BoltLost written inside BoltSystems::BoltLost must be visible to \
-         reckless_dash_double_penalty on the same tick"
-    );
-}
-
 // ── Behavior 53 — quiet-tick safety ─────────────────────────────────────────
 
 #[test]
@@ -416,13 +332,146 @@ fn pregate_bump_performed_drains_cleanly_before_reckless_dash_activates() {
     );
 }
 
-// ── Behavior 63 — wire does NOT init RecklessDashDoubledBolts ──────────-
+// ── Behavior 24 — wire registers reckless_dash_on_dash_transition, gated on active + Playing ──
 
 #[test]
-fn register_does_not_init_reckless_dash_doubled_bolts_resource() {
-    // Crucial: use RAW TestAppBuilder (not build_reckless_dash_app which
-    // inits the resource). Do NOT insert RecklessDashDoubledBolts, do NOT
-    // call init_resource on it.
+fn register_wires_on_dash_transition_gated_on_active_and_playing() {
+    let mut app = build_reckless_dash_app();
+    seed_canonical(&mut app);
+    let breaker = spawn_breaker_for_transition(
+        &mut app,
+        BoltLossBehavior::LifeLoss(1),
+        DashState::Idle,
+        DashState::Idle,
+    );
+
+    force_dash_state(&mut app, breaker, DashState::Dashing);
+    tick(&mut app);
+
+    let live = *app
+        .world()
+        .get::<BoltLossBehavior>(breaker)
+        .expect("breaker must have BoltLossBehavior");
+    let overlay = app
+        .world()
+        .get::<super::super::system::OriginalBoltLossBehavior>(breaker)
+        .map(|o| o.0);
+    assert_eq!(
+        live,
+        BoltLossBehavior::LifeLoss(2),
+        "on_dash_transition must run via wire → BoltLossBehavior doubled to LifeLoss(2), got {live:?}"
+    );
+    assert_eq!(
+        overlay,
+        Some(BoltLossBehavior::LifeLoss(1)),
+        "OriginalBoltLossBehavior overlay must be LifeLoss(1), got {overlay:?}"
+    );
+}
+
+// ── Behavior 25 — wire-registered system is gated OFF when RecklessDash NOT active ──
+
+#[test]
+fn on_dash_transition_gated_off_when_reckless_dash_not_active() {
+    let mut app = build_reckless_dash_app();
+    // Do NOT seed ActiveProtocols — gate closed.
+    let breaker = spawn_breaker_for_transition(
+        &mut app,
+        BoltLossBehavior::LifeLoss(1),
+        DashState::Idle,
+        DashState::Idle,
+    );
+
+    force_dash_state(&mut app, breaker, DashState::Dashing);
+    tick(&mut app);
+
+    let live = *app
+        .world()
+        .get::<BoltLossBehavior>(breaker)
+        .expect("breaker must have BoltLossBehavior");
+    assert_eq!(
+        live,
+        BoltLossBehavior::LifeLoss(1),
+        "on_dash_transition must not run when Reckless Dash inactive — BoltLossBehavior must stay LifeLoss(1), got {live:?}"
+    );
+    assert!(
+        app.world()
+            .get::<super::super::system::OriginalBoltLossBehavior>(breaker)
+            .is_none(),
+        "OriginalBoltLossBehavior must NOT be inserted when gate is closed"
+    );
+}
+
+// ── Behavior 26 — wire-registered system is gated OFF when NodeState != Playing ──
+
+#[test]
+fn on_dash_transition_gated_off_when_node_state_not_playing() {
+    let mut app = build_reckless_dash_app_in_chip_selecting();
+    seed_canonical(&mut app);
+    let breaker = spawn_breaker_for_transition(
+        &mut app,
+        BoltLossBehavior::LifeLoss(1),
+        DashState::Idle,
+        DashState::Idle,
+    );
+
+    force_dash_state(&mut app, breaker, DashState::Dashing);
+    tick(&mut app);
+
+    let live = *app
+        .world()
+        .get::<BoltLossBehavior>(breaker)
+        .expect("breaker must have BoltLossBehavior");
+    assert_eq!(
+        live,
+        BoltLossBehavior::LifeLoss(1),
+        "on_dash_transition must not run in ChipSelecting — BoltLossBehavior must stay LifeLoss(1), got {live:?}"
+    );
+    assert!(
+        app.world()
+            .get::<super::super::system::OriginalBoltLossBehavior>(breaker)
+            .is_none(),
+        "OriginalBoltLossBehavior must NOT be inserted in ChipSelecting"
+    );
+}
+
+// ── Behavior 27 — wire does NOT register reckless_dash_double_penalty (system deleted) ──
+//
+// Regression proof: if double_penalty were still wired, two BoltLost messages would
+// appear in the collector. Exactly one proves the system is absent.
+
+#[test]
+fn wire_does_not_register_reckless_dash_double_penalty() {
+    let mut app = build_reckless_dash_app();
+    seed_canonical(&mut app);
+    // Breaker already Dashing (no dash transition → Wave 5 system does nothing).
+    let breaker = spawn_breaker_for_transition(
+        &mut app,
+        BoltLossBehavior::LifeLoss(1),
+        DashState::Dashing,
+        DashState::Dashing,
+    );
+    let bolt = app.world_mut().spawn_empty().id();
+
+    write_bolt_lost(&mut app, bolt, breaker);
+    tick(&mut app);
+
+    assert_eq!(
+        captured_bolt_lost(&app).len(),
+        1,
+        "exactly one BoltLost — reckless_dash_double_penalty must NOT be registered \
+         (would emit a duplicate if still wired)"
+    );
+}
+
+// ── Behavior 28 — wire does NOT init RecklessDashDoubledBolts (resource deleted) ─
+//
+// The compile-time proof: if writer-code restored `RecklessDashDoubledBolts`,
+// this file would fail to compile (the type is no longer in scope). The runtime
+// smoke-test proves the wired schedule (including `reckless_dash_cleanup_node`
+// on `OnExit(NodeState::Playing)`) does not panic on quiet ticks in `Playing`.
+
+#[test]
+fn wire_does_not_init_reckless_dash_doubled_bolts_resource() {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
@@ -430,15 +479,16 @@ fn register_does_not_init_reckless_dash_doubled_bolts_resource() {
         .with_message::<BumpPerformed>()
         .with_message::<BoltImpactCell>()
         .with_message::<BoltLost>()
+        .with_dmg_pipeline()
         .build();
 
     wire(&mut app);
 
-    assert!(
-        app.world()
-            .get_resource::<RecklessDashDoubledBolts>()
-            .is_none(),
-        "wire must NOT init_resource::<RecklessDashDoubledBolts>() — \
-         the plugin owns init (matches Greed / Siphon / Fission pattern)"
-    );
+    // Smoke-test: 3 quiet ticks must not panic.
+    for _ in 0..3 {
+        tick(&mut app);
+    }
+    // The value of this test is structural: it compiles without referencing
+    // RecklessDashDoubledBolts. If writer-code re-introduces that resource,
+    // the compilation of this crate will catch the regression.
 }

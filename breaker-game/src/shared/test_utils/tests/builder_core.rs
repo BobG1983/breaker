@@ -199,10 +199,7 @@ fn with_dmg_pipeline_returns_with_dmg_typestate() {
 fn register_dmgable_on_with_dmg_registers_messages() {
     use crate::{cells::components::Cell, prelude::DamageDealt};
 
-    let app = TestAppBuilder::new()
-        .with_dmg_pipeline()
-        .register_dmgable::<Cell>()
-        .build();
+    let app = TestAppBuilder::new().with_dmg_pipeline().build();
 
     assert!(
         app.world()
@@ -215,11 +212,7 @@ fn register_dmgable_on_with_dmg_registers_messages() {
 fn register_dmgable_chains_multiple_types() {
     use crate::{bolt::components::Bolt, cells::components::Cell, prelude::DamageDealt};
 
-    let app = TestAppBuilder::new()
-        .with_dmg_pipeline()
-        .register_dmgable::<Bolt>()
-        .register_dmgable::<Cell>()
-        .build();
+    let app = TestAppBuilder::new().with_dmg_pipeline().build();
 
     assert!(
         app.world()

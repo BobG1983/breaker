@@ -1,27 +1,31 @@
-//! `RecklessDash` protocol — risky-catch damage boost with double-penalty on
-//! bolt loss.
+//! `RecklessDash` protocol — risky-catch damage boost with bolt-loss penalty
+//! doubling on dash transitions.
 //!
 //! Design doc: `docs/design/protocols/reckless_dash.md`.
 //!
 //! Owns the `RecklessDashConfig` resource (per-run tuning), the
-//! `RiskyDamageBoost` per-bolt component, the `RecklessDashDoubledBolts`
-//! per-node tracking resource, the builder-produced `"protocol:reckless_dash"` source tag,
-//! the `activate` / `wire` dispatch entry points, and the four runtime
-//! systems (`reckless_dash_on_bump`, `reckless_dash_amplify_damage`,
-//! `reckless_dash_double_penalty`, `reckless_dash_cleanup_node`).
+//! `RiskyDamageBoost` per-bolt component, the `OriginalBoltLossBehavior`
+//! per-breaker overlay component, the builder-produced
+//! `"protocol:reckless_dash"` source tag, the `activate` / `wire` dispatch
+//! entry points, and the four runtime systems
+//! (`reckless_dash_on_bump`, `reckless_dash_amplify_damage`,
+//! `reckless_dash_on_dash_transition`, `reckless_dash_cleanup_node`).
 
-use std::{collections::HashSet, marker::PhantomData};
+use std::marker::PhantomData;
 
 use bevy::prelude::*;
 
 use crate::{
     bolt::{components::BoltBaseDamage, resources::DEFAULT_BOLT_BASE_DAMAGE, sets::BoltSystems},
     breaker::{
-        components::{DashDuration, DashState, DashStateTimer},
+        components::{
+            BoltLossBehavior, DashDuration, DashState, DashStateTimer, PreviousDashState,
+        },
         sets::BreakerSystems,
     },
     mutators::protocols::{
         definition::{ProtocolKind, ProtocolTuning},
+        resources::protocol_active,
         systems::ProtocolGate,
     },
     prelude::*,
@@ -39,8 +43,8 @@ pub(crate) struct RecklessDashConfig {
     pub(crate) risky_zone_start:  f32,
     /// Multiplier applied to `BoltBaseDamage` on a risky catch.
     pub(crate) damage_multiplier: f32,
-    /// When true, every `BoltLost` that occurs while the breaker is Dashing
-    /// is duplicated into a second `BoltLost`.
+    /// When true, `reckless_dash_on_dash_transition` doubles the breaker's
+    /// `BoltLossBehavior` for the duration of every dash.
     pub(crate) double_penalty:    bool,
 }
 
@@ -56,17 +60,113 @@ pub struct RiskyDamageBoost {
     pub multiplier: f32,
 }
 
-// ── RecklessDashDoubledBolts ───────────────────────────────────────────────
+// ── OriginalBoltLossBehavior ───────────────────────────────────────────────
 
-/// Per-node set of bolt entities whose `BoltLost` has already been duplicated
-/// by `reckless_dash_double_penalty`. Used as the infinite-loop guard so a
-/// duplicated `BoltLost` is not itself re-duplicated. Cleared on
-/// `OnExit(NodeState::Playing)` by `reckless_dash_cleanup_node`.
+/// Per-breaker overlay that stores the unmodified `BoltLossBehavior` from
+/// before `reckless_dash_on_dash_transition` began doubling it. Inserted on
+/// the `Idle → Dashing` transition; removed on `Dashing → {anything else}`.
+/// Allows restoration of the original behavior when the dash ends.
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+pub(crate) struct OriginalBoltLossBehavior(
+    /// The original, undoubled `BoltLossBehavior` captured at `Idle → Dashing` entry.
+    pub BoltLossBehavior,
+);
+
+// ── reckless_dash_on_dash_transition ──────────────────────────────────────
+
+/// Query alias for `reckless_dash_on_dash_transition` — extracted to keep the
+/// system signature under clippy's `type_complexity` threshold.
+type BreakerDashQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static DashState,
+        &'static PreviousDashState,
+        &'static mut BoltLossBehavior,
+        Option<&'static OriginalBoltLossBehavior>,
+    ),
+    (With<Breaker>, Changed<DashState>),
+>;
+
+/// Mutates `BoltLossBehavior` on dash state transitions.
 ///
-/// Initialised by the `ProtocolPlugin` (matches Greed / Siphon / Fission
-/// convention) — NOT by `wire`.
-#[derive(Resource, Debug, Default)]
-pub struct RecklessDashDoubledBolts(pub HashSet<Entity>);
+/// - `{not Dashing} → Dashing`: saves the live `BoltLossBehavior` as
+///   `OriginalBoltLossBehavior`, then doubles the live component
+///   (`LifeLoss(n) → LifeLoss(n.saturating_mul(2))`,
+///   `TimeLoss(d) → TimeLoss(d * 2.0)`, `None → None`).
+/// - `Dashing → {anything else}`: restores `BoltLossBehavior` from the
+///   `OriginalBoltLossBehavior` overlay (when present) and removes the
+///   overlay component. Safe no-op when the overlay is absent.
+///
+/// Skips (early return) when:
+/// - `RecklessDashConfig` is absent.
+/// - `config.double_penalty == false`.
+///
+/// Run conditions (registered in `wire`): gated on
+/// `protocol_active(ProtocolKind::RecklessDash)` AND `in_state(NodeState::Playing)`.
+///
+/// Transition detection compares `PreviousDashState` against the current
+/// `DashState` rather than relying on `Changed<DashState>` alone — the
+/// `Changed` filter guards iteration cost (it's the query filter), but
+/// the actual enter/exit logic uses the previous-state snapshot to
+/// distinguish same-value writes (e.g. `Idle → Idle`) from real
+/// transitions.
+pub(crate) fn reckless_dash_on_dash_transition(
+    config: Option<Res<RecklessDashConfig>>,
+    mut breakers: BreakerDashQuery,
+    mut commands: Commands,
+) {
+    let Some(config) = config else {
+        return;
+    };
+    if !config.double_penalty {
+        return;
+    }
+    for (entity, current_state, previous_dash_state, mut current_behavior, overlay_opt) in
+        &mut breakers
+    {
+        let was_dashing = matches!(previous_dash_state.0, DashState::Dashing);
+        let now_dashing = matches!(*current_state, DashState::Dashing);
+        if !was_dashing && now_dashing {
+            // Read BEFORE mutating so the saved value is the unmodified one.
+            let original = *current_behavior;
+            commands
+                .entity(entity)
+                .insert(OriginalBoltLossBehavior(original));
+            // (Site A) cross-domain write exception: reckless_dash uniquely observes Idle→Dashing
+            // via PreviousDashState (1); simple enum-value mutation, not a state-machine
+            // transition (2); gated by run_if(protocol_active) + run_if(in_state(Playing))
+            // + Changed<DashState> query filter (3); message-based alternative would need
+            // a new breaker consumer system solely for this one path (4).
+            *current_behavior = double_behavior(original);
+        } else if was_dashing
+            && !now_dashing
+            && let Some(overlay) = overlay_opt
+        {
+            // cross-domain write exception: same justification as Site A above (1-4);
+            // restore is the paired inverse of the doubling write.
+            *current_behavior = overlay.0;
+            commands.entity(entity).remove::<OriginalBoltLossBehavior>();
+        }
+        // Neither enter nor exit (e.g., Idle → Idle same-value write,
+        // Dashing → Dashing) is a no-op.
+    }
+}
+
+/// Doubles the penalty carried by a `BoltLossBehavior`.
+///
+/// - `LifeLoss(n)` → `LifeLoss(n.saturating_mul(2))` (no panic on overflow).
+/// - `TimeLoss(d)` → `TimeLoss(d * 2.0)` (raw float multiplication, no clamp).
+///   NaN input produces NaN output; callers must ensure values are finite.
+/// - `None` → `None` (uniform handling).
+fn double_behavior(behavior: BoltLossBehavior) -> BoltLossBehavior {
+    match behavior {
+        BoltLossBehavior::LifeLoss(n) => BoltLossBehavior::LifeLoss(n.saturating_mul(2)),
+        BoltLossBehavior::TimeLoss(d) => BoltLossBehavior::TimeLoss(d * 2.0),
+        BoltLossBehavior::None => BoltLossBehavior::None,
+    }
+}
 
 // ── activate ───────────────────────────────────────────────────────────────
 
@@ -102,16 +202,20 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
 /// later frame where the protocol activates:
 /// - `reckless_dash_on_bump` — after `BreakerSystems::GradeBump`.
 /// - `reckless_dash_amplify_damage` — after `BoltSystems::CellCollision`.
-/// - `reckless_dash_double_penalty` — after `BoltSystems::BoltLost`.
 ///
-/// `OnExit(NodeState::Playing)` (no run-if):
-/// - `reckless_dash_cleanup_node` — clears the `RecklessDashDoubledBolts`
-///   anti-feedback set.
+/// `FixedUpdate` non-reader system — gated externally via `run_if` because
+/// it has no message reader to drain:
+/// - `reckless_dash_on_dash_transition` —
+///   `.after(BreakerSystems::UpdateState)
+///    .before(BreakerSystems::UpdatePreviousState)
+///    .before(BreakerSystems::HandleBoltLost)`,
+///   gated on `protocol_active(RecklessDash)` AND
+///   `in_state(NodeState::Playing)`.
 ///
-/// NOTE: `wire` does NOT call
-/// `init_resource::<RecklessDashDoubledBolts>()`. The resource is initialised
-/// by `ProtocolPlugin::build`, mirroring the Greed / Siphon / Fission
-/// precedent where the plugin owns all protocol resource initialisation.
+/// `OnExit(NodeState::Playing)` cleanup system:
+/// - `reckless_dash_cleanup_node` — restores `BoltLossBehavior` from
+///   `OriginalBoltLossBehavior` on every breaker that exits `Playing` while
+///   still dashing. Runs unconditionally (no run-if gate).
 pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
@@ -120,10 +224,49 @@ pub(crate) fn wire(app: &mut App) {
             reckless_dash_amplify_damage
                 .after(BoltSystems::CellCollision)
                 .in_set(DmgSystems::EmitDamage),
-            reckless_dash_double_penalty.after(BoltSystems::BoltLost),
+            reckless_dash_on_dash_transition
+                .after(BreakerSystems::UpdateState)
+                .before(BreakerSystems::UpdatePreviousState)
+                .before(BreakerSystems::HandleBoltLost)
+                .run_if(protocol_active(ProtocolKind::RecklessDash))
+                .run_if(in_state(NodeState::Playing)),
         ),
-    )
-    .add_systems(OnExit(NodeState::Playing), reckless_dash_cleanup_node);
+    );
+    app.add_systems(OnExit(NodeState::Playing), reckless_dash_cleanup_node);
+}
+
+/// Query alias for [`reckless_dash_cleanup_node`] — extracts breakers that
+/// exited `NodeState::Playing` while carrying an `OriginalBoltLossBehavior`
+/// overlay (i.e., while still `DashState::Dashing`).
+type BreakerOverlayQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut BoltLossBehavior,
+        &'static OriginalBoltLossBehavior,
+    ),
+    With<Breaker>,
+>;
+
+/// Runs on `OnExit(NodeState::Playing)`. For every breaker that still carries
+/// an `OriginalBoltLossBehavior` overlay (i.e., exited `Playing` while
+/// `DashState::Dashing`), restores `BoltLossBehavior` to the saved original
+/// and removes the overlay.
+///
+/// The query's `&OriginalBoltLossBehavior` filter naturally skips breakers
+/// without the overlay — idle breakers are untouched.
+pub(crate) fn reckless_dash_cleanup_node(
+    mut breakers: BreakerOverlayQuery,
+    mut commands: Commands,
+) {
+    for (entity, mut current_behavior, overlay) in &mut breakers {
+        // cross-domain write exception: same justification as the transition-system
+        // restore (1-4); this cleanup runs only on OnExit(NodeState::Playing) so the
+        // run-condition gate is structural, not a run_if (3).
+        *current_behavior = overlay.0;
+        commands.entity(entity).remove::<OriginalBoltLossBehavior>();
+    }
 }
 
 // ── Systems ────────────────────────────────────────────────────────────────
@@ -253,88 +396,4 @@ pub(crate) fn reckless_dash_amplify_damage(
         }
         amplified_this_frame.push(msg.bolt);
     }
-}
-
-/// Consumes `BoltLost` messages. On a `BoltLost` whose breaker is
-/// `DashState::Dashing` and `config.double_penalty == true`, emits a second
-/// `BoltLost` carrying the same `bolt` + `breaker` fields. The anti-feedback
-/// set `RecklessDashDoubledBolts` prevents the same bolt from being doubled
-/// more than once within a single node.
-///
-/// Skips (`continue`) per-message when:
-/// - The breaker lookup fails (despawned or missing `DashState`).
-/// - The breaker is not `Dashing`.
-/// - The bolt is already in `RecklessDashDoubledBolts` (already doubled).
-///
-/// Harness-safe:
-/// - If `RecklessDashConfig` is absent → drain the reader and return.
-/// - If `config.double_penalty == false` → drain the reader and return
-///   (disabled means no-op, not deferred).
-pub(crate) fn reckless_dash_double_penalty(
-    mut reader: MessageReader<BoltLost>,
-    config: Option<Res<RecklessDashConfig>>,
-    gate: ProtocolGate,
-    breakers: Query<&DashState, With<Breaker>>,
-    mut doubled: ResMut<RecklessDashDoubledBolts>,
-    mut already_doubled_ever: Local<HashSet<Entity>>,
-    mut commands: Commands,
-) {
-    if gate.is_closed_for(ProtocolKind::RecklessDash) {
-        reader.clear();
-        return;
-    }
-    let Some(config) = config else {
-        reader.clear();
-        return;
-    };
-    if !config.double_penalty {
-        reader.clear();
-        return;
-    }
-    for msg in reader.read() {
-        let Ok(state) = breakers.get(msg.breaker) else {
-            continue;
-        };
-        if *state != DashState::Dashing {
-            continue;
-        }
-        // Two-level anti-feedback guard — division of responsibility:
-        //
-        // - `already_doubled_ever` (system-local, NEVER cleared): catches the
-        //   one failure mode the observable set can't — after an `OnExit`
-        //   cleanup clears `RecklessDashDoubledBolts`, a buffered duplicate
-        //   still sitting in `Messages<BoltLost>` can be surfaced by the
-        //   reader cursor on the next `Playing` frame. Without this local,
-        //   that read would re-pass the set check and enqueue yet another
-        //   duplicate. Local persistence is bounded by bolt spawn count
-        //   over a full run (small); Bevy never reuses `Entity` generations.
-        //
-        // - `RecklessDashDoubledBolts` (shared resource, per-node): the
-        //   observable state that tests assert on. Exists so tests can
-        //   inspect doubled-bolts state and so future systems (FX, stat
-        //   tracking) can query "has this bolt been doubled this node?"
-        //   without depending on an internal Local.
-        if !already_doubled_ever.insert(msg.bolt) {
-            continue;
-        }
-        doubled.0.insert(msg.bolt);
-        let duplicate = BoltLost {
-            bolt:    msg.bolt,
-            breaker: msg.breaker,
-        };
-        // Defer the write via `Commands` so the `MessageReader<BoltLost>`
-        // (`Res<Messages<BoltLost>>`) borrow does not conflict with
-        // `ResMut<Messages<BoltLost>>` in the same system.
-        commands.queue(move |world: &mut World| {
-            world.resource_mut::<Messages<BoltLost>>().write(duplicate);
-        });
-    }
-}
-
-/// Runs on `OnExit(NodeState::Playing)`. Clears the
-/// `RecklessDashDoubledBolts` tracking set so per-node state does not leak
-/// across nodes / runs. Runs unconditionally (no `run_if`) — safe no-op when
-/// the set is already empty.
-pub(crate) fn reckless_dash_cleanup_node(mut doubled: ResMut<RecklessDashDoubledBolts>) {
-    doubled.0.clear();
 }

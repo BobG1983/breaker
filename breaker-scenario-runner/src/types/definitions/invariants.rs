@@ -87,13 +87,11 @@ pub enum InvariantKind {
     /// indicating orphaned kill-count state leaked from a prior run or
     /// protocol removal without cleanup.
     FissionCounterOrphaned,
-    /// CONTRACT: no bolt carries `RiskyDamageBoost` and
-    /// `RecklessDashDoubledBolts` is empty only when `ActiveProtocols`
-    /// contains `ProtocolKind::RecklessDash`.
+    /// CONTRACT: no bolt carries `RiskyDamageBoost` only when
+    /// `ActiveProtocols` contains `ProtocolKind::RecklessDash`.
     ///
-    /// Fires when `RecklessDash` is NOT active but either a bolt has
-    /// `RiskyDamageBoost` or `RecklessDashDoubledBolts` is non-empty,
-    /// indicating orphaned boost/penalty state.
+    /// Fires when `RecklessDash` is NOT active but a bolt has
+    /// `RiskyDamageBoost`, indicating orphaned boost state.
     RecklessDashOrphaned,
     /// CONTRACT: no bolt carries `EchoNetwork` or `EchoPrimed` when
     /// `ActiveProtocols` does not contain `ProtocolKind::EchoStrike`.
@@ -205,7 +203,7 @@ impl InvariantKind {
                 "FissionCounter.kills > 0 while Fission is not active in ActiveProtocols"
             }
             Self::RecklessDashOrphaned => {
-                "RiskyDamageBoost or RecklessDashDoubledBolts non-empty while RecklessDash is not active"
+                "RiskyDamageBoost present while RecklessDash is not active"
             }
             Self::EchoStrikeOrphaned => {
                 "EchoNetwork or EchoPrimed on bolt while EchoStrike is not active in ActiveProtocols"

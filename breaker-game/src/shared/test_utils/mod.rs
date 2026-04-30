@@ -11,7 +11,7 @@ pub(crate) mod pregate_drain;
 pub(crate) mod schedule_inspect;
 pub(crate) mod tick_helper;
 
-pub(crate) use builder::TestAppBuilder;
+pub(crate) use builder::{TestAppBuilder, add_breaker_transition_systems};
 pub(crate) use collector::{MessageCollector, attach_message_capture};
 pub(crate) use effect_v3_infra::register_effect_v3_test_infrastructure;
 pub(crate) use input::press_key;

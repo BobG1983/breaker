@@ -1,22 +1,16 @@
 use bevy::prelude::*;
 use breaker::mutators::protocols::{
-    definition::ProtocolKind,
-    reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
-    resources::ActiveProtocols,
+    definition::ProtocolKind, reckless_dash::RiskyDamageBoost, resources::ActiveProtocols,
 };
 
 use crate::{invariants::*, types::InvariantKind};
 
-/// CONTRACT invariant: `RiskyDamageBoost` components on bolts and a non-empty
-/// `RecklessDashDoubledBolts` resource are only legal while `ActiveProtocols`
-/// contains `ProtocolKind::RecklessDash`.
+/// CONTRACT invariant: `RiskyDamageBoost` components on bolts are only legal
+/// while `ActiveProtocols` contains `ProtocolKind::RecklessDash`.
 ///
 /// Violation indicates orphaned reckless-dash state — either:
-/// - `reckless_dash_cleanup_node` failed to clear `RecklessDashDoubledBolts`
-///   at node boundary, or
 /// - `ActiveProtocols` was cleared without removing reckless-dash components, or
-/// - a cross-node state leak carried boost markers or penalty guards from a
-///   prior node.
+/// - a cross-node state leak carried boost markers from a prior node.
 ///
 /// Gated on [`ScenarioStats::entered_playing`]: returns without producing
 /// violations when the game has not yet entered the `Playing` state.
@@ -24,7 +18,6 @@ use crate::{invariants::*, types::InvariantKind};
 /// Increments [`ScenarioStats::invariant_checks`] when it runs.
 pub fn check_reckless_dash_orphaned(
     boost_query: Query<Entity, With<RiskyDamageBoost>>,
-    doubled_bolts: Option<Res<RecklessDashDoubledBolts>>,
     active_protocols: Option<Res<ActiveProtocols>>,
     frame: Res<ScenarioFrame>,
     mut log: ResMut<ViolationLog>,
@@ -60,31 +53,13 @@ pub fn check_reckless_dash_orphaned(
             ),
         });
     }
-
-    // Check RecklessDashDoubledBolts resource.
-    if let Some(ref doubled) = doubled_bolts
-        && !doubled.0.is_empty()
-    {
-        log.0.push(ViolationEntry {
-            frame:     frame.0,
-            invariant: InvariantKind::RecklessDashOrphaned,
-            entity:    None,
-            message:   format!(
-                "RecklessDashOrphaned FAIL frame={} RecklessDashDoubledBolts is non-empty ({} entries) but RecklessDash is not active",
-                frame.0,
-                doubled.0.len(),
-            ),
-        });
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use breaker::mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
-        reckless_dash::{RecklessDashDoubledBolts, RiskyDamageBoost},
+        reckless_dash::RiskyDamageBoost,
         resources::ActiveProtocols,
     };
 
@@ -124,16 +99,16 @@ mod tests {
         }
     }
 
-    // -- no RiskyDamageBoost components and empty/absent doubled → no violation --
+    // -- no RiskyDamageBoost components → no violation --
 
     #[test]
-    fn no_boost_no_doubled_no_violation() {
+    fn no_boost_no_violation() {
         let mut app = test_app();
         tick(&mut app);
         let log = app.world().resource::<ViolationLog>();
         assert!(
             log.0.is_empty(),
-            "expected no violation when no boost components or doubled bolts, got {}",
+            "expected no violation when no boost components, got {}",
             log.0.len()
         );
     }
@@ -197,51 +172,6 @@ mod tests {
                 .iter()
                 .all(|v| v.invariant == InvariantKind::RecklessDashOrphaned),
             "all violations should be RecklessDashOrphaned"
-        );
-    }
-
-    // -- non-empty RecklessDashDoubledBolts, RecklessDash inactive → VIOLATION --
-
-    #[test]
-    fn non_empty_doubled_bolts_fires_violation() {
-        let mut app = test_app();
-        let fake_entity = Entity::from_bits(99u64);
-        let mut doubled = RecklessDashDoubledBolts(HashSet::new());
-        doubled.0.insert(fake_entity);
-        app.world_mut().insert_resource(doubled);
-        tick(&mut app);
-        let log = app.world().resource::<ViolationLog>();
-        assert_eq!(
-            log.0.len(),
-            1,
-            "expected 1 violation for non-empty doubled bolts, got {}",
-            log.0.len()
-        );
-        assert_eq!(log.0[0].invariant, InvariantKind::RecklessDashOrphaned);
-        assert!(
-            log.0[0].entity.is_none(),
-            "resource-level doubled bolts violation should have entity=None"
-        );
-        assert!(
-            log.0[0].message.contains("1 entries"),
-            "message should report entry count, got: {}",
-            log.0[0].message
-        );
-    }
-
-    // -- empty RecklessDashDoubledBolts, RecklessDash inactive → no violation --
-
-    #[test]
-    fn empty_doubled_bolts_no_violation() {
-        let mut app = test_app();
-        app.world_mut()
-            .insert_resource(RecklessDashDoubledBolts(HashSet::new()));
-        tick(&mut app);
-        let log = app.world().resource::<ViolationLog>();
-        assert!(
-            log.0.is_empty(),
-            "expected no violation when doubled bolts resource is empty, got {}",
-            log.0.len()
         );
     }
 

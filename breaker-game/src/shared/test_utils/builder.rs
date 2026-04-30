@@ -15,7 +15,7 @@ use bevy::{
     time::TimeUpdateStrategy,
     winit::WinitPlugin,
 };
-use rantzsoft_dmg::{Dmgable, RantzDmgAppExt, RantzDmgPlugin};
+use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 use rantzsoft_physics2d::plugin::RantzPhysics2dPlugin;
 
 use super::{
@@ -393,12 +393,24 @@ impl<S: StateStatus, D: DmgStatus> TestAppBuilder<S, D> {
 
 // ── W2 Dmg-pipeline impls ────────────────────────────────────────────────
 
+fn register_standard_dmgables(app: &mut App) {
+    let _ = app
+        .register_dmgable::<Bolt>()
+        .register_dmgable::<Wall>()
+        .register_dmgable::<Breaker>()
+        .register_dmgable::<Salvo>()
+        .register_dmgable::<Cell>();
+}
+
 impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
-    /// Installs `RantzDmgPlugin`, transitioning the typestate to `WithDmg`.
-    /// After this call, `register_dmgable::<T>()` is available.
+    /// Installs `RantzDmgPlugin` and registers the standard dmgable types
+    /// (`Bolt`, `Wall`, `Breaker`, `Salvo`, `Cell`), transitioning the
+    /// typestate to `WithDmg`. After this call, `DamageDealt<T>` and related
+    /// messages are initialized for all standard dmgable types.
     #[must_use]
     pub(crate) fn with_dmg_pipeline(mut self) -> TestAppBuilder<S, WithDmg> {
         self.app.add_plugins(RantzDmgPlugin);
+        register_standard_dmgables(&mut self.app);
         TestAppBuilder {
             app:    self.app,
             _state: PhantomData,
@@ -412,13 +424,7 @@ impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
     #[must_use]
     pub(crate) fn with_effects_pipeline(mut self) -> TestAppBuilder<S, WithDmg> {
         self.app.add_plugins(RantzDmgPlugin);
-        let _ = self
-            .app
-            .register_dmgable::<Bolt>()
-            .register_dmgable::<Wall>()
-            .register_dmgable::<Breaker>()
-            .register_dmgable::<Salvo>()
-            .register_dmgable::<Cell>();
+        register_standard_dmgables(&mut self.app);
         register_effect_v3_test_infrastructure(&mut self.app);
         self.app.add_plugins(EffectV3Plugin);
         TestAppBuilder {
@@ -462,13 +468,29 @@ impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
     }
 }
 
-impl<S: StateStatus> TestAppBuilder<S, WithDmg> {
-    /// Registers a `Dmgable` type's per-`T` messages and systems via
-    /// `RantzDmgAppExt::register_dmgable::<T>()`. Only callable after
-    /// `.with_dmg_pipeline()` has installed `RantzDmgPlugin`.
-    #[must_use]
-    pub(crate) fn register_dmgable<T: Dmgable>(mut self) -> Self {
-        let _ = self.app.register_dmgable::<T>();
-        self
-    }
+// ── Cross-domain test-system bridges ──────────────────────────────────────
+
+/// Registers `update_previous_dash_state` and `handle_bolt_lost` in their
+/// `BreakerSystems` sets. Use when building a test app that needs the
+/// bolt-loss and dash-state-tracking pipeline without the full `BreakerPlugin`
+/// overhead.
+///
+/// Lives here (not in a domain-specific test module) because cross-domain
+/// tests must not import bare function pointers from `breaker::systems` —
+/// `shared::test_utils` is the accepted bridge for that wiring.
+#[cfg(test)]
+pub(crate) fn add_breaker_transition_systems(app: &mut App) {
+    use crate::breaker::{
+        sets::BreakerSystems,
+        systems::{handle_bolt_lost, update_previous_dash_state},
+    };
+    app.add_systems(
+        FixedUpdate,
+        (
+            update_previous_dash_state
+                .in_set(BreakerSystems::UpdatePreviousState)
+                .after(BreakerSystems::UpdateState),
+            handle_bolt_lost.in_set(BreakerSystems::HandleBoltLost),
+        ),
+    );
 }

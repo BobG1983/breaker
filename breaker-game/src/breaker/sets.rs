@@ -19,6 +19,12 @@ pub enum BreakerSystems {
     /// read both the current `DashState` and the previous-tick snapshot
     /// simultaneously, enabling per-tick transition detection.
     UpdatePreviousState,
+    /// The `handle_bolt_lost` system — applies the breaker's `BoltLossBehavior`
+    /// when a `BoltLost` fires for it. Protocols that mutate `BoltLossBehavior`
+    /// (e.g. `reckless_dash_on_dash_transition`) must be ordered
+    /// `.before(BreakerSystems::HandleBoltLost)` so the mutated behavior is
+    /// live when `handle_bolt_lost` reads it.
+    HandleBoltLost,
     /// The `breaker_cell_collision` system — detects breaker-cell overlap.
     CellCollision,
 }

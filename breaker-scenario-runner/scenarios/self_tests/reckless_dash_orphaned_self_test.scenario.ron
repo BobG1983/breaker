@@ -1,6 +1,5 @@
 // Self-test: RecklessDashOrphaned CONTRACT invariant fires when a bolt carries
-// RiskyDamageBoost or RecklessDashDoubledBolts is non-empty but RecklessDash
-// is not in ActiveProtocols.
+// RiskyDamageBoost but RecklessDash is not in ActiveProtocols.
 //
 // Sequence:
 //   frame 10 — InjectRiskyDamageBoost spawns a bolt-like entity with RiskyDamageBoost.

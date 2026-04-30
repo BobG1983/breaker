@@ -6,10 +6,8 @@
 //! `activate_now` CommandQueue-flush helper.
 //!
 //! Canonical config is `risky_zone_start: 0.7, damage_multiplier: 4.0,
-//! double_penalty: true` — the design-doc worked example. The RON asset's
-//! current `risky_zone_start: 0.3` is intentionally mismatched; the
-//! `ron_asset.rs` drift guard pins the correct design-intent value 0.7 and
-//! will FAIL until writer-code updates the RON.
+//! double_penalty: true` — the design-doc worked example. The `ron_asset.rs`
+//! drift guard pins the same 0.7 value against the shipped RON asset.
 
 use bevy::{
     ecs::{message::Messages, world::CommandQueue},
@@ -17,19 +15,25 @@ use bevy::{
 };
 
 use super::super::system::{
-    RecklessDashConfig, RecklessDashDoubledBolts, RiskyDamageBoost, activate, wire,
+    OriginalBoltLossBehavior, RecklessDashConfig, RiskyDamageBoost, activate,
+    reckless_dash_on_dash_transition, wire,
 };
 use crate::{
     bolt::components::BoltBaseDamage,
     breaker::{
-        components::{DashDuration, DashState, DashStateTimer},
+        components::{
+            BoltLossBehavior, DashDuration, DashState, DashStateTimer, PreviousDashState,
+        },
         messages::BumpGrade,
+        sets::BreakerSystems,
     },
     mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning},
-        resources::ActiveProtocols,
+        resources::{ActiveProtocols, protocol_active},
     },
     prelude::*,
+    shared::test_utils::add_breaker_transition_systems,
+    state::run::node::messages::ReduceNodeTimer,
 };
 
 // ── App builders ────────────────────────────────────────────────────────────
@@ -37,8 +41,7 @@ use crate::{
 /// Default Reckless Dash test app. State hierarchy in `NodeState::Playing`,
 /// `ActiveProtocols` initialised, reader messages registered, `BoltLost` and
 /// `DamageDealt<Cell>` capture installed, canonical `RecklessDashConfig`
-/// inserted, `RecklessDashDoubledBolts` init'd (plugin owns init — helpers
-/// mirror the Greed / Siphon / Fission pattern), and `wire` called.
+/// inserted, and `wire` called.
 ///
 /// Does NOT seed `ActiveProtocols` with Reckless Dash — tests that need the
 /// protocol active call [`seed_active_protocols_with_reckless_dash`].
@@ -55,7 +58,6 @@ pub(super) fn build_reckless_dash_app() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
-    app.world_mut().init_resource::<RecklessDashDoubledBolts>();
     wire(&mut app);
     app
 }
@@ -74,7 +76,6 @@ pub(super) fn build_reckless_dash_app_no_config() -> App {
         .with_message_capture::<BoltLost>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
-    app.world_mut().init_resource::<RecklessDashDoubledBolts>();
     wire(&mut app);
     app
 }
@@ -95,7 +96,6 @@ pub(super) fn build_reckless_dash_app_in_chip_selecting() -> App {
         .build();
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
-    app.world_mut().init_resource::<RecklessDashDoubledBolts>();
     wire(&mut app);
     app
 }
@@ -104,11 +104,8 @@ pub(super) fn build_reckless_dash_app_in_chip_selecting() -> App {
 
 /// Canonical Reckless Dash config used across all system-behavior tests.
 /// Matches the design-doc: `risky_zone_start: 0.7, damage_multiplier: 4.0,
-/// double_penalty: true`.
-///
-/// NOTE: The RON asset is expected to hold `risky_zone_start: 0.7` after the
-/// implementation spec updates it from the shipped `0.3`. The `ron_asset.rs`
-/// drift guard pins 0.7.
+/// double_penalty: true`. The `ron_asset.rs` drift guard pins the same 0.7
+/// value against the shipped RON asset.
 pub(super) const fn canonical_reckless_dash_config() -> RecklessDashConfig {
     RecklessDashConfig {
         risky_zone_start:  0.7,
@@ -258,8 +255,7 @@ pub(super) fn collected_reckless_dash_damage(app: &App) -> Vec<DamageDealt<Cell>
         .collect()
 }
 
-/// Returns all captured `BoltLost` messages (originals + any duplicates
-/// emitted by `reckless_dash_double_penalty`).
+/// Returns all captured `BoltLost` messages.
 pub(super) fn captured_bolt_lost(app: &App) -> Vec<BoltLost> {
     app.world()
         .resource::<MessageCollector<BoltLost>>()
@@ -273,4 +269,177 @@ pub(super) fn risky_boost(app: &App, bolt: Entity) -> Option<f32> {
     app.world()
         .get::<RiskyDamageBoost>(bolt)
         .map(|b| b.multiplier)
+}
+
+// ── Wave-5 app builders ─────────────────────────────────────────────────────
+
+/// Minimal app for testing `reckless_dash_on_dash_transition` in isolation.
+///
+/// Wires the breaker transition systems via [`add_breaker_transition_systems`]
+/// and `reckless_dash_on_dash_transition` (after `UpdateState`, before
+/// `UpdatePreviousState`, gated on `protocol_active`). The transition systems
+/// include `handle_bolt_lost`, but no test driving this builder writes
+/// `BoltLost`, so the system runs as a no-op. Use `build_reckless_dash_e2e_app`
+/// for tests that exercise the full `BoltLost → BoltLossBehavior` chain with
+/// `ReduceNodeTimer` capture.
+pub(super) fn build_reckless_dash_transition_app() -> App {
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .with_resource::<ActiveProtocols>()
+        .with_message::<BoltLost>()
+        .with_message::<ReduceNodeTimer>()
+        .build();
+    app.world_mut()
+        .insert_resource(canonical_reckless_dash_config());
+
+    app.configure_sets(
+        FixedUpdate,
+        BreakerSystems::UpdateState.before(BreakerSystems::UpdatePreviousState),
+    );
+    add_breaker_transition_systems(&mut app);
+    app.add_systems(
+        FixedUpdate,
+        reckless_dash_on_dash_transition
+            .after(BreakerSystems::UpdateState)
+            .before(BreakerSystems::UpdatePreviousState)
+            .run_if(protocol_active(ProtocolKind::RecklessDash)),
+    );
+    app
+}
+
+/// Same as [`build_reckless_dash_transition_app`] but does NOT insert
+/// `RecklessDashConfig`. Used by Behavior 9 to exercise the absent-config
+/// early-return guard.
+pub(super) fn build_reckless_dash_transition_app_no_config() -> App {
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .with_resource::<ActiveProtocols>()
+        .with_message::<BoltLost>()
+        .with_message::<ReduceNodeTimer>()
+        .build();
+
+    app.configure_sets(
+        FixedUpdate,
+        BreakerSystems::UpdateState.before(BreakerSystems::UpdatePreviousState),
+    );
+    add_breaker_transition_systems(&mut app);
+    app.add_systems(
+        FixedUpdate,
+        reckless_dash_on_dash_transition
+            .after(BreakerSystems::UpdateState)
+            .before(BreakerSystems::UpdatePreviousState)
+            .run_if(protocol_active(ProtocolKind::RecklessDash)),
+    );
+    app
+}
+
+/// End-to-end app for testing `reckless_dash_on_dash_transition` together with
+/// `handle_bolt_lost`.
+///
+/// Set ordering: `UpdateState → transition → HandleBoltLost → UpdatePreviousState`.
+/// Captures `ReduceNodeTimer` messages so tests can assert on `TimeLoss`
+/// behavior.
+pub(super) fn build_reckless_dash_e2e_app() -> App {
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .in_state_node_playing()
+        .with_resource::<ActiveProtocols>()
+        .with_message::<BoltLost>()
+        .with_message::<ReduceNodeTimer>()
+        .with_message_capture::<ReduceNodeTimer>()
+        .build();
+    app.world_mut()
+        .insert_resource(canonical_reckless_dash_config());
+
+    app.configure_sets(
+        FixedUpdate,
+        (
+            BreakerSystems::UpdateState
+                .before(BreakerSystems::HandleBoltLost)
+                .before(BreakerSystems::UpdatePreviousState),
+            BreakerSystems::HandleBoltLost.before(BreakerSystems::UpdatePreviousState),
+        ),
+    );
+    add_breaker_transition_systems(&mut app);
+    app.add_systems(
+        FixedUpdate,
+        reckless_dash_on_dash_transition
+            .after(BreakerSystems::UpdateState)
+            .before(BreakerSystems::UpdatePreviousState)
+            .before(BreakerSystems::HandleBoltLost)
+            .run_if(protocol_active(ProtocolKind::RecklessDash)),
+    );
+    app
+}
+
+// ── Wave-5 entity forcers / spawners ────────────────────────────────────────
+
+/// Directly mutates the breaker's `DashState` component to `target`, causing
+/// `Changed<DashState>` to fire for the entity on the next `tick`.
+pub(super) fn force_dash_state(app: &mut App, breaker: Entity, target: DashState) {
+    let mut state = app
+        .world_mut()
+        .get_mut::<DashState>(breaker)
+        .expect("breaker must have DashState component");
+    *state = target;
+}
+
+/// Spawns `(Breaker, behavior, dash_state, PreviousDashState(prev_dash_state))`.
+/// Used by the dash-transition isolation tests (Behaviors 1–11, 16–20).
+pub(super) fn spawn_breaker_for_transition(
+    app: &mut App,
+    behavior: BoltLossBehavior,
+    dash_state: DashState,
+    prev_dash_state: DashState,
+) -> Entity {
+    app.world_mut()
+        .spawn((
+            Breaker,
+            behavior,
+            dash_state,
+            PreviousDashState(prev_dash_state),
+        ))
+        .id()
+}
+
+/// Spawns `(Breaker, behavior, dash_state, PreviousDashState(prev_dash_state))`
+/// with an optional `Hp` component. Used by the end-to-end tests
+/// (Behaviors 12–15, 17, 23) that drive `BoltLost` through `handle_bolt_lost`.
+pub(super) fn spawn_breaker_for_e2e(
+    app: &mut App,
+    behavior: BoltLossBehavior,
+    hp: Option<Hp>,
+    dash_state: DashState,
+    prev_dash_state: DashState,
+) -> Entity {
+    let mut entity_commands = app.world_mut().spawn((
+        Breaker,
+        behavior,
+        dash_state,
+        PreviousDashState(prev_dash_state),
+    ));
+    if let Some(hp) = hp {
+        entity_commands.insert(hp);
+    }
+    entity_commands.id()
+}
+
+// ── Wave-5 assertion helpers ────────────────────────────────────────────────
+
+/// Collects all `ReduceNodeTimer` messages captured this tick.
+pub(super) fn captured_reduce_node_timer(app: &App) -> Vec<ReduceNodeTimer> {
+    app.world()
+        .resource::<MessageCollector<ReduceNodeTimer>>()
+        .0
+        .clone()
+}
+
+/// Returns the `OriginalBoltLossBehavior` inner value on `entity`, or `None`
+/// if the component is absent.
+pub(super) fn original_behavior(app: &App, entity: Entity) -> Option<BoltLossBehavior> {
+    app.world()
+        .get::<OriginalBoltLossBehavior>(entity)
+        .map(|o| o.0)
 }

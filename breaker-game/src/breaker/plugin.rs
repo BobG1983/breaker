@@ -78,7 +78,8 @@ impl Plugin for BreakerPlugin {
                     breaker_wall_collision.after(BreakerSystems::Move),
                     handle_bolt_lost
                         .after(BoltSystems::BoltLost)
-                        .before(NodeSystems::ReduceNodeTimer),
+                        .before(NodeSystems::ReduceNodeTimer)
+                        .in_set(BreakerSystems::HandleBoltLost),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )
