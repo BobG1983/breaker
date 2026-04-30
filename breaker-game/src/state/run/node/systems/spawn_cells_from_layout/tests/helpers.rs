@@ -14,8 +14,9 @@ use crate::{
             ActiveNodeLayout,
             definition::{LockMap, NodePool},
             messages::CellsSpawned,
-            systems::spawn_cells_from_layout::system::{
-                compute_grid_scale, grid_extent, spawn_cells_from_layout,
+            systems::spawn_cells_from_layout::{
+                geometry::{compute_grid_scale, grid_extent},
+                spawning::spawn_cells_from_layout,
             },
         },
         resources::{NodeAssignment, NodeOutcome, NodeSequence},

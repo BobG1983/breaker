@@ -27,10 +27,9 @@ use rantzsoft_spatial2d::components::Position2D;
 
 use super::handlers::{
     BirthingBoltLayersQuery, apply_decrement_run_stat_optional, apply_inject_hazard_stack,
-    apply_inject_non_zero_birthing_layers, apply_inject_original_bolt_loss_behavior,
-    apply_inject_zero_stack_hazard, apply_move_bolt, apply_set_burnout_heat,
-    apply_set_run_stat_optional, apply_set_timer_remaining, apply_spawn_extra_chain_arcs,
-    apply_spawn_extra_entities, apply_spawn_extra_primary_bolts,
+    apply_inject_non_zero_birthing_layers, apply_inject_zero_stack_hazard, apply_move_bolt,
+    apply_set_burnout_heat, apply_set_run_stat_optional, apply_set_timer_remaining,
+    apply_spawn_extra_chain_arcs, apply_spawn_extra_entities, apply_spawn_extra_primary_bolts,
     apply_spawn_extra_primary_breakers,
 };
 pub use super::handlers::{
@@ -306,9 +305,6 @@ fn apply_resource_mutation(mutation: &MutationKind, targets: &mut MutationTarget
             targets.commands.spawn(BurnoutDamageBoost {
                 multiplier: *multiplier,
             });
-        }
-        MutationKind::InjectOriginalBoltLossBehavior => {
-            apply_inject_original_bolt_loss_behavior(&mut targets.commands);
         }
         _ => {} // handled by apply_single_mutation
     }

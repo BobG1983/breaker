@@ -5,7 +5,7 @@ use std::collections::{HashMap, VecDeque};
 
 use bevy::prelude::*;
 
-use super::system::GridCellContext;
+use super::spawning::GridCellContext;
 use crate::{prelude::*, state::run::node::definition::LockMap};
 
 /// Pass 2: resolves lock dependencies via topological sort and spawns locked

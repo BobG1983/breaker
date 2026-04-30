@@ -75,7 +75,7 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 
 ## reviewer-file-length findings
 
-reviewer-file-length returns the split plan inline (summary table + refactor spec hint per file). It does NOT write to `docs/todos/`. The orchestrator executes the splits **directly inline in the current branch** — file moves following `.claude/rules/file-splitting.md` — and runs Basic Verification Tier after. Splits MUST land before the branch merges to develop. Do NOT defer to a todo. Do NOT route via `/implement` or `/quickfix`. If LOW-priority files are flagged, surface them to the user to decide whether to include them in the current split batch.
+reviewer-file-length returns the split plan inline (summary table + refactor spec hint per file). It does NOT write to `docs/todos/`. The orchestrator launches background sub-agents (forks — `Agent` without `subagent_type`) to perform the splits in the current branch following `.claude/rules/file-splitting.md`. Multiple splits can run in parallel. After all sub-agents complete, run Basic Verification Tier. Splits MUST land before the branch merges to develop. Do NOT defer to a todo. Do NOT route via `/implement` or `/quickfix`. If LOW-priority files are flagged, surface them to the user to decide whether to include them in the current split batch.
 
 ## reviewer-tests findings
 

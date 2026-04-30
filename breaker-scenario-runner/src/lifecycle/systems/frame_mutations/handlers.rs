@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use breaker::{
     bolt::components::{Bolt, PrimaryBolt},
-    breaker::components::{BoltLossBehavior, PrimaryBreaker},
+    breaker::components::PrimaryBreaker,
     chips::inventory::ChipInventory,
     effect_v3::effects::{
         chain_lightning::{ChainLightningArc, ChainLightningChain, ChainState},
@@ -17,7 +17,7 @@ use breaker::{
             definition::HazardKind,
             resources::{ActiveHazards, HazardRegistry},
         },
-        protocols::{burnout::BurnoutHeat, reckless_dash::OriginalBoltLossBehavior},
+        protocols::burnout::BurnoutHeat,
     },
     shared::birthing::Birthing,
     state::{
@@ -321,12 +321,4 @@ pub(super) fn apply_inject_non_zero_birthing_layers(bolts: &mut BirthingBoltLaye
         layers.membership = 0xFF;
         layers.mask = 0xFF;
     }
-}
-
-/// Spawns an entity carrying `OriginalBoltLossBehavior(BoltLossBehavior::LifeLoss(1))`.
-///
-/// Used exclusively by the `original_bolt_loss_behavior_orphaned_self_test` self-test
-/// scenario to trigger an [`InvariantKind::OriginalBoltLossBehaviorOrphaned`] violation.
-pub(super) fn apply_inject_original_bolt_loss_behavior(commands: &mut Commands) {
-    commands.spawn(OriginalBoltLossBehavior(BoltLossBehavior::LifeLoss(1)));
 }

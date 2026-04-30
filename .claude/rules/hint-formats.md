@@ -85,7 +85,7 @@ Standardized output formats that verification agents produce and failure routing
 
 ## reviewer-file-length
 
-reviewer-file-length returns its findings inline to the orchestrator: a summary table plus, per HIGH/MEDIUM file, a refactor spec hint of the form below. It does NOT write to `docs/todos/`. The orchestrator executes the splits inline in the current branch (per `.claude/rules/file-splitting.md`) before merge — never via `/implement`, `/quickfix`, or a todo.
+reviewer-file-length returns its findings inline to the orchestrator: a summary table plus, per HIGH/MEDIUM file, a refactor spec hint of the form below. It does NOT write to `docs/todos/`. The orchestrator launches background sub-agents (forks — `Agent` without `subagent_type`) to perform the splits in the current branch (per `.claude/rules/file-splitting.md`) before merge — never via `/implement`, `/quickfix`, or a todo. Multiple splits run in parallel; Basic Verification Tier runs after all complete.
 
 ```
 **Refactor spec hint:**

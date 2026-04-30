@@ -34,9 +34,9 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 - Make routing decisions per `.claude/rules/routing-failures.md`
 - Apply inline edits **only** where one of these explicitly authorizes it:
   - `.claude/rules/routing-failures.md` "Main agent fixes inline" rows (style/idiom from reviewer-quality, deprecated API from reviewer-bevy-api, dependency Cargo.toml changes from guard-dependencies, security warnings/info from guard-security)
-  - `.claude/rules/file-splitting.md` (file splits per reviewer-file-length hints)
   - The active skill's procedure (e.g., `/finish-dev` runs git, `/start-dev` runs `git flow`)
   - Orchestrator state files (`.claude/state/*`, `.claude/specs/*`, `docs/todos/TODO.md`, plan files)
+- File splits (reviewer-file-length findings): launch background sub-agents (forks) to perform splits — do NOT do inline; see `.claude/rules/routing-failures.md`
 - Run git/`gh` commands when the active skill authorizes them
 - Edit memory files under `/Users/bgardner/.claude-home/projects/.../memory/`
 

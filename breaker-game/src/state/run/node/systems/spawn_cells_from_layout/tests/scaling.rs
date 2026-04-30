@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{super::system::compute_grid_scale, helpers::*};
+use super::{super::geometry::compute_grid_scale, helpers::*};
 use crate::{cells::components::*, prelude::*, state::run::node::definition::NodePool};
 
 // --- A: Pure function tests for compute_grid_scale ---

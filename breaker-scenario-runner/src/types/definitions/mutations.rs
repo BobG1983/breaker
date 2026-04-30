@@ -271,11 +271,6 @@ pub enum MutationKind {
         /// Multiplier value to set on the spawned `BurnoutDamageBoost`.
         multiplier: f32,
     },
-    /// Spawns an entity carrying `OriginalBoltLossBehavior(BoltLossBehavior::LifeLoss(1))`.
-    ///
-    /// Used by the `original_bolt_loss_behavior_orphaned_self_test` self-test scenario to
-    /// trigger an `InvariantKind::OriginalBoltLossBehaviorOrphaned` violation.
-    InjectOriginalBoltLossBehavior,
 }
 
 /// Mirrors `DashState` for RON deserialization in the scenario runner crate.

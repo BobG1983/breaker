@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
-use super::{super::system::spawn_cells_from_layout, helpers::*};
+use super::{
+    super::{super::spawning::spawn_cells_from_layout, helpers::*},
+    helpers::*,
+};
 use crate::{
     cells::{
         CellTypeDefinition,
-        components::*,
         definition::{CellBehavior, GuardedBehavior, Toughness},
         resources::{CellConfig, CellTypeRegistry},
     },
@@ -15,135 +17,51 @@ use crate::{
     },
 };
 
-// --- A2: CellBehavior wiring tests ---
+// ── Part L: Toughness-based HP computation in spawn system ─────────────
 
-/// Helper to reduce verbosity of String grid construction.
-fn s(val: &str) -> String {
-    val.to_owned()
-}
-
-/// Creates a registry with a regen cell type ('R') and a normal cell type ('N').
-fn behavior_registry() -> CellTypeRegistry {
-    let mut registry = CellTypeRegistry::default();
+/// Creates a registry with a guarded cell type ("Gu") that has Tough toughness
+/// and `guardian_hp_fraction: 0.5`, plus "S" (Standard) and "T" (Tough).
+fn toughness_registry_with_guarded() -> CellTypeRegistry {
+    let mut registry = test_registry(); // already has "S" (Standard), "T" (Tough)
     registry.insert(
-        "R".to_owned(),
+        "Gu".to_owned(),
         CellTypeDefinition {
-            id:                "regen".to_owned(),
-            alias:             "R".to_owned(),
-            toughness:         Toughness::default(),
-            color_rgb:         [0.5, 1.0, 0.5],
+            id:                "guarded".to_owned(),
+            alias:             "Gu".to_owned(),
+            toughness:         Toughness::Tough,
+            color_rgb:         [1.0, 0.8, 0.2],
             required_to_clear: true,
             damage_hdr_base:   4.0,
             damage_green_min:  0.2,
             damage_blue_range: 0.4,
             damage_blue_base:  0.2,
-            behaviors:         Some(vec![CellBehavior::Regen { rate: 2.0 }]),
-
-            effects: None,
+            behaviors:         Some(vec![CellBehavior::Guarded(GuardedBehavior {
+                guardian_hp_fraction: 0.5,
+                guardian_color_rgb:   [0.5, 0.8, 1.0],
+                slide_speed:          30.0,
+            })]),
+            effects:           None,
         },
     );
+    // "gu" is the guardian child cell type consumed by the guarded parent
     registry.insert(
-        "N".to_owned(),
+        "gu".to_owned(),
         CellTypeDefinition {
-            id:                "normal".to_owned(),
-            alias:             "N".to_owned(),
-            toughness:         Toughness::default(),
-            color_rgb:         [1.0, 0.5, 0.5],
-            required_to_clear: true,
+            id:                "guardian".to_owned(),
+            alias:             "gu".to_owned(),
+            toughness:         Toughness::Weak,
+            color_rgb:         [0.5, 0.8, 1.0],
+            required_to_clear: false,
             damage_hdr_base:   4.0,
             damage_green_min:  0.2,
             damage_blue_range: 0.4,
             damage_blue_base:  0.2,
             behaviors:         None,
-
-            effects: None,
+            effects:           None,
         },
     );
     registry
 }
-
-fn behavior_test_app(layout: NodeLayout, registry: CellTypeRegistry) -> App {
-    TestAppBuilder::new()
-        .with_message::<CellsSpawned>()
-        .with_resource::<CellConfig>()
-        .with_resource::<PlayfieldConfig>()
-        .with_resource::<Assets<Mesh>>()
-        .with_resource::<Assets<ColorMaterial>>()
-        .insert_resource(ActiveNodeLayout(layout))
-        .insert_resource(registry)
-        .with_system(Startup, spawn_cells_from_layout)
-        .build()
-}
-
-// NOTE: locked_cell_definition_spawns_with_locked_component,
-// non_locked_cell_does_not_have_locked_component, and
-// locked_cell_definition_spawns_with_lock_adjacents_component
-// have been REMOVED — locking is no longer driven by CellBehavior.
-
-#[test]
-fn regen_cell_definition_spawns_with_cell_regen_component() {
-    let layout = NodeLayout {
-        name:            "regen_test".to_owned(),
-        timer_secs:      60.0,
-        cols:            2,
-        rows:            1,
-        grid_top_offset: 50.0,
-        grid:            vec![vec![s("R"), s("N")]],
-        pool:            NodePool::default(),
-        entity_scale:    1.0,
-        locks:           None,
-        sequences:       None,
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let regen_cells: Vec<&RegenRate> = app
-        .world_mut()
-        .query::<(&Cell, &RegenRate)>()
-        .iter(app.world())
-        .map(|(_, regen)| regen)
-        .collect();
-    assert_eq!(
-        regen_cells.len(),
-        1,
-        "cell with behaviors: [Regen {{ rate: 2.0 }}] should have RegenRate component"
-    );
-    assert!(
-        (regen_cells[0].0 - 2.0).abs() < f32::EPSILON,
-        "RegenRate rate should be 2.0, got {}",
-        regen_cells[0].0
-    );
-}
-
-#[test]
-fn non_regen_cell_does_not_have_cell_regen_component() {
-    let layout = NodeLayout {
-        name:            "no_regen_test".to_owned(),
-        timer_secs:      60.0,
-        cols:            2,
-        rows:            1,
-        grid_top_offset: 50.0,
-        grid:            vec![vec![s("N"), s("N")]],
-        pool:            NodePool::default(),
-        entity_scale:    1.0,
-        locks:           None,
-        sequences:       None,
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let regen_count = app
-        .world_mut()
-        .query::<(&Cell, &RegenRate)>()
-        .iter(app.world())
-        .count();
-    assert_eq!(
-        regen_count, 0,
-        "cells with behaviors: None should NOT have RegenRate component"
-    );
-}
-
-// --- A4: HP multiplier tests ---
 
 #[test]
 fn cell_hp_falls_back_to_default_base_hp_without_config() {
@@ -249,83 +167,6 @@ fn cell_hp_tough_falls_back_to_default_base_hp() {
         "cell max HP should be Tough default_base_hp = 30.0, got {}",
         healths[0].starting
     );
-}
-
-#[test]
-fn cell_spacing_matches_config() {
-    let layout = full_layout();
-    let config = CellConfig::default();
-    let step_x = config.width + config.padding_x;
-    let step_y = config.height + config.padding_y;
-    let mut app = test_app(layout);
-    app.update();
-
-    let positions = collect_sorted_cell_positions(&mut app);
-
-    // Check horizontal spacing within row 0 (first 3 cells)
-    let dx_01 = positions[1].0 - positions[0].0;
-    assert!(
-        (dx_01 - step_x).abs() < 0.01,
-        "horizontal spacing should be {step_x}, got {dx_01}"
-    );
-    let dx_12 = positions[2].0 - positions[1].0;
-    assert!(
-        (dx_12 - step_x).abs() < 0.01,
-        "horizontal spacing should be {step_x}, got {dx_12}"
-    );
-
-    // Check vertical spacing between row 0 and row 1 (same column)
-    let dy = positions[0].1 - positions[3].1;
-    assert!(
-        (dy - step_y).abs() < 0.01,
-        "vertical spacing should be {step_y}, got {dy}"
-    );
-}
-
-// ── Part L: Toughness-based HP computation in spawn system ─────────────
-
-/// Creates a registry with a guarded cell type ("Gu") that has Tough toughness
-/// and `guardian_hp_fraction: 0.5`, plus "S" (Standard) and "T" (Tough).
-fn toughness_registry_with_guarded() -> CellTypeRegistry {
-    let mut registry = test_registry(); // already has "S" (Standard), "T" (Tough)
-    registry.insert(
-        "Gu".to_owned(),
-        CellTypeDefinition {
-            id:                "guarded".to_owned(),
-            alias:             "Gu".to_owned(),
-            toughness:         Toughness::Tough,
-            color_rgb:         [1.0, 0.8, 0.2],
-            required_to_clear: true,
-            damage_hdr_base:   4.0,
-            damage_green_min:  0.2,
-            damage_blue_range: 0.4,
-            damage_blue_base:  0.2,
-            behaviors:         Some(vec![CellBehavior::Guarded(GuardedBehavior {
-                guardian_hp_fraction: 0.5,
-                guardian_color_rgb:   [0.5, 0.8, 1.0],
-                slide_speed:          30.0,
-            })]),
-            effects:           None,
-        },
-    );
-    // "gu" is the guardian child cell type consumed by the guarded parent
-    registry.insert(
-        "gu".to_owned(),
-        CellTypeDefinition {
-            id:                "guardian".to_owned(),
-            alias:             "gu".to_owned(),
-            toughness:         Toughness::Weak,
-            color_rgb:         [0.5, 0.8, 1.0],
-            required_to_clear: false,
-            damage_hdr_base:   4.0,
-            damage_green_min:  0.2,
-            damage_blue_range: 0.4,
-            damage_blue_base:  0.2,
-            behaviors:         None,
-            effects:           None,
-        },
-    );
-    registry
 }
 
 // Behavior 36: Standard cell at tier 0, pos 0 → CellHealth { current: 20.0, max: 20.0 }
@@ -595,93 +436,3 @@ fn spawn_boss_guarded_cell_applies_boss_multiplier_before_guardian_fraction() {
 // `resolve_hp_context` would fail to compile.
 // The function is private, so we cannot reference it directly. Instead, the
 // behavioral tests above verify the correct HP computation path.
-
-// --- A6: NodeLayout.sequences RON integration ---
-
-/// Layout with a single sequence group placing (0,0) at position 0 and (0,1)
-/// at position 1 should attach `SequenceCell`, `SequenceGroup(7)`, and
-/// `SequencePosition` to the matching cells.
-#[test]
-fn sequences_layout_field_attaches_group_and_position_components() {
-    use std::collections::HashMap;
-
-    use crate::{
-        cells::behaviors::sequence::components::{SequenceCell, SequenceGroup, SequencePosition},
-        state::run::node::definition::SequenceMap,
-    };
-
-    let mut sequences: SequenceMap = HashMap::new();
-    sequences.insert(7, vec![(0, 0), (0, 1)]);
-    let layout = NodeLayout {
-        name:            "sequence_layout".to_owned(),
-        timer_secs:      60.0,
-        cols:            2,
-        rows:            1,
-        grid_top_offset: 50.0,
-        grid:            vec![vec![s("N"), s("N")]],
-        pool:            NodePool::default(),
-        entity_scale:    1.0,
-        locks:           None,
-        sequences:       Some(sequences),
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let members: Vec<(u32, u32)> = app
-        .world_mut()
-        .query::<(&SequenceCell, &SequenceGroup, &SequencePosition)>()
-        .iter(app.world())
-        .map(|(_, group, position)| (group.0, position.0))
-        .collect();
-    assert_eq!(
-        members.len(),
-        2,
-        "both cells in the group should have sequence components attached"
-    );
-    assert!(
-        members.contains(&(7, 0)),
-        "position 0 in group 7 should be attached, got {members:?}"
-    );
-    assert!(
-        members.contains(&(7, 1)),
-        "position 1 in group 7 should be attached, got {members:?}"
-    );
-}
-
-/// Cells outside the `sequences` map must not receive sequence components.
-#[test]
-fn cells_outside_sequences_map_do_not_receive_sequence_components() {
-    use std::collections::HashMap;
-
-    use crate::{
-        cells::behaviors::sequence::components::SequenceCell,
-        state::run::node::definition::SequenceMap,
-    };
-
-    let mut sequences: SequenceMap = HashMap::new();
-    sequences.insert(0, vec![(0, 0)]);
-    let layout = NodeLayout {
-        name:            "mixed_sequence".to_owned(),
-        timer_secs:      60.0,
-        cols:            2,
-        rows:            1,
-        grid_top_offset: 50.0,
-        grid:            vec![vec![s("N"), s("N")]],
-        pool:            NodePool::default(),
-        entity_scale:    1.0,
-        locks:           None,
-        sequences:       Some(sequences),
-    };
-    let mut app = behavior_test_app(layout, behavior_registry());
-    app.update();
-
-    let sequence_count = app
-        .world_mut()
-        .query::<&SequenceCell>()
-        .iter(app.world())
-        .count();
-    assert_eq!(
-        sequence_count, 1,
-        "only the cell at (0,0) should be a sequence member"
-    );
-}

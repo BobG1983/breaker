@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{super::system::grid_extent, helpers::*};
+use super::{super::geometry::grid_extent, helpers::*};
 use crate::{
     cells::{components::*, resources::CellConfig},
     prelude::*,

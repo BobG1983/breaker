@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{InterpolateTransform2D, Spatial2D};
 
 use super::{
-    super::system::{compute_grid_scale, grid_extent, spawn_cells_from_layout},
+    super::{
+        geometry::{compute_grid_scale, grid_extent},
+        spawning::spawn_cells_from_layout,
+    },
     helpers::*,
 };
 use crate::{
