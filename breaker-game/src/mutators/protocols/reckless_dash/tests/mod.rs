@@ -5,6 +5,7 @@ mod amplify;
 mod components;
 mod double_only_while_dashing;
 mod double_penalty;
+mod lifecycle;
 mod node_exit_cleanup;
 mod on_bump;
 mod plugin;
