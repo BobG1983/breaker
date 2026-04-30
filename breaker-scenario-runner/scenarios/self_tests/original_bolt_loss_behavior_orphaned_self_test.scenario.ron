@@ -1,0 +1,28 @@
+// Self-test: OriginalBoltLossBehaviorOrphaned CONTRACT invariant fires when a
+// breaker carries OriginalBoltLossBehavior but RecklessDash is not active.
+//
+// Sequence:
+//   frame 10 — InjectOriginalBoltLossBehavior spawns an entity with
+//              OriginalBoltLossBehavior. No InjectProtocol — RecklessDash is
+//              never active.
+//   frame 11+ — check_original_bolt_loss_behavior_orphaned sees
+//               OriginalBoltLossBehavior with RecklessDash absent → VIOLATION.
+//
+// Physics disabled so the injected entity persists for the full run.
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Scripted((
+        actions: [],
+    )),
+    max_frames: 120,
+    disallowed_failures: [OriginalBoltLossBehaviorOrphaned],
+    allowed_failures: Some([OriginalBoltLossBehaviorOrphaned]),
+    debug_setup: (
+        disable_physics: true,
+        node_timer_remaining: 9999.0,
+    ),
+    frame_mutations: [
+        (frame: 10, mutation: InjectOriginalBoltLossBehavior),
+    ],
+)

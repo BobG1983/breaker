@@ -67,7 +67,7 @@ pub struct RiskyDamageBoost {
 /// the `Idle → Dashing` transition; removed on `Dashing → {anything else}`.
 /// Allows restoration of the original behavior when the dash ends.
 #[derive(Component, Clone, Copy, Debug, PartialEq)]
-pub(crate) struct OriginalBoltLossBehavior(
+pub struct OriginalBoltLossBehavior(
     /// The original, undoubled `BoltLossBehavior` captured at `Idle → Dashing` entry.
     pub BoltLossBehavior,
 );

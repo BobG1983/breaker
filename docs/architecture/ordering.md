@@ -23,7 +23,10 @@ Rules:
 ```rust
 // breaker/sets.rs
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-pub enum BreakerSystems { Move, Reset, GradeBump, UpdateState }
+pub enum BreakerSystems {
+    Move, Reset, GradeBump, UpdateState,
+    UpdatePreviousState, HandleBoltLost, CellCollision,
+}
 
 // breaker/plugin.rs — owning domain tags
 move_breaker.in_set(BreakerSystems::Move)

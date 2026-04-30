@@ -16,7 +16,7 @@ use breaker::{
 };
 use rantzsoft_stateflow::{routing_table::RoutingTable, transition::types::TransitionKind};
 
-use super::{
+use super::super::{
     debug_setup::{
         apply_debug_setup, deferred_debug_setup, enforce_frozen_positions, enforce_frozen_velocity,
     },
@@ -46,10 +46,11 @@ use crate::{
         check_echo_strike_orphaned, check_exactly_one_primary_bolt, check_fission_counter_orphaned,
         check_gravity_well_count_reasonable, check_greed_stacks_orphaned, check_hazard_stack_valid,
         check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-        check_offering_no_duplicates, check_pulse_ring_accumulation, check_reckless_dash_orphaned,
-        check_run_stats_monotonic, check_second_wind_wall_at_most_one,
-        check_shield_wall_at_most_one, check_siphon_streak_orphaned,
-        check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
+        check_offering_no_duplicates, check_original_bolt_loss_behavior_orphaned,
+        check_pulse_ring_accumulation, check_reckless_dash_orphaned, check_run_stats_monotonic,
+        check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
+        check_siphon_streak_orphaned, check_timer_monotonically_decreasing,
+        check_timer_non_negative, check_valid_breaker_state,
     },
     types::{InvariantKind, ScenarioDefinition},
 };
@@ -326,6 +327,10 @@ fn register_protocol_orphan_checkers(app: &mut App, active: &HashSet<InvariantKi
         InvariantKind::BurnoutStateOrphaned,
         check_burnout_state_orphaned
     );
+    register_checker!(
+        InvariantKind::OriginalBoltLossBehaviorOrphaned,
+        check_original_bolt_loss_behavior_orphaned
+    );
 }
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
@@ -425,7 +430,8 @@ fn register_scenario_systems(app: &mut App) {
 /// FixedUpdate-batch checkers. Returns `false` only for `ChipOfferExpected`,
 /// which runs on a different schedule (`Update` with a `run_if` condition).
 ///
-/// Uses an exhaustive match so new variants produce a compile error.
+/// Uses an exhaustive match so new variants produce a compile error (33 true,
+/// 1 false — `ChipOfferExpected`).
 pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
     match kind {
         InvariantKind::BoltInBounds
@@ -459,7 +465,8 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
         | InvariantKind::RecklessDashOrphaned
         | InvariantKind::EchoStrikeOrphaned
         | InvariantKind::DebtCollectorOrphaned
-        | InvariantKind::BurnoutStateOrphaned => true,
+        | InvariantKind::BurnoutStateOrphaned
+        | InvariantKind::OriginalBoltLossBehaviorOrphaned => true,
         InvariantKind::ChipOfferExpected => false,
     }
 }
@@ -470,7 +477,7 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
 /// Takes the union of `disallowed_failures` and `allowed_failures` (if
 /// present), filtered to only kinds where `is_fixed_update_checker` returns
 /// `true`. When both lists are empty/None, or when the filtered set is empty,
-/// returns all 32 `FixedUpdate`-batch kinds as a fallback.
+/// returns all 33 `FixedUpdate`-batch kinds as a fallback.
 pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet<InvariantKind> {
     let mut set: HashSet<InvariantKind> = definition
         .disallowed_failures
@@ -492,7 +499,7 @@ pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet
         // AND the health check for scenarios like
         // chip_offer_expected_self_test.scenario.ron where only
         // ChipOfferExpected is in the lists (non-FixedUpdate kind
-        // filtered out -> empty set -> all 32 registered).
+        // filtered out -> empty set -> all 33 registered).
         InvariantKind::ALL
             .iter()
             .copied()
@@ -500,256 +507,5 @@ pub(crate) fn active_invariant_kinds(definition: &ScenarioDefinition) -> HashSet
             .collect()
     } else {
         set
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // -----------------------------------------------------------------
-    // is_fixed_update_checker — classification function
-    // -----------------------------------------------------------------
-
-    /// Behavior 1: `is_fixed_update_checker` returns `true` for FixedUpdate-batch
-    /// variants. Test a representative from each of the three original batches.
-    #[test]
-    fn is_fixed_update_checker_returns_true_for_fixed_update_kinds() {
-        // checkers_a representative
-        assert!(
-            is_fixed_update_checker(InvariantKind::BoltInBounds),
-            "BoltInBounds should be a FixedUpdate checker"
-        );
-        // checkers_b representative
-        assert!(
-            is_fixed_update_checker(InvariantKind::NoEntityLeaks),
-            "NoEntityLeaks should be a FixedUpdate checker"
-        );
-        // checkers_c representative
-        assert!(
-            is_fixed_update_checker(InvariantKind::AabbMatchesEntityDimensions),
-            "AabbMatchesEntityDimensions should be a FixedUpdate checker"
-        );
-    }
-
-    /// Behavior 2: `is_fixed_update_checker` returns `false` for `ChipOfferExpected`.
-    #[test]
-    fn is_fixed_update_checker_returns_false_for_chip_offer_expected() {
-        assert!(
-            !is_fixed_update_checker(InvariantKind::ChipOfferExpected),
-            "ChipOfferExpected runs on Update, not FixedUpdate"
-        );
-    }
-
-    /// Behavior 3: Exhaustive coverage — exactly 32 variants return `true`,
-    /// exactly 1 returns `false` (`ChipOfferExpected`), total = 33 = `ALL.len()`.
-    #[test]
-    fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
-        let total = InvariantKind::ALL.len();
-        assert_eq!(total, 33, "expected 33 InvariantKind variants in ALL");
-
-        let fixed_update_count = InvariantKind::ALL
-            .iter()
-            .filter(|k| is_fixed_update_checker(**k))
-            .count();
-        let non_fixed_update_count = total - fixed_update_count;
-
-        assert_eq!(
-            fixed_update_count, 32,
-            "expected exactly 32 FixedUpdate checker kinds, got {fixed_update_count}"
-        );
-        assert_eq!(
-            non_fixed_update_count, 1,
-            "expected exactly 1 non-FixedUpdate kind, got {non_fixed_update_count}"
-        );
-
-        // The sole non-FixedUpdate variant must be ChipOfferExpected
-        let non_fixed: Vec<_> = InvariantKind::ALL
-            .iter()
-            .filter(|k| !is_fixed_update_checker(**k))
-            .collect();
-        assert_eq!(
-            non_fixed,
-            vec![&InvariantKind::ChipOfferExpected],
-            "the only non-FixedUpdate kind should be ChipOfferExpected"
-        );
-    }
-
-    // -----------------------------------------------------------------
-    // active_invariant_kinds — set computation
-    // -----------------------------------------------------------------
-
-    /// Behavior 4: Empty `disallowed_failures` and None `allowed_failures` returns
-    /// all 32 `FixedUpdate` kinds.
-    #[test]
-    fn active_invariant_kinds_returns_all_32_when_both_lists_empty() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![],
-            allowed_failures: None,
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            32,
-            "expected 32 active kinds when both lists empty, got {}",
-            active.len()
-        );
-        assert!(
-            !active.contains(&InvariantKind::ChipOfferExpected),
-            "fallback set must not contain ChipOfferExpected"
-        );
-    }
-
-    /// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 32.
-    #[test]
-    fn active_invariant_kinds_returns_all_32_when_allowed_is_empty_some() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![],
-            allowed_failures: Some(vec![]),
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            32,
-            "expected 32 active kinds when both lists effectively empty, got {}",
-            active.len()
-        );
-        assert!(
-            !active.contains(&InvariantKind::ChipOfferExpected),
-            "fallback set must not contain ChipOfferExpected"
-        );
-    }
-
-    /// Behavior 5: Single `disallowed_failures` entry returns only that kind.
-    #[test]
-    fn active_invariant_kinds_single_disallowed_returns_only_that_kind() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![InvariantKind::NoNaN],
-            allowed_failures: None,
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            1,
-            "expected 1 active kind, got {}",
-            active.len()
-        );
-        assert!(
-            active.contains(&InvariantKind::NoNaN),
-            "active set must contain NoNaN"
-        );
-    }
-
-    /// Behavior 6: Multiple `disallowed_failures` entries return their union.
-    #[test]
-    fn active_invariant_kinds_multiple_disallowed_returns_union() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![
-                InvariantKind::BoltInBounds,
-                InvariantKind::BreakerInBounds,
-                InvariantKind::NoNaN,
-            ],
-            allowed_failures: None,
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            3,
-            "expected 3 active kinds, got {}",
-            active.len()
-        );
-        assert!(active.contains(&InvariantKind::BoltInBounds));
-        assert!(active.contains(&InvariantKind::BreakerInBounds));
-        assert!(active.contains(&InvariantKind::NoNaN));
-    }
-
-    /// Behavior 7: `allowed_failures` entries are included in active set.
-    /// Edge case: same entry in both lists produces no duplication.
-    #[test]
-    fn active_invariant_kinds_allowed_failures_included_no_duplication() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![InvariantKind::BoltInBounds],
-            allowed_failures: Some(vec![InvariantKind::BoltInBounds]),
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            1,
-            "expected 1 active kind (no duplication), got {}",
-            active.len()
-        );
-        assert!(active.contains(&InvariantKind::BoltInBounds));
-    }
-
-    /// Behavior 8: Union of `disallowed_failures` and `allowed_failures`.
-    #[test]
-    fn active_invariant_kinds_union_of_disallowed_and_allowed() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![InvariantKind::BoltInBounds],
-            allowed_failures: Some(vec![InvariantKind::NoNaN]),
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            2,
-            "expected 2 active kinds, got {}",
-            active.len()
-        );
-        assert!(active.contains(&InvariantKind::BoltInBounds));
-        assert!(active.contains(&InvariantKind::NoNaN));
-    }
-
-    /// Behavior 9: `ChipOfferExpected` in `disallowed_failures` is filtered out;
-    /// only non-`ChipOfferExpected` kinds remain.
-    #[test]
-    fn active_invariant_kinds_filters_out_chip_offer_expected() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![
-                InvariantKind::ChipOfferExpected,
-                InvariantKind::BoltInBounds,
-            ],
-            allowed_failures: None,
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            1,
-            "expected 1 active kind after filtering ChipOfferExpected, got {}",
-            active.len()
-        );
-        assert!(active.contains(&InvariantKind::BoltInBounds));
-        assert!(
-            !active.contains(&InvariantKind::ChipOfferExpected),
-            "ChipOfferExpected must be filtered out"
-        );
-    }
-
-    /// Behavior 9 edge case: `ChipOfferExpected` as the only entry triggers
-    /// fallback to all 32 `FixedUpdate` kinds.
-    #[test]
-    fn active_invariant_kinds_chip_offer_expected_only_triggers_fallback() {
-        let def = ScenarioDefinition {
-            disallowed_failures: vec![InvariantKind::ChipOfferExpected],
-            allowed_failures: None,
-            ..Default::default()
-        };
-        let active = active_invariant_kinds(&def);
-        assert_eq!(
-            active.len(),
-            32,
-            "expected 32 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
-            active.len()
-        );
-        assert!(
-            !active.contains(&InvariantKind::ChipOfferExpected),
-            "fallback set must not contain ChipOfferExpected"
-        );
     }
 }

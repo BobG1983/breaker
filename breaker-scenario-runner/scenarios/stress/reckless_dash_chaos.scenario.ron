@@ -45,6 +45,7 @@
         BreakerCountReasonable,
         NoEntityLeaks,
         BoltCountReasonable,
+        OriginalBoltLossBehaviorOrphaned,
     ],
     allowed_failures: None,
     debug_setup: None,

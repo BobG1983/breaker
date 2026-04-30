@@ -1,7 +1,9 @@
+use ordered_float::OrderedFloat;
+
 use super::types::*;
 use crate::{
     breaker::components::BoltLossBehavior,
-    effect_v3::types::{EntityKind, RootNode, StampTarget, Tree, Trigger},
+    effect_v3::types::{EffectType, EntityKind, RootNode, StampTarget, Tree, Trigger},
 };
 
 // ── Behavior 1: BreakerDefinition parses RON with explicit bolt field ──
@@ -250,16 +252,89 @@ fn chrono_breaker_ron_does_not_contain_bolt_lost_field() {
     );
 }
 
-// ── Behavior 16: prism.breaker.ron does not exist ──
+// ── Behavior 16: prism.breaker.ron deserializes correctly ──
 
 #[test]
-fn prism_breaker_ron_file_does_not_exist() {
-    use std::path::PathBuf;
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("assets/breakers/prism.breaker.ron");
+fn prism_breaker_ron_deserializes_correctly() {
+    let ron_str = include_str!("../../../assets/breakers/prism.breaker.ron");
+    let def: BreakerDefinition =
+        ron::de::from_str(ron_str).expect("prism.breaker.ron should parse");
+    assert_eq!(def.name, "Prism");
+    assert_eq!(
+        def.life_pool, None,
+        "prism.breaker.ron must have life_pool: None",
+    );
+    assert_eq!(
+        def.bolt_loss_behavior,
+        BoltLossBehavior::TimeLoss(7.0),
+        "prism.breaker.ron must have bolt_loss_behavior: TimeLoss(7.0)",
+    );
+}
+
+#[test]
+fn prism_breaker_ron_salvo_hit_is_time_penalty_seven_seconds() {
+    let ron_str = include_str!("../../../assets/breakers/prism.breaker.ron");
+    let def: BreakerDefinition =
+        ron::de::from_str(ron_str).expect("prism.breaker.ron should parse");
+    let RootNode::Stamp(StampTarget::Breaker, ref outer_tree) = def.salvo_hit else {
+        panic!(
+            "prism.breaker.ron salvo_hit must be Stamp(Breaker, ...), got {:?}",
+            def.salvo_hit
+        );
+    };
+    let Tree::When(Trigger::Impacted(EntityKind::Salvo), ref inner_tree) = *outer_tree else {
+        panic!(
+            "prism.breaker.ron salvo_hit inner tree must be When(Impacted(Salvo), ...), \
+             got {outer_tree:?}"
+        );
+    };
+    let Tree::Fire(EffectType::TimePenalty(ref cfg)) = **inner_tree else {
+        panic!(
+            "prism.breaker.ron salvo_hit leaf must be Fire(TimePenalty(...)), got {inner_tree:?}"
+        );
+    };
+    assert_eq!(
+        cfg.seconds,
+        OrderedFloat(7.0),
+        "prism.breaker.ron salvo_hit TimePenalty seconds must be 7.0, got {:?}",
+        cfg.seconds,
+    );
+}
+
+#[test]
+fn prism_breaker_ron_effects_contains_spawn_bolts_on_perfect_bump() {
+    let ron_str = include_str!("../../../assets/breakers/prism.breaker.ron");
+    let def: BreakerDefinition =
+        ron::de::from_str(ron_str).expect("prism.breaker.ron should parse");
+    assert_eq!(
+        def.effects.len(),
+        1,
+        "prism.breaker.ron must have exactly 1 effect entry",
+    );
+    let RootNode::Stamp(StampTarget::Bolt, ref outer_tree) = def.effects[0] else {
+        panic!(
+            "prism.breaker.ron effects[0] must be Stamp(Bolt, ...), got {:?}",
+            def.effects[0]
+        );
+    };
+    let Tree::When(Trigger::PerfectBumpOccurred, ref inner_tree) = *outer_tree else {
+        panic!(
+            "prism.breaker.ron effects[0] inner tree must be \
+             When(PerfectBumpOccurred, ...), got {outer_tree:?}"
+        );
+    };
     assert!(
-        !path.exists(),
-        "{} must NOT exist — Prism breaker is retired in Wave 3",
-        path.display(),
+        matches!(**inner_tree, Tree::Fire(EffectType::SpawnBolts(_))),
+        "prism.breaker.ron effects[0] leaf must be Fire(SpawnBolts(...)), got {inner_tree:?}",
+    );
+}
+
+#[test]
+fn prism_breaker_ron_does_not_contain_legacy_bolt_lost_field() {
+    let ron_str = include_str!("../../../assets/breakers/prism.breaker.ron");
+    assert!(
+        !ron_str.contains("bolt_lost:"),
+        "prism.breaker.ron must NOT contain `bolt_lost:` (legacy field). \
+         Use `bolt_loss_behavior: TimeLoss(7.0)` instead.",
     );
 }

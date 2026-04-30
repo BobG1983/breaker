@@ -16,5 +16,5 @@ pub mod system;
 #[cfg(test)]
 mod tests;
 
-pub use system::RiskyDamageBoost;
+pub use system::{OriginalBoltLossBehavior, RiskyDamageBoost};
 pub(crate) use system::{activate, wire};

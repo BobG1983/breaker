@@ -1,0 +1,10 @@
+/* @[brickbreaker::breaker::definition::BreakerDefinition] */
+(
+    name: "Prism",
+    life_pool: None,
+    bolt_loss_behavior: TimeLoss(7.0),
+    salvo_hit: Stamp(Breaker, When(Impacted(Salvo), Fire(TimePenalty((seconds: 7.0))))),
+    effects: [
+        Stamp(Bolt, When(PerfectBumpOccurred, Fire(SpawnBolts(SpawnBoltsConfig(count: 1, lifespan: None, inherit: false))))),
+    ],
+)
