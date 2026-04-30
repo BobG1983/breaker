@@ -1,6 +1,6 @@
 ---
 name: reviewer-file-length
-description: "Use this agent to find overly large source files and produce refactor specs for splitting them. Identifies files over 400 lines, analyzes test-to-production ratio, and outputs a prioritized table with concrete split recommendations directly to the orchestrator — splits are executed in the current branch BEFORE merging, never deferred to a todo.\n\nExamples:\n\n- At a phase boundary:\n  Assistant: \"Phase complete. Let me use the reviewer-file-length agent to check for files that need splitting.\"\n\n- After a feature adds many tests:\n  Assistant: \"Let me use the reviewer-file-length agent to check if any files have grown too large.\"\n\n- When agents are reading files in multiple chunks:\n  Assistant: \"Context pollution suspected. Let me use the reviewer-file-length agent to identify split candidates.\"\n\n- Parallel note: Run alongside reviewer-quality, reviewer-correctness, runner-tests, and other post-implementation agents — all are independent."
+description: "Use this agent to find overly large source files and produce refactor specs for splitting them. Identifies files over 400 lines, analyzes test-to-production ratio, and outputs a prioritized table with concrete split recommendations directly to the orchestrator — orchestrator launches sub-agents (background forks) to perform splits in the current branch BEFORE merging, never deferred to a todo.\n\nExamples:\n\n- At a phase boundary:\n  Assistant: \"Phase complete. Let me use the reviewer-file-length agent to check for files that need splitting.\"\n\n- After a feature adds many tests:\n  Assistant: \"Let me use the reviewer-file-length agent to check if any files have grown too large.\"\n\n- When agents are reading files in multiple chunks:\n  Assistant: \"Context pollution suspected. Let me use the reviewer-file-length agent to identify split candidates.\"\n\n- Parallel note: Run alongside reviewer-quality, reviewer-correctness, runner-tests, and other post-implementation agents — all are independent."
 tools: Read, Glob, Grep
 model: sonnet
 color: orange
@@ -138,7 +138,7 @@ For each HIGH and MEDIUM priority file, emit a refactor spec hint:
   - `group_name.rs`: test_fn_3, test_fn_4, ... (N tests, ~M lines)
 - Imports needed: [any use statements the split files will need]
 - Re-exports needed: [what mod.rs must re-export to maintain public API]
-- Delegate: orchestrator executes this refactor inline in the current branch (NOT via /implement or /quickfix; NOT as a todo). Splits MUST land before the branch merges to develop.
+- Delegate: orchestrator launches a background sub-agent (fork) to perform this split in the current branch (NOT inline; NOT via /implement or /quickfix; NOT as a todo). Splits MUST land before the branch merges to develop. Basic Verification Tier runs after all splits complete.
 ```
 
 For LOW priority files, just list them in the table — no refactor spec needed. Surface them so the orchestrator can ask the user whether to include them in the current split batch.
