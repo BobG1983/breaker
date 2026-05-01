@@ -96,7 +96,10 @@ mod tests {
             name:        "Fission".into(),
             description: String::new(),
             unlock_tier: 0,
-            tuning:      ProtocolTuning::Fission { kills_per_split: 5 },
+            tuning:      ProtocolTuning::Fission {
+                kills_per_split:      5,
+                divergence_angle_rad: 0.0,
+            },
         }
     }
 

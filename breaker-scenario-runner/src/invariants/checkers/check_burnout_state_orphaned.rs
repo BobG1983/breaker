@@ -121,6 +121,10 @@ mod tests {
                 still_threshold:             1.0,
                 full_heat_damage_multiplier: 3.0,
                 speed_boost_duration:        0.5,
+                shockwave_base_range:        0.0,
+                shockwave_range_per_level:   0.0,
+                shockwave_stacks:            0,
+                shockwave_speed:             0.0,
             },
         }
     }

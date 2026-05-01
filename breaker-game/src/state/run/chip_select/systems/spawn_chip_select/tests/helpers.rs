@@ -61,6 +61,10 @@ pub(super) fn def_for(kind: ProtocolKind, name: &str) -> ProtocolDefinition {
             still_threshold:             1.5,
             full_heat_damage_multiplier: 4.0,
             speed_boost_duration:        2.0,
+            shockwave_base_range:        0.0,
+            shockwave_range_per_level:   0.0,
+            shockwave_stacks:            0,
+            shockwave_speed:             0.0,
         },
         ProtocolKind::Conductor => ProtocolTuning::Conductor,
         ProtocolKind::Afterimage => ProtocolTuning::Afterimage {
@@ -68,7 +72,8 @@ pub(super) fn def_for(kind: ProtocolKind, name: &str) -> ProtocolDefinition {
             phantom_bolt_duration: 0.75,
         },
         ProtocolKind::Fission => ProtocolTuning::Fission {
-            kills_per_split: 10,
+            kills_per_split:      10,
+            divergence_angle_rad: 0.0,
         },
         ProtocolKind::TierRegression => ProtocolTuning::TierRegression { tiers_back: 1 },
     };
