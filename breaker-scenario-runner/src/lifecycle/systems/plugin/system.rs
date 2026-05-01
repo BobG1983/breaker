@@ -46,11 +46,10 @@ use crate::{
         check_echo_strike_orphaned, check_exactly_one_primary_bolt, check_fission_counter_orphaned,
         check_gravity_well_count_reasonable, check_greed_stacks_orphaned, check_hazard_stack_valid,
         check_maxed_chip_never_offered, check_no_entity_leaks, check_no_nan,
-        check_offering_no_duplicates, check_original_bolt_loss_behavior_orphaned,
-        check_pulse_ring_accumulation, check_reckless_dash_orphaned, check_run_stats_monotonic,
-        check_second_wind_wall_at_most_one, check_shield_wall_at_most_one,
-        check_siphon_streak_orphaned, check_timer_monotonically_decreasing,
-        check_timer_non_negative, check_valid_breaker_state,
+        check_offering_no_duplicates, check_pulse_ring_accumulation, check_reckless_dash_orphaned,
+        check_run_stats_monotonic, check_second_wind_wall_at_most_one,
+        check_shield_wall_at_most_one, check_siphon_streak_orphaned,
+        check_timer_monotonically_decreasing, check_timer_non_negative, check_valid_breaker_state,
     },
     types::{InvariantKind, ScenarioDefinition},
 };
@@ -327,10 +326,6 @@ fn register_protocol_orphan_checkers(app: &mut App, active: &HashSet<InvariantKi
         InvariantKind::BurnoutStateOrphaned,
         check_burnout_state_orphaned
     );
-    register_checker!(
-        InvariantKind::OriginalBoltLossBehaviorOrphaned,
-        check_original_bolt_loss_behavior_orphaned
-    );
 }
 
 /// Registers all scenario systems: input, lifecycle hooks, invariant checkers.
@@ -465,8 +460,7 @@ pub(crate) const fn is_fixed_update_checker(kind: InvariantKind) -> bool {
         | InvariantKind::RecklessDashOrphaned
         | InvariantKind::EchoStrikeOrphaned
         | InvariantKind::DebtCollectorOrphaned
-        | InvariantKind::BurnoutStateOrphaned
-        | InvariantKind::OriginalBoltLossBehaviorOrphaned => true,
+        | InvariantKind::BurnoutStateOrphaned => true,
         InvariantKind::ChipOfferExpected => false,
     }
 }

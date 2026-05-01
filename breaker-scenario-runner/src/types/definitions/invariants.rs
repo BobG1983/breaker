@@ -112,13 +112,6 @@ pub enum InvariantKind {
     /// Fires when Burnout is NOT active but any breaker has positive heat or
     /// any bolt has `BurnoutDamageBoost`, indicating orphaned burnout state.
     BurnoutStateOrphaned,
-    /// CONTRACT: no breaker carries `OriginalBoltLossBehavior` when
-    /// `ActiveProtocols` does not contain `ProtocolKind::RecklessDash`.
-    ///
-    /// Fires when `RecklessDash` is NOT active but any breaker has
-    /// `OriginalBoltLossBehavior`, indicating the `BoltLossBehavior` was doubled
-    /// but the overlay was never cleaned up (cross-node permanent doubling).
-    OriginalBoltLossBehaviorOrphaned,
 }
 
 impl InvariantKind {
@@ -161,7 +154,6 @@ impl InvariantKind {
         Self::EchoStrikeOrphaned,
         Self::DebtCollectorOrphaned,
         Self::BurnoutStateOrphaned,
-        Self::OriginalBoltLossBehaviorOrphaned,
     ];
 
     /// Standard human-readable fail reason for this invariant violation.
@@ -221,9 +213,6 @@ impl InvariantKind {
             }
             Self::BurnoutStateOrphaned => {
                 "BurnoutHeat.heat > 0 on breaker or BurnoutDamageBoost on bolt while Burnout is not active"
-            }
-            Self::OriginalBoltLossBehaviorOrphaned => {
-                "OriginalBoltLossBehavior present while RecklessDash is not active in ActiveProtocols"
             }
         }
     }

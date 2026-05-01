@@ -35,12 +35,12 @@ fn is_fixed_update_checker_returns_false_for_chip_offer_expected() {
     );
 }
 
-/// Behavior 3: Exhaustive coverage — exactly 33 variants return `true`,
-/// exactly 1 returns `false` (`ChipOfferExpected`), total = 34 = `ALL.len()`.
+/// Behavior 3: Exhaustive coverage — exactly 32 variants return `true`,
+/// exactly 1 returns `false` (`ChipOfferExpected`), total = 33 = `ALL.len()`.
 #[test]
 fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
     let total = InvariantKind::ALL.len();
-    assert_eq!(total, 34, "expected 34 InvariantKind variants in ALL");
+    assert_eq!(total, 33, "expected 33 InvariantKind variants in ALL");
 
     let fixed_update_count = InvariantKind::ALL
         .iter()
@@ -49,8 +49,8 @@ fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
     let non_fixed_update_count = total - fixed_update_count;
 
     assert_eq!(
-        fixed_update_count, 33,
-        "expected exactly 33 FixedUpdate checker kinds, got {fixed_update_count}"
+        fixed_update_count, 32,
+        "expected exactly 32 FixedUpdate checker kinds, got {fixed_update_count}"
     );
     assert_eq!(
         non_fixed_update_count, 1,
@@ -74,9 +74,9 @@ fn is_fixed_update_checker_covers_every_invariant_kind_variant() {
 // -----------------------------------------------------------------
 
 /// Behavior 4: Empty `disallowed_failures` and None `allowed_failures` returns
-/// all 33 `FixedUpdate` kinds.
+/// all 32 `FixedUpdate` kinds.
 #[test]
-fn active_invariant_kinds_returns_all_33_when_both_lists_empty() {
+fn active_invariant_kinds_returns_all_32_when_both_lists_empty() {
     let def = ScenarioDefinition {
         disallowed_failures: vec![],
         allowed_failures: None,
@@ -85,8 +85,8 @@ fn active_invariant_kinds_returns_all_33_when_both_lists_empty() {
     let active = active_invariant_kinds(&def);
     assert_eq!(
         active.len(),
-        33,
-        "expected 33 active kinds when both lists empty, got {}",
+        32,
+        "expected 32 active kinds when both lists empty, got {}",
         active.len()
     );
     assert!(
@@ -95,9 +95,9 @@ fn active_invariant_kinds_returns_all_33_when_both_lists_empty() {
     );
 }
 
-/// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 33.
+/// Behavior 4 edge case: Empty vec with Some(vec![]) also returns all 32.
 #[test]
-fn active_invariant_kinds_returns_all_33_when_allowed_is_empty_some() {
+fn active_invariant_kinds_returns_all_32_when_allowed_is_empty_some() {
     let def = ScenarioDefinition {
         disallowed_failures: vec![],
         allowed_failures: Some(vec![]),
@@ -106,8 +106,8 @@ fn active_invariant_kinds_returns_all_33_when_allowed_is_empty_some() {
     let active = active_invariant_kinds(&def);
     assert_eq!(
         active.len(),
-        33,
-        "expected 33 active kinds when both lists effectively empty, got {}",
+        32,
+        "expected 32 active kinds when both lists effectively empty, got {}",
         active.len()
     );
     assert!(
@@ -226,7 +226,7 @@ fn active_invariant_kinds_filters_out_chip_offer_expected() {
 }
 
 /// Behavior 9 edge case: `ChipOfferExpected` as the only entry triggers
-/// fallback to all 33 `FixedUpdate` kinds.
+/// fallback to all 32 `FixedUpdate` kinds.
 #[test]
 fn active_invariant_kinds_chip_offer_expected_only_triggers_fallback() {
     let def = ScenarioDefinition {
@@ -237,8 +237,8 @@ fn active_invariant_kinds_chip_offer_expected_only_triggers_fallback() {
     let active = active_invariant_kinds(&def);
     assert_eq!(
         active.len(),
-        33,
-        "expected 33 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
+        32,
+        "expected 32 active kinds (fallback) when only ChipOfferExpected is listed, got {}",
         active.len()
     );
     assert!(
