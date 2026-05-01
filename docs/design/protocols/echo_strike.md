@@ -58,7 +58,7 @@ Both `pub(crate)` — owned by EchoStrike.
 - **Behavior**: Reads `BumpPerformed`. On `BumpGrade::Perfect`: inserts `EchoPrimed` on the bolt.
 
 ### `echo_strike_emit_siblings`
-- **Schedule**: `FixedUpdate`, in `DmgSystems::PostApply`.
+- **Schedule**: `FixedUpdate`, in `DmgSystems::PostApplyDamage`.
 - **run_if**: `protocol_active(ProtocolKind::EchoStrike)` + `in_state(NodeState::Playing)`.
 - **Behavior**: Reads current-frame `DamageDealt<Cell>` messages. For each
   post-apply primary:
@@ -94,7 +94,7 @@ Both `pub(crate)` — owned by EchoStrike.
 ## Pipeline position (dmg crate)
 
 - **Trigger**: `BumpPerformed` (Perfect) → primes bolt via `echo_strike_on_bump`.
-- **Ripple emitter** in `DmgSystems::PostApply`. Reads the post-apply
+- **Ripple emitter** in `DmgSystems::PostApplyDamage`. Reads the post-apply
   `DamageDealt<Cell>` messages and emits one echo sibling per entry in the
   bolt's `EchoNetwork.echoes`. Siblings traverse the FULL pipeline on the
   next `FixedUpdate` tick (1-frame delay).

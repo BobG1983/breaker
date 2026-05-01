@@ -33,7 +33,7 @@ Both are `pub(crate)` — DebtCollector owns them; no other domain reads or writ
 
 ## Messages
 **Reads**: `BumpPerformed { grade, bolt }` (breaker domain), `BoltLost { bolt }` (bolt domain).
-**Sends**: None. Cash-out damage lands via `DamageBoostStack::add_one_shot` (Pattern B) on the bolt — the next `DamageDealt<Cell>` aggregation picks it up in `DeathPipelineSystems::ApplyDamageBoosts`.
+**Sends**: None. Cash-out damage lands via `DamageBoostStack::add_one_shot` (Pattern B) on the bolt — the next `DamageDealt<Cell>` aggregation picks it up in `DmgSystems::ApplyDamageBoosts`.
 
 ## Systems
 
@@ -58,7 +58,7 @@ Both are `pub(crate)` — DebtCollector owns them; no other domain reads or writ
 - **Schedule**: `FixedUpdate`.
 - **run_if**: `protocol_active(ProtocolKind::DebtCollector)` + `in_state(NodeState::Playing)`.
 - **Behavior**: When a bolt has `DebtCashOut(n)`: calls `DamageBoostStack::add_one_shot(1.0 + n)` on the bolt (the "1.0 +" makes the base hit deal normal damage AND the stack multiplies it by `1 + n`). Removes `DebtCashOut`.
-- **Ordering**: `.before(DeathPipelineSystems::ApplyDamageBoosts)` — one-shot must be present for the next aggregation.
+- **Ordering**: `.before(DmgSystems::ApplyDamageBoosts)` — one-shot must be present for the next aggregation.
 
 ### `debt_collector_on_bolt_lost`
 - **Schedule**: `FixedUpdate`.
@@ -73,7 +73,7 @@ Both are `pub(crate)` — DebtCollector owns them; no other domain reads or writ
 
 - **Trigger**: `BumpPerformed` (Early/Late builds; Perfect cashes out).
 - **Writes**: `DamageBoostStack::add_one_shot(1.0 + stack)` on the cashing-out bolt (Pattern B from `rantzsoft_dmg`).
-- **Consumed in**: `DeathPipelineSystems::ApplyDamageBoosts` on the bolt's next `DamageDealt<Cell>` aggregation.
+- **Consumed in**: `DmgSystems::ApplyDamageBoosts` on the bolt's next `DamageDealt<Cell>` aggregation.
 - **No direct damage emission** from DebtCollector.
 
 ## Cross-Domain Dependencies

@@ -26,12 +26,12 @@ None — the wave is a one-shot event that iterates cells and emits `DamageDealt
 
 ## Messages
 **Reads**: `BoltLost { bolt }` (bolt-lifecycle message, not part of the death pipeline).
-**Sends**: `DamageDealt<Cell> { target, damage, source }` in `DeathPipelineSystems::EmitDamage` — one per cell within the falloff radius. Source: `"protocol:iron_curtain"`.
+**Sends**: `DamageDealt<Cell> { target, damage, source }` in `DmgSystems::EmitDamage` — one per cell within the falloff radius. Source: `"protocol:iron_curtain"`.
 
 ## Systems
 
 ### `iron_curtain_on_bolt_lost`
-- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::EmitDamage`.
+- **Schedule**: `FixedUpdate`, in `DmgSystems::EmitDamage`.
 - **run_if**: `protocol_active(ProtocolKind::IronCurtain)` + `in_state(NodeState::Playing)`.
 - **Behavior**:
   1. Reads `BoltLost`.
@@ -62,7 +62,7 @@ if distance <= falloff_start {
 ## Pipeline position (dmg crate)
 
 - **Trigger**: `BoltLost` (bolt-lifecycle — NOT part of `DeathPipelineSystems`).
-- **Emits**: `DamageDealt<Cell>` in `DeathPipelineSystems::EmitDamage` for each cell in range.
+- **Emits**: `DamageDealt<Cell>` in `DmgSystems::EmitDamage` for each cell in range.
 - **Source**: `"protocol:iron_curtain"`.
 - **No** `DamageBoostStack` / `VulnerableStack` interaction — the emitted damage flows through the standard chain (boosts → mutate → vulnerable → apply) like any other source.
 

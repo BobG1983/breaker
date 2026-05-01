@@ -27,19 +27,19 @@ None. Cascade is a reactive hazard — reads cell destruction and emits heal mes
 ## Systems
 
 ### `cascade_heal_on_death`
-- **Schedule**: `FixedUpdate`, in `DeathPipelineSystems::EmitHeal`.
+- **Schedule**: `FixedUpdate`, in `DmgSystems::EmitHeal`.
 - **run_if**: `hazard_active(HazardKind::Cascade)` + `in_state(NodeState::Playing)`.
 - **Behavior**:
   1. Reads `CellDestroyed` messages.
   2. For each, issues `Quadtree::query_circle(destroyed.position, config.neighbor_radius)` via `rantzsoft_physics2d`.
   3. Filters the returned entities by `Query<Entity, (With<Cell>, Without<Dead>)>` and excludes `destroyed.entity` itself.
   4. For each remaining cell, emits `HealDealt<Cell> { target, amount: base_heal + heal_per_level * (stack - 1), cap: HealCap::Starting, source: Some("hazard:cascade".into()), .. }`.
-- **Ordering**: `.after(DeathPipelineSystems::ApplyKill)` — `CellDestroyed` populated. `.before(DeathPipelineSystems::ApplyHeal)` — heal applied same tick.
+- **Ordering**: `.after(DmgSystems::ApplyKill)` — `CellDestroyed` populated. `.before(DmgSystems::ApplyHeal)` — heal applied same tick.
 
 ## Pipeline position (dmg crate)
 
 - **Trigger**: `CellDestroyed` (derived from `rantzsoft_dmg::Destroyed<Cell>` via the cells-domain companion emitter).
-- **Emits**: `HealDealt<Cell>` in `DeathPipelineSystems::EmitHeal`.
+- **Emits**: `HealDealt<Cell>` in `DmgSystems::EmitHeal`.
 - **Cap**: `HealCap::Starting` — nearby cells can only be healed up to their starting HP (or `Hp.max` if set, e.g., by Momentum).
 - **No** `DamageDealt<T>` / `DamageBoostStack` / `VulnerableStack` involvement.
 

@@ -36,7 +36,7 @@ Tracks kills-this-cycle per bolt. Lazily inserted on each bolt's first kill (ins
 ## Systems
 
 ### `overcharge_count_kills`
-- **Schedule**: `FixedUpdate`, `.after(DeathPipelineSystems::ApplyKill)` so kill attribution is resolved.
+- **Schedule**: `FixedUpdate`, `.after(DmgSystems::ApplyKill)` so kill attribution is resolved.
 - **run_if**: `hazard_active(HazardKind::Overcharge)` + `in_state(NodeState::Playing)`.
 - **Behavior**: Reads `Destroyed<Cell>` + `KilledBy`. For each kill attributed to a bolt:
   1. Lazily insert `OverchargeKillCount(0)` on the bolt if absent.
@@ -52,7 +52,7 @@ Tracks kills-this-cycle per bolt. Lazily inserted on each bolt's first kill (ins
 
 - **Trigger**: reads `Destroyed<Cell>` from `rantzsoft_dmg` inside `overcharge_count_kills` — each kill attributed to a bolt (via `KilledBy`) increments the bolt's `OverchargeKillCount` (lazy insertion on first kill).
 - **Not a damage emitter or mutator.** Overcharge does NOT participate in any `DeathPipelineSystems` set. After counting, it reconciles `EffectStack<SpeedBoostConfig>` on the bolt (source `"hazard:overcharge"`) — a speed multiplier, not a damage one. Reset on `BumpPerformed` clears the count.
-- **Ordering**: `overcharge_count_kills` runs `.after(DeathPipelineSystems::ApplyKill)` so kill attribution is resolved.
+- **Ordering**: `overcharge_count_kills` runs `.after(DmgSystems::ApplyKill)` so kill attribution is resolved.
 - **No** `DamageDealt<T>` / `HealDealt<T>` / `DamageBoostStack` involvement.
 
 ## Stacking Behavior
