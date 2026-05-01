@@ -1,15 +1,18 @@
 //! `GravitySurge` hazard — destroyed cells spawn short-lived gravity wells
 //! that pull the bolt. Stacking increases both the duration of each well
 //! and its pull strength (linear in duration, fractional in strength).
-//! Forces are applied directly to each Bolt's `Velocity2D` each tick and
-//! are clamped at short range to prevent numeric blow-up.
+//! Each tick, `gravity_well_pull` sums the inverse-linear pull from every
+//! active well per bolt and emits one `ApplyBoltForce` per bolt; the bolt
+//! domain's `apply_bolt_forces` consumer drains those messages and applies
+//! `force * dt` to each bolt's `Velocity2D`. The pull magnitude is clamped
+//! at short range to prevent numeric blow-up.
 
 use bevy::prelude::*;
-use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
+use rantzsoft_spatial2d::components::Position2D;
 use rantzsoft_stateflow::CleanupOnExit;
 
 use crate::{
-    bolt::components::Bolt,
+    bolt::{components::Bolt, messages::ApplyBoltForce, sets::BoltSystems},
     cells::components::Cell,
     mutators::hazards::{
         definition::{HazardKind, HazardTuning},
@@ -129,24 +132,24 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `hazard_active(HazardKind::GravitySurge)` AND
 /// `in_state(NodeState::Playing)`:
 /// - `gravity_well_pull` — ticks each well's `remaining`, sums
-///   inverse-linear pulls clamped at `MIN_PULL_DISTANCE`, and writes
-///   the accumulated impulse to every Bolt's `Velocity2D`.
+///   inverse-linear pulls clamped at `MIN_PULL_DISTANCE`, and emits one
+///   `ApplyBoltForce` per bolt with the summed acceleration; the bolt
+///   domain's `apply_bolt_forces` consumer drains these and applies
+///   `force * dt` to each bolt's `Velocity2D`.
 /// - `despawn_expired_gravity_wells` — removes wells whose `remaining`
 ///   has dropped to or below zero.
 ///
 /// Ordering: `spawn_gravity_wells` → `gravity_well_pull` →
-/// `despawn_expired_gravity_wells`. No `DmgSystems`
-/// ordering — `GravitySurge` operates on bolt `Velocity2D` directly as
-/// a **deferred architectural exception** not yet covered by
-/// `docs/architecture/plugins.md` § `Velocity2D` Cross-Domain Write
-/// Exception. Commit 5 / Wave 7 retrofits `gravity_well_pull` to publish
-/// `ApplyBoltForce` messages instead, at which point the bolt domain
-/// owns velocity integration and this exception resolves.
+/// `despawn_expired_gravity_wells`. The pull/despawn chain runs
+/// `.before(BoltSystems::ApplyForces)` so the bolt-domain consumer
+/// drains the emitted `ApplyBoltForce` messages in the same tick before
+/// `SpatialSystems::ApplyVelocity` integrates velocity into position.
 pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (gravity_well_pull, despawn_expired_gravity_wells)
             .chain()
+            .before(BoltSystems::ApplyForces)
             .run_if(hazard_active(HazardKind::GravitySurge))
             .run_if(in_state(NodeState::Playing)),
     )
@@ -211,23 +214,28 @@ pub(crate) fn spawn_gravity_wells(
     }
 }
 
-/// Applies the summed pull from every active well to each bolt's
-/// `Velocity2D`. Also ticks each well's `remaining` down. Pull falloff
-/// is inverse-linear (`strength / distance`) with the distance clamped at
-/// `MIN_PULL_DISTANCE` (20.0) to prevent numeric blow-up when a bolt sits
-/// on top of a well. Collects a `Vec<(Vec2, f32)>` snapshot of still-live
-/// wells after the tick-down pass so expired wells do not contribute to
-/// this frame's pull. Early-returns when the snapshot is empty — no
-/// active wells means no impulse work to do.
+/// Sums the pull from every active well per bolt and emits one
+/// `ApplyBoltForce { bolt, force }` per bolt where `force` is the
+/// aggregate acceleration (world-units/s²). Also ticks each well's
+/// `remaining` down by `dt`. Pull falloff is inverse-linear
+/// (`strength / distance`) with the distance clamped at
+/// `MIN_PULL_DISTANCE` (20.0). Collects a `Vec<(Vec2, f32)>` snapshot
+/// of still-live wells AFTER the tick-down pass so expired wells do
+/// not contribute to this frame's pull. Early-returns when the
+/// snapshot is empty — no active wells means no messages to emit.
+/// The consumer (`apply_bolt_forces` in the bolt domain) multiplies
+/// by `dt` and applies the result to each bolt's `Velocity2D`.
 pub(crate) fn gravity_well_pull(
     time: Res<Time<Fixed>>,
     mut wells: Query<(&mut GravityWell, &Position2D)>,
-    mut bolts: Query<(&Position2D, &mut Velocity2D), With<Bolt>>,
+    bolts: Query<(Entity, &Position2D), With<Bolt>>,
+    mut writer: MessageWriter<ApplyBoltForce>,
+    mut snapshots: Local<Vec<(Vec2, f32)>>,
 ) {
     let dt = time.delta_secs();
-    // Collect well snapshots and tick remaining.
-    let mut snapshots: Vec<(Vec2, f32)> = Vec::new();
+    snapshots.clear();
     for (mut well, pos) in &mut wells {
+        // Tick down before snapshotting: a well that expires this frame must not contribute force.
         well.remaining -= dt;
         if well.remaining > 0.0 {
             snapshots.push((pos.0, well.strength));
@@ -236,7 +244,7 @@ pub(crate) fn gravity_well_pull(
     if snapshots.is_empty() {
         return;
     }
-    for (bolt_pos, mut vel) in &mut bolts {
+    for (bolt_entity, bolt_pos) in &bolts {
         let mut accel = Vec2::ZERO;
         for (well_pos, strength) in &snapshots {
             let delta = *well_pos - bolt_pos.0;
@@ -245,7 +253,10 @@ pub(crate) fn gravity_well_pull(
             // Inverse-linear falloff, clamped at the distance floor.
             accel += direction * (*strength / distance);
         }
-        vel.0 += accel * dt;
+        writer.write(ApplyBoltForce {
+            bolt:  bolt_entity,
+            force: accel,
+        });
     }
 }
 

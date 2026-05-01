@@ -9,12 +9,13 @@ Destroyed cells spawn short-lived gravity wells that pull the bolt. Wells are vi
 ```rust
 #[derive(Resource, Debug, Clone)]
 pub(crate) struct GravitySurgeConfig {
-    pub base_duration: f32,         // 2.0 seconds
-    pub duration_per_level: f32,    // 1.0 s per additional stack
-    pub base_strength: f32,         // pull force magnitude at stack 1
-    pub per_level_strength_frac: f32, // fractional scaling per stack (e.g., 0.5)
-    pub min_distance: f32,          // force clamp floor, e.g., 10.0
+    pub base_duration_secs: f32,         // 2.0 seconds
+    pub per_level_duration_secs: f32,    // 1.0 s per additional stack
+    pub base_strength: f32,              // pull force magnitude at stack 1
+    pub per_level_strength_frac: f32,    // fractional scaling per stack (e.g., 0.5)
 }
+
+// Distance clamp floor is a module-level const: MIN_PULL_DISTANCE = 20.0
 ```
 
 **Multiplicative strength formula**: `strength_for_stacks(N) = base_strength * (1.0 + per_level_strength_frac * sqrt(N - 1))`.
@@ -40,11 +41,11 @@ pub(crate) struct GravityWell {
 }
 ```
 
-Gravity-well entity has a `Transform` at the destroyed cell's position and a `GravityWell` component. The `fx` domain renders the telegraph; no sprite lives on the core component.
+Gravity-well entity has a `Position2D` at the destroyed cell's position and a `GravityWell` component. The `fx` domain renders the telegraph; no sprite lives on the core component.
 
 ## Messages
 **Reads**: `Destroyed<Cell>` (from `rantzsoft_dmg`).
-**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` per bolt per tick (bolt-domain consumer aggregates forces in `FixedUpdate` before `BoltSystems::IntegrateMotion` per TODO #7). Gravity Surge does NOT write `Velocity2D` directly.
+**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` per bolt per tick — one pre-summed message per bolt (aggregating all active wells). Bolt-domain consumer (`apply_bolt_forces` in `BoltSystems::ApplyForces`) multiplies by `dt` and writes to `Velocity2D` before `SpatialSystems::ApplyVelocity`. Gravity Surge does NOT write `Velocity2D` directly.
 
 ## Systems
 
@@ -54,9 +55,9 @@ Gravity-well entity has a `Transform` at the destroyed cell's position and a `Gr
 - **Behavior**: Reads `Destroyed<Cell>`. For each victim, computes `duration = base_duration + duration_per_level * (stack - 1)` and `strength = strength_for_stacks(stack)`. Spawns a new entity at the victim's world position with `GravityWell { strength, remaining: duration }` + `Transform`.
 
 ### `gravity_well_pull`
-- **Schedule**: `FixedUpdate`, `.before(BoltSystems::IntegrateMotion)` (via `ApplyBoltForce` pipeline ordering).
+- **Schedule**: `FixedUpdate`, `.before(BoltSystems::ApplyForces)`.
 - **run_if**: `hazard_active(HazardKind::GravitySurge)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Ticks each `GravityWell.remaining -= delta_secs`. For each bolt, sums `force = sum_over_wells(direction * strength / distance.max(min_distance))` then emits `ApplyBoltForce { bolt, force }`.
+- **Behavior**: Ticks each `GravityWell.remaining -= delta_secs`. For each bolt, sums `force = sum_over_wells(direction * strength / distance.max(MIN_PULL_DISTANCE))` then emits ONE `ApplyBoltForce { bolt, force }` with the aggregate acceleration (no `dt` multiply — consumer handles that).
 
 ### `despawn_expired_gravity_wells`
 - **Schedule**: `FixedUpdate`, `.after(gravity_well_pull)`.
@@ -67,7 +68,7 @@ Gravity-well entity has a `Transform` at the destroyed cell's position and a `Gr
 
 - **Not in the death pipeline.** Gravity Surge does not participate in any `DeathPipelineSystems` set.
 - **Trigger**: reads `Destroyed<Cell>` from `rantzsoft_dmg` — every cell death spawns a gravity-well entity at the killed cell's position with lifetime + strength per stack.
-- **Force emission**: emits `ApplyBoltForce { bolt, force: Vec2 }` in `FixedUpdate` before `BoltSystems::IntegrateMotion` (bolt-domain consumer — NOT part of the damage pipeline).
+- **Force emission**: emits `ApplyBoltForce { bolt, force: Vec2 }` (one per bolt, pre-summed across all wells) in `FixedUpdate` before `BoltSystems::ApplyForces`. Bolt-domain consumer applies `force * dt` to `Velocity2D` before `SpatialSystems::ApplyVelocity` — NOT part of the damage pipeline.
 - **No** `DamageBoostStack` / `VulnerableStack` interaction. **No** direct `Velocity2D` write.
 
 ## Stacking Behavior
@@ -78,7 +79,7 @@ The real danger at high stacks is well overlap. With 4+ second durations, destro
 
 ## Cross-Domain Dependencies
 - **cells / damage crate**: Reads `Destroyed<Cell>`.
-- **bolt**: Consumes `ApplyBoltForce`. Owns force-aggregation + `Velocity2D` write (per TODO #7). `ApplyBoltForce` is shared with Drift — the bolt consumer sums forces across sources.
+- **bolt**: Consumes `ApplyBoltForce` via `apply_bolt_forces` in `BoltSystems::ApplyForces`. Owns force-aggregation + `Velocity2D` write. `ApplyBoltForce` is shared with Drift — the bolt consumer sums forces across sources.
 - **fx**: Reads `GravityWell` to render the telegraph.
 
 ## Expected Behaviors (for test specs)

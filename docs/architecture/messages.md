@@ -20,6 +20,15 @@ To find the producer or consumer of a specific message, `rg "MessageWriter<X>"` 
 
 The `rantzsoft_dmg` crate owns the damage/heal/kill message types: `DamageDealt<T>`, `HealDealt<T>`, `KillYourself<T>`, `Destroyed<T>`, `DespawnEntity`. Game systems emit `DamageDealt<T>` (and `HealDealt<T>`); the crate's pipeline applies them, detects deaths, and despawns. See `ordering.md` for the chain order and the `DmgSystems::EmitDamage` requirement for game-side writers.
 
+## Force Application Pattern
+
+When multiple independent systems exert forces on a bolt in the same tick, the canonical approach is a force-accumulation pipeline:
+
+1. **Emitters** send `ApplyBoltForce { bolt: Entity, force: Vec2 }` messages. `force` is an acceleration in world-units/s²; emitters must NOT pre-multiply by `delta_secs` — the consumer owns the `* dt` step.
+2. **Consumer** (`apply_bolt_forces` in `BoltSystems::ApplyForces`) drains all `ApplyBoltForce` messages each tick, sums forces per bolt entity, then applies `sum * delta_secs` to each bolt's `Velocity2D` before `SpatialSystems::ApplyVelocity` integrates position.
+
+This pattern keeps `Velocity2D` write-ownership in the bolt domain, lets any number of producers compose forces without coordination, and ensures a single `* dt` multiplication per bolt per tick regardless of how many emitters contributed.
+
 ## Effect Dispatch — Not a Message
 
 Effect firing does not use `#[derive(Message)]` and does not use `commands.trigger()`. Each per-effect config struct implements `Fireable::fire(entity, source, world)` (and optionally `Reversible::reverse(...)`); `EffectCommandsExt` queues commands that call free dispatch functions in `effect_v3/dispatch/`.

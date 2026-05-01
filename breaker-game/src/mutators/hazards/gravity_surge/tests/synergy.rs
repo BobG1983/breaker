@@ -1,7 +1,9 @@
 //! Group H — Multi-hazard synergy (light).
 //!
-//! Gravity Surge's sole observable side-effect on bolts is mutating
-//! `Velocity2D.0` directly. Drift also mutates `Velocity2D.0` directly.
+//! Gravity Surge's observable side-effect on bolts is emitting
+//! `ApplyBoltForce` messages (via `wire_with_force_consumer`, which also
+//! wires `apply_bolt_forces` so the messages land on `Velocity2D`).
+//! Drift also mutates `Velocity2D.0` directly (Drift is not migrated in this wave).
 //! These tests pin that both hazards, when both chains run on the same
 //! tick, compose cleanly — forces sum additively on the bolt's velocity
 //! with no interference.
@@ -11,12 +13,9 @@ use std::time::Duration;
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use super::{
-    super::system::wire,
-    helpers::{
-        add_gravity_surge_stacks, canonical_config, insert_seeded_rng,
-        install_gravity_surge_config, spawn_bolt, spawn_well, test_app_playing, tick_with_dt,
-    },
+use super::helpers::{
+    add_gravity_surge_stacks, canonical_config, insert_seeded_rng, install_gravity_surge_config,
+    spawn_bolt, spawn_well, test_app_playing, tick_with_dt, wire_with_force_consumer,
 };
 use crate::mutators::hazards::{
     definition::HazardKind,
@@ -34,7 +33,7 @@ fn gravity_surge_and_drift_forces_sum_on_same_tick() {
     let mut app = test_app_playing();
     // Register both hazards.
     drift_register(&mut app);
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
 
     // Install both configs + Drift wind (+X, long timer so direction is stable).
     app.world_mut().insert_resource(DriftConfig {
@@ -87,7 +86,7 @@ fn gravity_and_drift_both_positive_x_when_bolt_at_minus_hundred() {
     // still pushes +X. Both add: 10 + 0.5 = 10.5.
     let mut app = test_app_playing();
     drift_register(&mut app);
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
 
     app.world_mut().insert_resource(DriftConfig {
         force:           100.0,

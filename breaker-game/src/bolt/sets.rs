@@ -20,4 +20,8 @@ pub enum BoltSystems {
     /// same tick the cell died. Exported for cross-domain ordering (e.g.,
     /// scenario-runner invariant checkers must observe the post-sync velocity).
     SyncSpeedToStack,
+    /// The `apply_bolt_forces` system — drains `ApplyBoltForce` messages,
+    /// aggregates per-bolt force, and applies `force * dt` to each bolt's
+    /// `Velocity2D`. Runs in `FixedUpdate` before `SpatialSystems::ApplyVelocity`.
+    ApplyForces,
 }

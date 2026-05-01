@@ -1,10 +1,21 @@
-//! Group F — Multi-hazard synergy (light).
+//! Group F — Multi-hazard synergy (Wave 2 rewrite).
 //!
-//! Drift's sole observable side-effect is mutating `Velocity2D.0`. Haste
-//! and Overcharge operate on `EffectStack<SpeedBoostConfig>` (consumed by
-//! the effect system downstream). These tests pin that Drift's
-//! `Velocity2D` mutation and the other hazards' stack entries coexist
-//! without interfering.
+//! After the Wave 2 migration, Drift's observable side-effect in these tests is
+//! emitting `ApplyBoltForce` messages — NOT mutating `Velocity2D` directly.
+//! The consumer (`apply_bolt_forces`) is NOT wired here; wiring it just to
+//! re-assert on velocity would reintroduce the dt-coupling that Behavior 2 in
+//! `apply_force.rs` explicitly proves the emitter is independent of.
+//!
+//! Assertions that REMAIN unchanged in all four tests:
+//! - `EffectStack<SpeedBoostConfig>` membership / counts (Haste).
+//! - `EffectStack<DamageBoostConfig>` and Overcharge-related stack checks.
+//! - `ActiveHazards` / `ActiveProtocols` resource state assertions.
+//! - Bolt entity counts and despawn assertions.
+//! - `DriftWind.direction` and `DriftWind.timer` assertions.
+//!
+//! New assertions (replacing the `Velocity2D` Drift assertions):
+//! - `captured_forces(app).len()` equals the expected message count.
+//! - Each captured message's `force` is approximately `Vec2::X * 100.0`.
 
 use std::time::Duration;
 
@@ -19,7 +30,7 @@ use super::{
     },
 };
 use crate::{
-    bolt::components::Bolt,
+    bolt::{components::Bolt, messages::ApplyBoltForce},
     breaker::messages::BumpPerformed,
     cells::components::Cell,
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
@@ -33,13 +44,24 @@ use crate::{
         resources::ActiveHazards,
     },
     prelude::{Destroyed, SourceId, SourceIdExt},
+    shared::test_utils::collector::{MessageCollector, attach_message_capture},
 };
 
-// ── Behavior 45 — Drift + Haste: direct velocity + stack coexist ─────────
+// ── Harness helpers ───────────────────────────────────────────────────────────
+
+fn captured_forces(app: &App) -> Vec<ApplyBoltForce> {
+    app.world()
+        .resource::<MessageCollector<ApplyBoltForce>>()
+        .0
+        .clone()
+}
+
+// ── Behavior 45 — Drift + Haste: message emitted + stack coexist ─────────────
 
 #[test]
 fn drift_and_haste_coexist_on_same_bolt_in_one_tick() {
     let mut app = test_app_playing();
+    attach_message_capture::<ApplyBoltForce>(&mut app);
     haste_register(&mut app);
     drift_register(&mut app);
     app.world_mut().insert_resource(HasteConfig {
@@ -62,14 +84,23 @@ fn drift_and_haste_coexist_on_same_bolt_in_one_tick() {
 
     tick_with_dt(&mut app, Duration::from_secs(1));
 
-    // Drift applied: velocity gained +100 in X.
-    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(
-        (velocity.0.x - 100.0).abs() < 1e-3,
-        "Drift should apply +100 in X, got {}",
-        velocity.0.x
+    // Drift emitted: exactly one ApplyBoltForce message with force ≈ Vec2::X * 100.0.
+    let forces = captured_forces(&app);
+    assert_eq!(
+        forces.len(),
+        1,
+        "exactly one ApplyBoltForce message expected"
     );
-    assert!(velocity.0.y.abs() < 1e-5);
+    assert!(
+        (forces[0].force.x - 100.0).abs() < 1e-5,
+        "force.x should be ≈ 100.0, got {}",
+        forces[0].force.x
+    );
+    assert!(
+        forces[0].force.y.abs() < 1e-5,
+        "force.y should be ≈ 0.0, got {}",
+        forces[0].force.y
+    );
 
     // Haste applied: stack entry with source "hazard:haste" and multiplier 1.20.
     let stack = app
@@ -86,8 +117,9 @@ fn drift_and_haste_coexist_on_same_bolt_in_one_tick() {
 
 #[test]
 fn drift_and_haste_independent_surfaces_across_two_ticks() {
-    // Edge: second tick — Drift's velocity doubles, Haste's stack still len=1.
+    // Edge: second tick — Drift emits a second message; Haste's stack still len=1.
     let mut app = test_app_playing();
+    attach_message_capture::<ApplyBoltForce>(&mut app);
     haste_register(&mut app);
     drift_register(&mut app);
     app.world_mut().insert_resource(HasteConfig {
@@ -111,12 +143,19 @@ fn drift_and_haste_independent_surfaces_across_two_ticks() {
     tick_with_dt(&mut app, Duration::from_secs(1));
     tick_with_dt(&mut app, Duration::from_secs(1));
 
-    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
+    // After two ticks: the collector captures messages from the LAST tick only
+    // (clear_messages runs at the start of each update). Two full ticks → 2 total
+    // emissions (one per tick). The collector holds the messages from tick 2.
+    let forces = captured_forces(&app);
+    assert_eq!(forces.len(), 1, "tick 2: one ApplyBoltForce message");
     assert!(
-        (velocity.0.x - 200.0).abs() < 1e-3,
-        "Drift should accumulate to 200 over 2 ticks, got {}",
-        velocity.0.x
+        (forces[0].force.x - 100.0).abs() < 1e-5,
+        "force.x should be ≈ 100.0, got {}",
+        forces[0].force.x
     );
+    assert!(forces[0].force.y.abs() < 1e-5);
+
+    // Haste stack remains idempotent
     let stack = app
         .world()
         .get::<EffectStack<SpeedBoostConfig>>(bolt)
@@ -129,11 +168,12 @@ fn drift_and_haste_independent_surfaces_across_two_ticks() {
     assert!((entry.1.multiplier.into_inner() - 1.20).abs() < 1e-6);
 }
 
-// ── Behavior 46 — Drift + Overcharge: both apply on same tick ────────────
+// ── Behavior 46 — Drift + Overcharge: both apply on same tick ────────────────
 
 #[test]
 fn drift_and_overcharge_coexist_on_same_bolt_in_one_tick() {
     let mut app = test_app_playing();
+    attach_message_capture::<ApplyBoltForce>(&mut app);
     // Overcharge reads `Destroyed<Cell>` and `BumpPerformed` — message
     // channels must be initialized even if no messages are sent.
     app.add_message::<Destroyed<Cell>>();
@@ -163,13 +203,23 @@ fn drift_and_overcharge_coexist_on_same_bolt_in_one_tick() {
 
     tick_with_dt(&mut app, Duration::from_secs(1));
 
-    // Drift applied: +100 in X.
-    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(
-        (velocity.0.x - 100.0).abs() < 1e-3,
-        "Drift should apply +100 in X, got {}",
-        velocity.0.x
+    // Drift emitted: exactly one ApplyBoltForce message per surviving bolt.
+    // (With Bolt filter: only the bolt entity above — Overcharge does not
+    // kill the bolt here since no Bolt despawn mechanic is configured in this
+    // minimal test setup; we pin the count and force vector.)
+    let forces = captured_forces(&app);
+    assert_eq!(
+        forces.len(),
+        1,
+        "one ApplyBoltForce message expected (one Bolt entity, no despawn in this setup)"
     );
+    assert!(
+        (forces[0].force.x - 100.0).abs() < 1e-5,
+        "force.x should be ≈ 100.0, got {}",
+        forces[0].force.x
+    );
+    assert!(forces[0].force.y.abs() < 1e-5, "force.y should be ≈ 0.0");
+    assert_eq!(forces[0].bolt, bolt, "message must address the bolt entity");
 
     // Overcharge applied: single entry with multiplier 1.05^3 ≈ 1.157625.
     let stack = app
@@ -192,11 +242,10 @@ fn drift_and_overcharge_coexist_on_same_bolt_in_one_tick() {
 
 #[test]
 fn drift_applies_uniformly_across_bolts_independent_of_overcharge_kills() {
-    // Edge: second bolt with OverchargeKillCount(0) — Drift still applies
-    // uniformly; Overcharge skips the zero-kill bolt.
+    // Edge: second bolt with OverchargeKillCount(0) — Drift still emits a
+    // message for every Bolt entity; Overcharge skips the zero-kill bolt.
     let mut app = test_app_playing();
-    // Overcharge reads `Destroyed<Cell>` and `BumpPerformed` — message
-    // channels must be initialized even if no messages are sent.
+    attach_message_capture::<ApplyBoltForce>(&mut app);
     app.add_message::<Destroyed<Cell>>();
     app.add_message::<BumpPerformed>();
     overcharge_register(&mut app);
@@ -217,6 +266,7 @@ fn drift_applies_uniformly_across_bolts_independent_of_overcharge_kills() {
         .resource_mut::<ActiveHazards>()
         .add_stack(HazardKind::Overcharge);
     add_drift_stacks(&mut app, 1);
+
     let bolt_1 = app
         .world_mut()
         .spawn((Bolt, Velocity2D(Vec2::ZERO), OverchargeKillCount(3)))
@@ -228,11 +278,35 @@ fn drift_applies_uniformly_across_bolts_independent_of_overcharge_kills() {
 
     tick_with_dt(&mut app, Duration::from_secs(1));
 
-    // Both bolts gain +100 in X from Drift.
-    let vel_1 = app.world().get::<Velocity2D>(bolt_1).unwrap();
-    let vel_2 = app.world().get::<Velocity2D>(bolt_2).unwrap();
-    assert!((vel_1.0.x - 100.0).abs() < 1e-3);
-    assert!((vel_2.0.x - 100.0).abs() < 1e-3);
+    // Drift emits for ALL Bolt entities regardless of Overcharge kill count.
+    // Two bolts → exactly 2 messages.
+    let forces = captured_forces(&app);
+    let surviving_bolt_count = 2usize; // neither bolt is despawned in this test
+    assert_eq!(
+        forces.len(),
+        surviving_bolt_count,
+        "Drift must emit one message per surviving bolt, got {}",
+        forces.len()
+    );
+    for msg in &forces {
+        assert!(
+            (msg.force.x - 100.0).abs() < 1e-5,
+            "every force.x must be ≈ 100.0, got {}",
+            msg.force.x
+        );
+        assert!(msg.force.y.abs() < 1e-5, "force.y must be ≈ 0.0");
+    }
+
+    // Both bolt entities received a message
+    let addressed: std::collections::HashSet<Entity> = forces.iter().map(|m| m.bolt).collect();
+    assert!(
+        addressed.contains(&bolt_1),
+        "bolt_1 must receive a Drift force message"
+    );
+    assert!(
+        addressed.contains(&bolt_2),
+        "bolt_2 must receive a Drift force message"
+    );
 
     // Bolt 2 has no Overcharge entry (zero kills).
     let stack_2 = app.world().get::<EffectStack<SpeedBoostConfig>>(bolt_2);

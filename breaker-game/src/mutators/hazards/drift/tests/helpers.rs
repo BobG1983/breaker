@@ -2,8 +2,7 @@
 //!
 //! State-hierarchy apps (`NodeState::Playing` and a non-Playing variant),
 //! bolt spawn helpers, a variable-dt ticker, a seeded-RNG installer, and
-//! `ActiveHazards` / `DriftConfig` / `DriftWind` installers. Drift emits no
-//! messages, so unlike Overcharge or Cascade there is no message helper here.
+//! `ActiveHazards` / `DriftConfig` / `DriftWind` installers.
 
 use std::time::Duration;
 

@@ -61,6 +61,20 @@ pub(crate) struct BoltImpactWall {
     pub wall: Entity,
 }
 
+/// Applies a per-tick acceleration to a bolt.
+///
+/// `force` units: world-units per second² (acceleration).
+///
+/// Sent by force-producing systems (drift hazard, gravity surge).
+/// Consumed by `apply_bolt_forces` (this domain).
+#[derive(Message, Clone, Debug)]
+pub(crate) struct ApplyBoltForce {
+    /// The bolt entity to accelerate.
+    pub bolt:  Entity,
+    /// Acceleration in world-units/s². Do NOT pre-multiply by `dt` — the consumer owns the `* dt` step.
+    pub force: Vec2,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,6 +192,24 @@ mod tests {
             msg.breaker,
             Entity::PLACEHOLDER,
             "BoltLost.breaker should equal PLACEHOLDER"
+        );
+    }
+
+    #[test]
+    fn apply_bolt_force_debug_format() {
+        let msg = ApplyBoltForce {
+            bolt:  Entity::PLACEHOLDER,
+            force: Vec2::ZERO,
+        };
+        let fmt = format!("{msg:?}");
+        assert!(fmt.contains("ApplyBoltForce"));
+        assert!(
+            fmt.contains("bolt"),
+            "debug format should include 'bolt' field name"
+        );
+        assert!(
+            fmt.contains("force"),
+            "debug format should include 'force' field name"
         );
     }
 }

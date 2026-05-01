@@ -22,23 +22,29 @@ use super::super::system::{
     spawn_gravity_wells,
 };
 use crate::{
-    bolt::components::Bolt,
+    bolt::{
+        components::Bolt, messages::ApplyBoltForce, sets::BoltSystems, systems::apply_bolt_forces,
+    },
     cells::components::Cell,
     mutators::hazards::{
         definition::{HazardKind, HazardTuning},
         resources::ActiveHazards,
     },
     prelude::{Destroyed, *},
+    shared::test_utils::collector::attach_message_capture,
 };
 
 /// Default builder: state hierarchy driven into `NodeState::Playing`,
-/// `ActiveHazards`, `Destroyed<Cell>` message queue.
+/// `ActiveHazards`, `Destroyed<Cell>` message queue, and `ApplyBoltForce`
+/// message capture so tests can assert on emitted messages via
+/// `app.world().resource::<MessageCollector<ApplyBoltForce>>()`.
 pub(super) fn test_app_playing() -> App {
     TestAppBuilder::new()
         .with_state_hierarchy()
         .in_state_node_playing()
         .with_resource::<ActiveHazards>()
         .with_message::<Destroyed<Cell>>()
+        .with_message_capture::<ApplyBoltForce>()
         .build()
 }
 
@@ -162,4 +168,45 @@ pub(super) fn activate_now(app: &mut App, tuning: &HazardTuning) {
 pub(super) fn insert_seeded_rng(app: &mut App, seed: u64) {
     app.world_mut()
         .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(seed)));
+}
+
+/// Wires the bare system pair `(gravity_well_pull, apply_bolt_forces)` in
+/// `FixedUpdate` with `gravity_well_pull.before(apply_bolt_forces)`.
+///
+/// Used by **integration behaviors 16 and 17 only** — these tests assert on
+/// `Velocity2D` after the producer→consumer chain runs. Does NOT use the
+/// production `gravity_surge::wire`; this is a minimal harness for
+/// integration math pinning.
+///
+/// Requires `test_app_playing()` (which registers `MessageCollector<ApplyBoltForce>`
+/// via `with_message_capture`).
+pub(super) fn wire_pull_only_with_consumer(app: &mut App) {
+    app.add_systems(FixedUpdate, (gravity_well_pull, apply_bolt_forces).chain());
+}
+
+/// Wires the production `gravity_surge::wire` PLUS the `apply_bolt_forces`
+/// consumer in `BoltSystems::ApplyForces`, PLUS message capture for
+/// `ApplyBoltForce`.
+///
+/// Used by:
+/// - `tests/wire.rs` and `tests/synergy.rs` tests that assert on `Velocity2D`
+///   after the production chain runs (replaces bare `wire(&mut app)` calls).
+/// - **Behavior 18** (wire-ordering regression test).
+///
+/// Performs exactly:
+/// 1. `gravity_surge::wire(app)` — production wiring with `.before(BoltSystems::ApplyForces)`.
+/// 2. Registers `apply_bolt_forces` in `FixedUpdate` in `BoltSystems::ApplyForces`
+///    before `rantzsoft_spatial2d::plugin::SpatialSystems::ApplyVelocity`.
+/// 3. `attach_message_capture::<ApplyBoltForce>(app)` — idempotently registers
+///    the collector after `wire` has had a chance to register the message.
+pub(super) fn wire_with_force_consumer(app: &mut App) {
+    use super::super::system::wire;
+    wire(app);
+    app.add_systems(
+        FixedUpdate,
+        apply_bolt_forces
+            .in_set(BoltSystems::ApplyForces)
+            .before(rantzsoft_spatial2d::plugin::SpatialSystems::ApplyVelocity),
+    );
+    attach_message_capture::<ApplyBoltForce>(app);
 }

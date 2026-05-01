@@ -1,6 +1,6 @@
 //! Group F — `wire` integration: full chain, ordering, gating.
 //!
-//! These tests exercise the production wiring (`wire(&mut app)`) so
+//! These tests exercise the production wiring (`wire_with_force_consumer(&mut app)`) so
 //! the run conditions `hazard_active(GravitySurge)` and
 //! `in_state(NodeState::Playing)` are active and the chain ordering
 //! `(spawn_gravity_wells, gravity_well_pull, despawn_expired_gravity_wells)
@@ -12,10 +12,11 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::{
-    super::system::{GravityWell, wire},
+    super::system::GravityWell,
     helpers::{
         add_gravity_surge_stacks, canonical_config, install_gravity_surge_config, spawn_bolt,
-        spawn_well, test_app_not_playing, test_app_playing, tick_with_dt, write_cell_destroyed,
+        spawn_well, test_app_not_playing, test_app_playing, tick_with_dt, wire_with_force_consumer,
+        write_cell_destroyed,
     },
 };
 use crate::mutators::hazards::{definition::HazardKind, resources::ActiveHazards};
@@ -25,7 +26,7 @@ use crate::mutators::hazards::{definition::HazardKind, resources::ActiveHazards}
 #[test]
 fn full_chain_spawns_applies_force_and_preserves_active_well() {
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     add_gravity_surge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
@@ -52,7 +53,7 @@ fn full_chain_second_tick_no_new_message_accumulates_velocity() {
     // Edge: tick 2 with no new Destroyed<Cell> → still 1 well (remaining
     // ≈ 1.8), bolt velocity accumulates another -0.5.
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     add_gravity_surge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
@@ -75,7 +76,7 @@ fn full_chain_second_tick_no_new_message_accumulates_velocity() {
 #[test]
 fn same_tick_new_spawn_and_old_despawn_coexist_in_chain() {
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     add_gravity_surge_stacks(&mut app, 1);
     // Pre-insert an already-expired well.
@@ -104,7 +105,7 @@ fn same_tick_new_spawn_and_old_despawn_coexist_in_chain() {
 fn same_tick_chain_completes_without_bolt() {
     // Edge: no bolt in the world — chain still runs without panic.
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     add_gravity_surge_stacks(&mut app, 1);
     let old = spawn_well(&mut app, Vec2::new(50.0, 0.0), 500.0, 0.0);
@@ -122,7 +123,7 @@ fn same_tick_chain_completes_without_bolt() {
 #[test]
 fn gate_off_with_zero_stacks_suppresses_all_systems() {
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     // NO stacks added — gate closed.
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::new(5.0, 3.0));
@@ -149,7 +150,7 @@ fn gate_reopens_when_stack_added_mid_run() {
     // opens, spawning an extra well. Here we isolate the gate toggle
     // by writing messages ONLY after the stack is added.
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::new(5.0, 3.0));
 
@@ -182,7 +183,7 @@ fn gate_reopens_when_stack_added_mid_run() {
 #[test]
 fn gate_off_outside_playing_state_suppresses_all_systems() {
     let mut app = test_app_not_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     add_gravity_surge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::new(5.0, 3.0));
@@ -206,7 +207,7 @@ fn gate_off_outside_playing_state_suppresses_all_systems() {
 fn same_setup_with_playing_state_fires_chain() {
     // Edge: mirror the non-Playing setup with Playing state — chain fires.
     let mut app = test_app_playing();
-    wire(&mut app);
+    wire_with_force_consumer(&mut app);
     install_gravity_surge_config(&mut app, canonical_config());
     add_gravity_surge_stacks(&mut app, 1);
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::new(5.0, 3.0));

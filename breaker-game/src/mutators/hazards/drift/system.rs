@@ -1,14 +1,14 @@
 //! Drift hazard — ambient wind pushes bolts in a telegraphed direction.
 //! Direction changes every `period_secs`; magnitude scales linearly with
-//! stack count. The hazard writes directly to each Bolt's `Velocity2D`
-//! each tick (force × dt), keeping the implementation self-contained.
+//! stack count. The hazard emits one `ApplyBoltForce` message per active
+//! Bolt each tick; the bolt domain's `apply_bolt_forces` consumer drains
+//! the messages and writes `force * dt` to each bolt's `Velocity2D`.
 
 use bevy::prelude::*;
 use rand::Rng;
-use rantzsoft_spatial2d::components::Velocity2D;
 
 use crate::{
-    bolt::components::Bolt,
+    bolt::{components::Bolt, messages::ApplyBoltForce, sets::BoltSystems},
     mutators::hazards::{
         definition::{HazardKind, HazardTuning},
         resources::{ActiveHazards, hazard_active},
@@ -99,15 +99,18 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `in_state(NodeState::Playing)`. `drift_update_wind` ticks the
 /// `DriftWind.timer` down; on expiry rolls a new unit-vector direction via
 /// `GameRng` and resets the timer to `period_secs`. `drift_apply_force`
-/// adds `direction * force_magnitude(stacks) * dt` to every Bolt's
-/// `Velocity2D`. No `DmgSystems` ordering — Drift operates on
-/// bolt `Velocity2D` directly (pending the `ApplyBoltForce` pipeline in
-/// Commit 5).
+/// emits one `ApplyBoltForce { bolt, force }` per active Bolt each tick;
+/// the bolt domain's `apply_bolt_forces` consumer (running in
+/// `BoltSystems::ApplyForces`) drains the messages and writes
+/// `force * dt` to each bolt's `Velocity2D`. The chain is ordered
+/// `.before(BoltSystems::ApplyForces)` so the consumer drains the
+/// emitter's messages within the same `FixedUpdate` tick.
 pub(crate) fn wire(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (drift_update_wind, drift_apply_force)
             .chain()
+            .before(BoltSystems::ApplyForces)
             .run_if(hazard_active(HazardKind::Drift))
             .run_if(in_state(NodeState::Playing)),
     );
@@ -136,27 +139,34 @@ pub(crate) fn drift_update_wind(
     wind.timer = config.period_secs;
 }
 
-/// Adds `direction × force × dt` to every Bolt's `Velocity2D` each tick.
-/// Early-returns when `DriftConfig` or `DriftWind` is absent, or when
-/// `force_magnitude(stacks) <= 0.0` (stack count is zero) — avoids writing
-/// a zero-length impulse to every bolt in the common inactive path.
+/// Emits one `ApplyBoltForce { bolt, force }` per active Bolt each tick.
+/// `force = wind.direction * force_magnitude(stacks)` in world-units/s²
+/// (acceleration). The bolt-domain consumer (`apply_bolt_forces`) drains
+/// the messages, sums per-bolt forces, and performs the single `force * dt`
+/// velocity write. The emitter MUST NOT pre-multiply by dt.
+///
+/// Early-returns (no messages emitted) when:
+/// - `DriftConfig` is absent,
+/// - `DriftWind` is absent, or
+/// - `force_magnitude(stacks) <= 0.0` (zero stacks, zero base, or
+///   negative tuning — silenced uniformly).
 pub(crate) fn drift_apply_force(
-    time: Res<Time<Fixed>>,
     active: Res<ActiveHazards>,
     config: Option<Res<DriftConfig>>,
     wind: Option<Res<DriftWind>>,
-    mut bolts: Query<&mut Velocity2D, With<Bolt>>,
+    bolts: Query<Entity, With<Bolt>>,
+    mut writer: MessageWriter<ApplyBoltForce>,
 ) {
     let (Some(config), Some(wind)) = (config, wind) else {
         return;
     };
     let stacks = active.stacks(HazardKind::Drift);
-    let force = config.force_magnitude(stacks);
-    if force <= 0.0 {
+    let force_magnitude = config.force_magnitude(stacks);
+    if force_magnitude <= 0.0 {
         return;
     }
-    let impulse = wind.direction * force * time.delta_secs();
-    for mut velocity in &mut bolts {
-        velocity.0 += impulse;
+    let force = wind.direction * force_magnitude;
+    for bolt in &bolts {
+        writer.write(ApplyBoltForce { bolt, force });
     }
 }

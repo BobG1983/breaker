@@ -5,11 +5,11 @@ use bevy::{ecs::schedule::ApplyDeferred, prelude::*};
 use crate::{
     bolt::{
         BoltSystems,
-        messages::{BoltLost, BoltSpawned},
+        messages::{ApplyBoltForce, BoltLost, BoltSpawned},
         systems::{
-            begin_node_birthing, bolt_breaker_collision, bolt_cell_collision, bolt_lost,
-            bolt_wall_collision, clamp_bolt_to_playfield, dispatch_bolt_effects, hover_bolt,
-            launch_bolt, normalize_bolt_speed_after_constraints, spawn_bolt_lost_text,
+            apply_bolt_forces, begin_node_birthing, bolt_breaker_collision, bolt_cell_collision,
+            bolt_lost, bolt_wall_collision, clamp_bolt_to_playfield, dispatch_bolt_effects,
+            hover_bolt, launch_bolt, normalize_bolt_speed_after_constraints, spawn_bolt_lost_text,
             sync_bolt_scale, sync_bolt_speed_to_stack, tick_birthing, tick_bolt_lifespan,
         },
     },
@@ -35,6 +35,7 @@ impl Plugin for BoltPlugin {
             .add_message::<BoltImpactCell>()
             .add_message::<BoltLost>()
             .add_message::<BoltImpactWall>()
+            .add_message::<ApplyBoltForce>()
             .add_systems(
                 OnEnter(NodeState::Loading),
                 (
@@ -91,6 +92,10 @@ impl Plugin for BoltPlugin {
                     tick_bolt_lifespan
                         .before(BoltSystems::BoltLost)
                         .before(DmgSystems::ApplyKill),
+                    // Apply accumulated force messages as velocity deltas
+                    apply_bolt_forces
+                        .in_set(BoltSystems::ApplyForces)
+                        .before(rantzsoft_spatial2d::plugin::SpatialSystems::ApplyVelocity),
                 )
                     .run_if(in_state(NodeState::Playing)),
             )

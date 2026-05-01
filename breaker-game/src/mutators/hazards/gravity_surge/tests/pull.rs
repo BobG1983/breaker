@@ -1,9 +1,14 @@
-//! Group D — `gravity_well_pull` system.
+//! Group D — `gravity_well_pull` emits `ApplyBoltForce` (migration from direct
+//!            `Velocity2D` write).
 //!
-//! Every test wires only `gravity_well_pull` via `wire_pull_only`. Wells
-//! are seeded via `spawn_well`; bolts via `spawn_bolt`.
-//! `MIN_PULL_DISTANCE = 20.0` is the file-private distance floor — tests
-//! that exercise it use the literal `20.0`.
+//! Every test wires only `gravity_well_pull` via `wire_pull_only`.
+//! After the migration, `gravity_well_pull` emits `ApplyBoltForce` messages
+//! rather than mutating `Velocity2D` directly. Tests assert on message
+//! emission; `Velocity2D` remains unchanged because the consumer
+//! (`apply_bolt_forces`) is NOT wired in these tests.
+//!
+//! Integration tests (Group I) and wire-ordering tests (Group J) live in
+//! `pull_integration.rs` (split out per the 800-line file-splitting rule).
 
 use std::time::Duration;
 
@@ -14,32 +19,49 @@ use super::{
     super::system::GravityWell,
     helpers::{spawn_bolt, spawn_well, test_app_playing, tick_with_dt, wire_pull_only},
 };
+use crate::{bolt::messages::ApplyBoltForce, shared::test_utils::collector::MessageCollector};
 
-// ── Behavior 24 — single well pulls bolt toward it — PRESERVED ──────────
+// ── Group D — gravity_well_pull emits ApplyBoltForce ─────────────────────────
+
+// ── Behavior 1 — single well emits ApplyBoltForce in -X direction ────────────
 
 #[test]
-fn single_well_pulls_bolt_toward_it() {
+fn single_well_emits_apply_bolt_force_in_negative_x_direction() {
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
-    let _well = spawn_well(&mut app, Vec2::new(0.0, 0.0), 500.0, 2.0);
+    let _well = spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
     let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    // Well is to the left → accel in -X. Distance = 100, force = 500/100 = 5 u/s²
-    // After 1s, velocity = 5 u/s in -X.
-    assert!(
-        vel.0.x < 0.0,
-        "expected negative X velocity, got {:?}",
-        vel.0
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected exactly one ApplyBoltForce message, got {}",
+        collector.0.len()
     );
-    assert!(vel.0.y.abs() < 1e-5);
+    assert_eq!(
+        collector.0[0].bolt, bolt,
+        "message.bolt must match the spawned bolt entity"
+    );
+    assert!(
+        collector.0[0].force.x < 0.0,
+        "expected negative X force (well is to the -X side), got {}",
+        collector.0[0].force.x
+    );
+    assert!(
+        collector.0[0].force.y.abs() < 1e-5,
+        "expected zero Y force, got {}",
+        collector.0[0].force.y
+    );
 }
 
 #[test]
-fn single_well_pull_pins_exact_velocity() {
-    // Expanded: pin exact (-5, 0) velocity.
+fn single_well_emits_force_velocity_unchanged_without_consumer() {
+    // Edge case: bolt's Velocity2D MUST remain at Vec2::ZERO because the
+    // producer no longer writes velocity directly — without apply_bolt_forces
+    // wired, velocity is unchanged this tick.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
@@ -47,14 +69,91 @@ fn single_well_pull_pins_exact_velocity() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
+    // One message emitted.
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+
+    // But Velocity2D must be UNCHANGED — producer does not write velocity.
     let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!((vel.0.x - (-5.0)).abs() < 1e-3);
-    assert!(vel.0.y.abs() < 1e-5);
+    assert_eq!(
+        vel.0,
+        Vec2::ZERO,
+        "Velocity2D must be unchanged when consumer is not wired, got {:?}",
+        vel.0
+    );
+}
+
+// ── Behavior 2 — single well emits exact acceleration vector ─────────────────
+
+#[test]
+fn single_well_emits_exact_acceleration_vector() {
+    // accel = strength / distance = 500 / 100 = 5 toward -X.
+    // force = Vec2::new(-5.0, 0.0). Independent of dt.
+    let mut app = test_app_playing();
+    wire_pull_only(&mut app);
+    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
+    let _bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
+
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    assert!(
+        (collector.0[0].force - Vec2::new(-5.0, 0.0)).length() < 1e-3,
+        "expected force ≈ (-5.0, 0.0), got {:?}",
+        collector.0[0].force
+    );
 }
 
 #[test]
-fn pull_impulse_adds_to_existing_velocity() {
-    // Edge: pull impulse is added, not overwriting, the existing velocity.
+fn single_well_emits_force_independent_of_dt() {
+    // Edge case: re-running with dt = 0.1 MUST still yield force ≈ (-5.0, 0.0).
+    // The producer emits acceleration, not acceleration*dt.
+    let mut app = test_app_playing();
+    wire_pull_only(&mut app);
+    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
+    let bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::ZERO);
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
+
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(
+        collector.0[0].bolt, bolt,
+        "message.bolt must match the spawned bolt entity"
+    );
+    assert!(
+        (collector.0[0].force - Vec2::new(-5.0, 0.0)).length() < 1e-3,
+        "force must be acceleration (dt-independent): expected ≈ (-5.0, 0.0), got {:?}",
+        collector.0[0].force
+    );
+}
+
+// ── Behavior 3 — pre-existing bolt velocity is NOT in the emitted force ───────
+
+#[test]
+fn pre_existing_bolt_velocity_absent_from_emitted_force() {
+    // The bolt's existing velocity does NOT appear in the emitted force field.
+    let mut app = test_app_playing();
+    wire_pull_only(&mut app);
+    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
+    let _bolt = spawn_bolt(&mut app, Vec2::new(100.0, 0.0), Vec2::new(3.0, 4.0));
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
+
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    // force is pure acceleration, not velocity + acceleration.
+    assert!(
+        (collector.0[0].force - Vec2::new(-5.0, 0.0)).length() < 1e-3,
+        "force must be pure acceleration (no bolt velocity mixed in): expected ≈ (-5.0, 0.0), got {:?}",
+        collector.0[0].force
+    );
+}
+
+#[test]
+fn bolt_velocity_unchanged_when_existing_velocity_present_and_consumer_not_wired() {
+    // Edge case: bolt's Velocity2D is still (3.0, 4.0) — consumer not wired.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
@@ -63,42 +162,21 @@ fn pull_impulse_adds_to_existing_velocity() {
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
     let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    let expected = Vec2::new(-2.0, 4.0);
-    assert!(
-        (vel.0 - expected).length() < 1e-3,
-        "expected {expected:?}, got {:?}",
+    assert_eq!(
+        vel.0,
+        Vec2::new(3.0, 4.0),
+        "Velocity2D must be untouched (consumer not wired): got {:?}",
         vel.0
     );
 }
 
-// ── Behavior 25 — bolt at distance < MIN_PULL_DISTANCE clamps — PRESERVED
+// ── Behavior 4 — bolt at distance < MIN_PULL_DISTANCE clamps the magnitude ───
 
 #[test]
-fn pull_is_clamped_at_min_distance() {
-    let mut app = test_app_playing();
-    wire_pull_only(&mut app);
-    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::new(1.0, 0.0), Vec2::ZERO);
-
-    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
-
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    // Distance floor = 20.0. Pull = 500 / 20 = 25 u/s². After 1s = 25 u/s.
-    // Without the floor, pull at distance 1 would be ~500, which would be
-    // a runaway.
-    assert!(
-        vel.0.length() < 100.0,
-        "pull should be clamped (<100), got {}",
-        vel.0.length()
-    );
-}
-
-#[test]
-fn pull_clamped_at_distance_one_produces_small_force() {
-    // Production clamps distance via `.max(20.0)` in BOTH direction and
-    // magnitude. At true distance=1 inside the clamp:
+fn bolt_inside_min_pull_distance_emits_clamped_force() {
+    // MIN_PULL_DISTANCE = 20.0. Bolt at distance 1.
     //   delta = (-1, 0), distance_clamped = 20.0
-    //   direction = (-1/20, 0) = (-0.05, 0)  (NOT unit-length)
+    //   direction = (-1/20, 0) = (-0.05, 0)
     //   accel = direction * (500/20) = (-0.05, 0) * 25 = (-1.25, 0)
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
@@ -107,186 +185,266 @@ fn pull_clamped_at_distance_one_produces_small_force() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(
-        (vel.0.x - (-1.25)).abs() < 1e-3,
-        "expected x = -1.25, got {}",
-        vel.0.x
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected exactly one ApplyBoltForce message"
     );
-    assert!(vel.0.y.abs() < 1e-5);
+    assert_eq!(collector.0[0].bolt, bolt);
+    // Clamped magnitude must be well below unclamped (~500).
+    assert!(
+        collector.0[0].force.length() < 100.0,
+        "force should be clamped (<100), got {}",
+        collector.0[0].force.length()
+    );
+    assert!(
+        (collector.0[0].force.x - (-1.25)).abs() < 1e-3,
+        "expected force.x ≈ -1.25, got {}",
+        collector.0[0].force.x
+    );
+    assert!(
+        collector.0[0].force.y.abs() < 1e-5,
+        "expected force.y ≈ 0.0, got {}",
+        collector.0[0].force.y
+    );
 }
 
+// ── Behavior 5 — clamp keeps direction NOT re-normalised ─────────────────────
+
 #[test]
-fn pull_clamped_off_axis_keeps_direction_uncorrected() {
-    // Edge: bolt at (0.5, 0.866) — direction NOT re-normalised after clamp.
+fn clamped_off_axis_force_keeps_direction_uncorrected() {
+    // Bolt at (0.5, 0.866) — direction NOT re-normalised after clamp.
     //   delta = (-0.5, -0.866), delta.length() ≈ 1.0 < 20 → clamp = 20
-    //   direction = (-0.025, -0.0433)
-    //   accel = direction * 25 = (-0.625, -1.0825) → after 1s, same.
+    //   direction = (-0.5/20, -0.866/20) = (-0.025, -0.0433)
+    //   accel = direction * 25 = (-0.625, -1.0825)
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::new(0.5, 0.866), Vec2::ZERO);
+    spawn_bolt(&mut app, Vec2::new(0.5, 0.866), Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!((vel.0.length() - 1.25).abs() < 1e-3);
-    assert!((vel.0.x - (-0.625)).abs() < 1e-2);
-    assert!((vel.0.y - (-1.0825)).abs() < 1e-2);
-}
-
-// ── Behavior 26 — bolt at exactly MIN_PULL_DISTANCE → force = 25 u/s² ──
-
-#[test]
-fn pull_at_exact_min_distance_produces_twenty_five() {
-    let mut app = test_app_playing();
-    wire_pull_only(&mut app);
-    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::new(20.0, 0.0), Vec2::ZERO);
-
-    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
-
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    // At distance = 20, distance.max(20) = 20, force = 500/20 = 25.
-    // Direction vector = (-20/20, 0) = (-1, 0) (unit-length).
-    assert!((vel.0.x - (-25.0)).abs() < 1e-3);
-    assert!(vel.0.y.abs() < 1e-5);
-}
-
-#[test]
-fn pull_just_above_min_distance_uses_actual_distance() {
-    // Edge: bolt at (20.0001, 0.0) — distance just above clamp; formula
-    // uses actual distance → pull ≈ 500/20.0001 ≈ 24.9999.
-    let mut app = test_app_playing();
-    wire_pull_only(&mut app);
-    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::new(20.0001, 0.0), Vec2::ZERO);
-
-    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
-
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    let force = collector.0[0].force;
     assert!(
-        (vel.0.x - (-24.9999)).abs() < 1e-2,
-        "expected ≈ -24.9999, got {}",
-        vel.0.x
+        (force.length() - 1.25).abs() < 1e-3,
+        "expected force magnitude ≈ 1.25, got {}",
+        force.length()
+    );
+    assert!(
+        (force.x - (-0.625)).abs() < 1e-2,
+        "expected force.x ≈ -0.625, got {}",
+        force.x
+    );
+    assert!(
+        (force.y - (-1.0825)).abs() < 1e-2,
+        "expected force.y ≈ -1.0825, got {}",
+        force.y
     );
 }
 
-// ── Behavior 27 — bolt at same position as well → degenerate direction ──
+// ── Behavior 6 — bolt at exactly MIN_PULL_DISTANCE → force = -25 in X ────────
 
 #[test]
-fn bolt_on_top_of_well_produces_zero_finite_force() {
+fn bolt_at_exact_min_pull_distance_emits_twenty_five() {
+    // distance = 20.0 → distance.max(20.0) = 20, direction = (-1, 0),
+    // accel = -1 * (500/20) = -25.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
+    spawn_bolt(&mut app, Vec2::new(20.0, 0.0), Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.x.is_finite() && vel.0.y.is_finite());
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    let force = collector.0[0].force;
+    assert!(
+        (force.x - (-25.0)).abs() < 1e-3,
+        "expected force.x ≈ -25.0, got {}",
+        force.x
+    );
+    assert!(
+        force.y.abs() < 1e-5,
+        "expected force.y ≈ 0.0, got {}",
+        force.y
+    );
+}
+
+// ── Behavior 7 — bolt just above MIN_PULL_DISTANCE uses actual distance ───────
+
+#[test]
+fn bolt_just_above_min_pull_distance_uses_actual_distance() {
+    // Bolt at (20.0001, 0.0) — distance just above clamp; formula uses
+    // actual distance → accel ≈ 500/20.0001 ≈ 24.9999.
+    let mut app = test_app_playing();
+    wire_pull_only(&mut app);
+    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
+    spawn_bolt(&mut app, Vec2::new(20.0001, 0.0), Vec2::ZERO);
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
+
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    assert!(
+        (collector.0[0].force.x - (-24.9999)).abs() < 1e-2,
+        "expected force.x ≈ -24.9999, got {}",
+        collector.0[0].force.x
+    );
+}
+
+// ── Behavior 8 — bolt on top of well produces zero finite force ───────────────
+
+#[test]
+fn bolt_on_top_of_well_emits_zero_finite_force() {
     // delta = 0, distance_clamped = 20, direction = 0/20 = 0, accel = 0.
-    assert!(vel.0.length() < 1e-4);
-}
-
-#[test]
-fn bolt_essentially_at_well_produces_tiny_finite_force() {
-    // Edge: bolt at (1e-9, 0) — tiny finite delta, tiny finite force.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::new(1e-9, 0.0), Vec2::ZERO);
+    spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.x.is_finite() && vel.0.y.is_finite());
-    assert!(vel.0.length() < 1e-6);
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    let force = collector.0[0].force;
+    assert!(
+        force.x.is_finite() && force.y.is_finite(),
+        "force components must be finite, got {force:?}",
+    );
+    assert!(
+        force.length() < 1e-4,
+        "force magnitude must be near zero, got {}",
+        force.length()
+    );
 }
 
-// ── Behavior 28 — two equidistant wells on X axis cancel — PRESERVED ───
-
 #[test]
-fn multiple_wells_compound_force() {
+fn bolt_essentially_at_well_emits_tiny_finite_force() {
+    // Edge case: bolt at (1e-9, 0) — tiny finite delta, tiny finite force.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
-    // Two wells equidistant on X axis → forces cancel in X.
+    spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
+    spawn_bolt(&mut app, Vec2::new(1e-9, 0.0), Vec2::ZERO);
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
+
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    let force = collector.0[0].force;
+    assert!(
+        force.x.is_finite() && force.y.is_finite(),
+        "force components must be finite, got {force:?}",
+    );
+    assert!(
+        force.length() < 1e-6,
+        "force magnitude must be tiny, got {}",
+        force.length()
+    );
+}
+
+// ── Behavior 9 — producer pre-sums all wells into exactly ONE message per bolt ─
+
+#[test]
+fn three_wells_produce_exactly_one_summed_message_per_bolt() {
+    // Three wells at (-100,0), (+100,0), (0,+100). Bolt at origin.
+    // Well (-100,0): delta=(-100,0), dist=100, dir=(-1,0), contrib=(-5,0)
+    // Well (+100,0): delta=(+100,0), dist=100, dir=(+1,0), contrib=(+5,0)
+    // Well (0,+100): delta=(0,+100), dist=100, dir=(0,+1), contrib=(0,+5)
+    // Vector sum: (0, +5)
+    let mut app = test_app_playing();
+    wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(-100.0, 0.0), 500.0, 2.0);
     spawn_well(&mut app, Vec2::new(100.0, 0.0), 500.0, 2.0);
-    // Third well above the bolt → pull in +Y.
     spawn_well(&mut app, Vec2::new(0.0, 100.0), 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
+    let bolt_a = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(
-        vel.0.x.abs() < 1e-4,
-        "X-axis wells should cancel, got {}",
-        vel.0.x
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    // ONE message, not one per well.
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected exactly 1 ApplyBoltForce message (pre-summed), got {} (regression: producer emitted one message per well)",
+        collector.0.len()
     );
-    assert!(vel.0.y > 0.0, "+Y well should pull up, got {}", vel.0.y);
+    assert_eq!(collector.0[0].bolt, bolt_a);
+    assert!(
+        collector.0[0].force.x.abs() < 1e-4,
+        "X contributions cancel: expected force.x ≈ 0, got {}",
+        collector.0[0].force.x
+    );
+    assert!(
+        (collector.0[0].force.y - 5.0).abs() < 1e-3,
+        "expected force.y ≈ +5.0, got {}",
+        collector.0[0].force.y
+    );
 }
 
 #[test]
-fn two_wells_cancel_on_x_with_third_below_pulls_minus_y() {
-    // Edge: two ±X wells plus one at (0,-100) below → X cancels, y = -5.
+fn three_wells_one_summed_message_edge_case_third_below() {
+    // Edge case A: third well at (0, -100) → only message has force ≈ (0, -5).
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(-100.0, 0.0), 500.0, 2.0);
     spawn_well(&mut app, Vec2::new(100.0, 0.0), 500.0, 2.0);
     spawn_well(&mut app, Vec2::new(0.0, -100.0), 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
+    let bolt_a = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.x.abs() < 1e-4);
-    assert!((vel.0.y - (-5.0)).abs() < 1e-3);
-}
-
-// ── Behavior 29 — third well above bolt pulls in +Y — PRESERVED ───────
-
-#[test]
-fn three_wells_x_cancels_with_upper_well_pulling_positive_y() {
-    let mut app = test_app_playing();
-    wire_pull_only(&mut app);
-    spawn_well(&mut app, Vec2::new(-100.0, 0.0), 500.0, 2.0);
-    spawn_well(&mut app, Vec2::new(100.0, 0.0), 500.0, 2.0);
-    spawn_well(&mut app, Vec2::new(0.0, 100.0), 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
-
-    tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
-
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.x.abs() < 1e-4);
-    assert!((vel.0.y - 5.0).abs() < 1e-3);
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(collector.0[0].bolt, bolt_a);
+    assert!(
+        collector.0[0].force.x.abs() < 1e-4,
+        "expected force.x ≈ 0, got {}",
+        collector.0[0].force.x
+    );
+    assert!(
+        (collector.0[0].force.y - (-5.0)).abs() < 1e-3,
+        "expected force.y ≈ -5.0, got {}",
+        collector.0[0].force.y
+    );
 }
 
 #[test]
-fn three_wells_closer_above_well_below_pulls_minus_ten() {
-    // Edge: move upper well to (0,-50) (below, closer) → y ≈ -10.
+fn three_wells_one_summed_message_edge_case_closer_below_well() {
+    // Edge case B: third well at (0, -50) (closer) → force.y ≈ -10.
+    // 500/50 = 10, direction (0,-1), contribution (0,-10).
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(-100.0, 0.0), 500.0, 2.0);
     spawn_well(&mut app, Vec2::new(100.0, 0.0), 500.0, 2.0);
     spawn_well(&mut app, Vec2::new(0.0, -50.0), 500.0, 2.0);
-    let bolt = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
+    let bolt_a = spawn_bolt(&mut app, Vec2::ZERO, Vec2::ZERO);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.x.abs() < 1e-4);
-    assert!((vel.0.y - (-10.0)).abs() < 1e-3);
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(collector.0[0].bolt, bolt_a);
+    assert!(
+        collector.0[0].force.x.abs() < 1e-4,
+        "expected force.x ≈ 0, got {}",
+        collector.0[0].force.x
+    );
+    assert!(
+        (collector.0[0].force.y - (-10.0)).abs() < 1e-3,
+        "expected force.y ≈ -10.0, got {}",
+        collector.0[0].force.y
+    );
 }
 
-// ── Behavior 30 — well with remaining <= 0 contributes NO force ────────
+// ── Behavior 10 — well with remaining <= 0 contributes NO force ───────────────
 
 #[test]
-fn expired_well_contributes_no_force_after_tick_filter() {
-    // Both wells expire this tick (one was 0.05, decrements to -0.05;
-    // other started at 0.0, decrements to -0.1). Neither passes the
-    // positive-remaining filter → no force.
+fn expired_wells_emit_no_apply_bolt_force() {
+    // Both wells expire this tick (0.05 → -0.05; 0.0 → -0.1). Neither passes
+    // the positive-remaining filter. No messages emitted.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(-100.0, 0.0), 500.0, 0.05);
@@ -295,14 +453,27 @@ fn expired_well_contributes_no_force_after_tick_filter() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
 
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert!(
+        collector.0.is_empty(),
+        "expected zero messages (both wells expired), got {}",
+        collector.0.len()
+    );
+    // Velocity must also be unchanged (no consumer wired, no messages).
     let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.length() < 1e-4, "expected no force, got {:?}", vel.0);
+    assert_eq!(
+        vel.0,
+        Vec2::ZERO,
+        "bolt velocity must be unchanged when no messages emitted: got {:?}",
+        vel.0
+    );
 }
 
 #[test]
-fn expired_wells_filtered_active_well_still_contributes() {
-    // Edge: two expiring wells plus one surviving — only surviving well
-    // pulls.
+fn expired_wells_filtered_active_well_emits_one_message() {
+    // Edge case: two expiring + one surviving well. Exactly one message with
+    // the surviving well's contribution.
+    // Surviving well at (0,-100): delta=(0,-100), dir=(0,-1), accel=(0,-5).
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(-100.0, 0.0), 500.0, 0.05);
@@ -312,14 +483,28 @@ fn expired_wells_filtered_active_well_still_contributes() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
 
-    let vel = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(vel.0.x.abs() < 1e-4);
-    // Surviving well at (0,-100) pulls bolt at origin in -Y: accel = -5,
-    // over dt=0.1 → velocity = -0.5.
-    assert!((vel.0.y - (-0.5)).abs() < 1e-3);
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(
+        collector.0.len(),
+        1,
+        "expected one message from the surviving well"
+    );
+    assert_eq!(collector.0[0].bolt, bolt);
+    assert!(
+        collector.0[0].force.x.abs() < 1e-4,
+        "expected force.x ≈ 0, got {}",
+        collector.0[0].force.x
+    );
+    // Producer emits acceleration (-5 in Y); dt-independent.
+    assert!(
+        (collector.0[0].force.y - (-5.0)).abs() < 1e-3,
+        "expected force.y ≈ -5.0 (acceleration, not velocity), got {}",
+        collector.0[0].force.y
+    );
 }
 
-// ── Behavior 31 — well.remaining ticks down by delta_secs — PRESERVED ──
+// ── Behavior 11 — well.remaining ticks down by dt ────────────────────────────
+// (Preserved unchanged — same behavior, no message check needed.)
 
 #[test]
 fn well_remaining_ticks_down() {
@@ -347,10 +532,12 @@ fn well_remaining_ticks_down_accumulates_across_ticks() {
     assert!((remaining - 1.2).abs() < 1e-5);
 }
 
-// ── Behavior 32 — two bolts each get independent accumulation ──────────
+// ── Behavior 12 — two bolts each receive their own message ───────────────────
 
 #[test]
-fn two_bolts_get_independent_pull_from_same_well() {
+fn two_bolts_each_receive_own_apply_bolt_force_message() {
+    // bolt_a at (100, 0): force ≈ (-5, 0) — distance 100, accel 5 in -X.
+    // bolt_b at (0, 50): force ≈ (0, -10) — distance 50, accel 10 in -Y.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
@@ -359,19 +546,44 @@ fn two_bolts_get_independent_pull_from_same_well() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let va = app.world().get::<Velocity2D>(bolt_a).unwrap().0;
-    let vb = app.world().get::<Velocity2D>(bolt_b).unwrap().0;
-    // bolt_a: distance 100, force 5, -X direction.
-    assert!((va - Vec2::new(-5.0, 0.0)).length() < 1e-3);
-    // bolt_b: distance 50, force 10, -Y direction.
-    assert!((vb - Vec2::new(0.0, -10.0)).length() < 1e-3);
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(
+        collector.0.len(),
+        2,
+        "expected exactly 2 ApplyBoltForce messages (one per bolt), got {}",
+        collector.0.len()
+    );
+
+    // Find the message for each bolt by the `bolt` field.
+    let msg_a = collector
+        .0
+        .iter()
+        .find(|m| m.bolt == bolt_a)
+        .expect("expected an ApplyBoltForce message for bolt_a");
+    let msg_b = collector
+        .0
+        .iter()
+        .find(|m| m.bolt == bolt_b)
+        .expect("expected an ApplyBoltForce message for bolt_b");
+
+    // bolt_a: distance 100, force 5 in -X.
+    assert!(
+        (msg_a.force - Vec2::new(-5.0, 0.0)).length() < 1e-3,
+        "bolt_a: expected force ≈ (-5.0, 0.0), got {:?}",
+        msg_a.force
+    );
+    // bolt_b: distance 50, force 10 in -Y.
+    assert!(
+        (msg_b.force - Vec2::new(0.0, -10.0)).length() < 1e-3,
+        "bolt_b: expected force ≈ (0.0, -10.0), got {:?}",
+        msg_b.force
+    );
 }
 
 #[test]
-fn third_bolt_gets_correct_directional_decomposition() {
-    // Edge: bolt_c at (-50,-50), distance = 50*sqrt(2) ≈ 70.71.
-    //   direction from bolt to well = (+1, +1)/sqrt(2) normalized
-    //   accel magnitude = 500/70.71 ≈ 7.07, so per-axis ≈ 5.0.
+fn third_bolt_gets_correct_directional_force_message() {
+    // Edge: bolt_c at (-50, -50), distance = 50*sqrt(2) ≈ 70.71.
+    // direction from bolt to well = (+1, +1)/sqrt(2), accel per-axis ≈ 5.0.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
@@ -379,28 +591,45 @@ fn third_bolt_gets_correct_directional_decomposition() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
-    let v = app.world().get::<Velocity2D>(bolt_c).unwrap().0;
-    assert!((v.x - 5.0).abs() < 1e-2);
-    assert!((v.y - 5.0).abs() < 1e-2);
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(collector.0.len(), 1);
+    assert_eq!(collector.0[0].bolt, bolt_c);
+    assert!(
+        (collector.0[0].force.x - 5.0).abs() < 1e-2,
+        "expected force.x ≈ +5.0 (toward well), got {}",
+        collector.0[0].force.x
+    );
+    assert!(
+        (collector.0[0].force.y - 5.0).abs() < 1e-2,
+        "expected force.y ≈ +5.0 (toward well), got {}",
+        collector.0[0].force.y
+    );
 }
 
-// ── Behavior 33 — zero wells in world → no velocity change ────────────
+// ── Behavior 13 — zero wells → no message emitted ────────────────────────────
 
 #[test]
-fn zero_wells_in_world_no_velocity_change() {
+fn zero_wells_in_world_no_apply_bolt_force_emitted() {
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     let bolt = spawn_bolt(&mut app, Vec2::new(10.0, 20.0), Vec2::new(3.0, 4.0));
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert!(
+        collector.0.is_empty(),
+        "expected zero messages with no wells, got {}",
+        collector.0.len()
+    );
+    // Velocity unchanged — no consumer wired, no messages.
     let vel = app.world().get::<Velocity2D>(bolt).unwrap();
     assert_eq!(vel.0, Vec2::new(3.0, 4.0));
 }
 
 #[test]
-fn zero_wells_second_tick_velocity_unchanged() {
-    // Edge: second tick — still bitwise unchanged.
+fn zero_wells_second_tick_still_no_message() {
+    // Edge: second tick — still zero messages, velocity unchanged.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     let bolt = spawn_bolt(&mut app, Vec2::new(10.0, 20.0), Vec2::new(3.0, 4.0));
@@ -408,28 +637,42 @@ fn zero_wells_second_tick_velocity_unchanged() {
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert!(
+        collector.0.is_empty(),
+        "expected zero messages on second tick with no wells, got {}",
+        collector.0.len()
+    );
     let vel = app.world().get::<Velocity2D>(bolt).unwrap();
     assert_eq!(vel.0, Vec2::new(3.0, 4.0));
 }
 
-// ── Behavior 34 — zero bolts → no panic; wells still tick ────────────
+// ── Behavior 14 — zero bolts → no panic; wells still tick ────────────────────
 
 #[test]
-fn zero_bolts_in_world_no_panic_wells_still_tick() {
+fn zero_bolts_in_world_no_panic_wells_still_tick_no_messages() {
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     let well = spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.5));
 
+    // No panic — wells still tick.
     let remaining = app.world().get::<GravityWell>(well).unwrap().remaining;
     assert!((remaining - 1.5).abs() < 1e-5);
+    // Zero messages emitted (no bolts).
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert!(
+        collector.0.is_empty(),
+        "expected zero messages with no bolts, got {}",
+        collector.0.len()
+    );
 }
 
 #[test]
-fn non_bolt_entity_is_excluded_from_pull() {
-    // Edge: non-Bolt entity with Position2D + Velocity2D → unchanged by
-    // the `With<Bolt>` filter.
+fn non_bolt_entity_excluded_from_apply_bolt_force() {
+    // Edge: non-Bolt entity with Position2D + Velocity2D is excluded by the
+    // With<Bolt> filter — no message emitted for it, its velocity is unchanged.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::ZERO, 500.0, 2.0);
@@ -440,17 +683,27 @@ fn non_bolt_entity_is_excluded_from_pull() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));
 
+    // No messages (non-Bolt filtered out).
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert!(
+        collector.0.is_empty(),
+        "expected zero messages (no Bolt entities), got {}",
+        collector.0.len()
+    );
+    // Non-bolt velocity unchanged.
     let vel = app.world().get::<Velocity2D>(non_bolt).unwrap();
     assert_eq!(vel.0, Vec2::new(5.0, 5.0));
 }
 
-// ── Behavior 35 — same-tick multi-well multi-bolt with filter ─────────
+// ── Behavior 15 — multi-well multi-bolt with expired-well filter ──────────────
 
 #[test]
-fn multi_well_multi_bolt_with_expired_wells_filtered() {
-    // Four wells: two active (±Y at ±100), two expiring (at ±X).
-    // Two bolts. After the tick's snapshot filter, only the ±Y wells
-    // contribute.
+fn multi_well_multi_bolt_with_expired_wells_emits_two_messages() {
+    // Four wells: two active at (0,+100) and (0,-100) (strength 200,
+    // remaining 2.0); two expiring at (+50,0) (remaining 0.0) and
+    // (-50,0) (remaining 0.05).
+    // With dt=0.1: the expiring wells decrement to negative — excluded.
+    // Two bolts.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(0.0, 100.0), 200.0, 2.0);
@@ -462,26 +715,54 @@ fn multi_well_multi_bolt_with_expired_wells_filtered() {
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
 
-    // bolt_a at origin: ±Y wells cancel in Y (they pull toward +Y and -Y
-    // symmetrically), both on X axis = 0 → no X either.
-    let va = app.world().get::<Velocity2D>(bolt_a).unwrap().0;
-    assert!(
-        va.length() < 1e-3,
-        "bolt_a should have ~zero force, got {va:?}"
+    let collector = app.world().resource::<MessageCollector<ApplyBoltForce>>();
+    assert_eq!(
+        collector.0.len(),
+        2,
+        "expected exactly 2 ApplyBoltForce messages (one per bolt), got {}",
+        collector.0.len()
     );
 
-    // bolt_b at (10,10): both surviving wells pull.
-    let vb = app.world().get::<Velocity2D>(bolt_b).unwrap().0;
-    assert!(vb.length() > 0.0, "bolt_b should feel force");
+    // bolt_a at origin: symmetric (0,+100) and (0,-100) wells cancel on Y;
+    // no X contribution from surviving wells. Assert per-axis to catch
+    // asymmetric regressions.
+    let msg_a = collector
+        .0
+        .iter()
+        .find(|m| m.bolt == bolt_a)
+        .expect("expected an ApplyBoltForce message for bolt_a");
     assert!(
-        vb.length() < 10.0,
-        "bolt_b force should be modest, got {vb:?}"
+        msg_a.force.x.abs() < 1e-4,
+        "bolt_a: expected force.x ≈ 0 (no X contribution from ±Y wells), got {}",
+        msg_a.force.x
+    );
+    assert!(
+        msg_a.force.y.abs() < 1e-4,
+        "bolt_a: expected force.y ≈ 0 (symmetric ±Y wells cancel), got {}",
+        msg_a.force.y
+    );
+
+    // bolt_b at (10, 10): modest non-zero force from two surviving wells.
+    let msg_b = collector
+        .0
+        .iter()
+        .find(|m| m.bolt == bolt_b)
+        .expect("expected an ApplyBoltForce message for bolt_b");
+    assert!(
+        msg_b.force.length() > 0.0,
+        "bolt_b: expected non-zero force, got {:?}",
+        msg_b.force
+    );
+    assert!(
+        msg_b.force.length() < 100.0,
+        "bolt_b: expected modest force (<100), got {}",
+        msg_b.force.length()
     );
 }
 
 #[test]
 fn multi_well_multi_bolt_preserves_all_four_entities_this_frame() {
-    // Edge: despawn is NOT wired — all four wells still exist.
+    // Edge: despawn is NOT wired — all four wells still exist after the tick.
     let mut app = test_app_playing();
     wire_pull_only(&mut app);
     spawn_well(&mut app, Vec2::new(0.0, 100.0), 200.0, 2.0);

@@ -31,7 +31,7 @@ Resource — one global wind affecting all bolts.
 
 ## Messages
 **Reads**: `Time` for delta; `Option<Res<ActiveHazards>>` for stack; `Option<ResMut<GameRng>>` for new direction selection.
-**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` — one per active bolt per tick. Bolt-domain consumer aggregates forces in `FixedUpdate` before `BoltSystems::IntegrateMotion` (per TODO #7). Drift does NOT write `Velocity2D` directly.
+**Sends**: `ApplyBoltForce { bolt: Entity, force: Vec2 }` — one per active bolt per tick. Bolt-domain consumer (`apply_bolt_forces` in `BoltSystems::ApplyForces`) aggregates forces and writes `force * dt` to each bolt's `Velocity2D` before `SpatialSystems::ApplyVelocity`. Drift does NOT write `Velocity2D` directly.
 
 ## Systems
 
@@ -42,7 +42,7 @@ Resource — one global wind affecting all bolts.
 - **Ordering**: Before `drift_apply_force`.
 
 ### `drift_apply_force`
-- **Schedule**: `FixedUpdate`, `.after(drift_update_wind)`, `.before(BoltSystems::IntegrateMotion)` (via the `ApplyBoltForce` pipeline ordering).
+- **Schedule**: `FixedUpdate`, `.after(drift_update_wind)`, `.before(BoltSystems::ApplyForces)`.
 - **run_if**: `hazard_active(HazardKind::Drift)` + `in_state(NodeState::Playing)`.
 - **Behavior**: For each bolt: computes `magnitude = base_force + force_per_level * (stack - 1)`. Emits `ApplyBoltForce { bolt, force: DriftWind.direction * magnitude }`.
 
@@ -50,7 +50,7 @@ Resource — one global wind affecting all bolts.
 
 - **Not in the death pipeline.** Drift does not participate in any `DeathPipelineSystems` set.
 - **Trigger**: FixedUpdate tick.
-- **Emits**: `ApplyBoltForce` — bolt-domain consumer aggregates and writes `Velocity2D` in `FixedUpdate` before `BoltSystems::IntegrateMotion`.
+- **Emits**: `ApplyBoltForce` — bolt-domain consumer (`apply_bolt_forces`) aggregates and writes `Velocity2D` in `BoltSystems::ApplyForces` before `SpatialSystems::ApplyVelocity`.
 - **No** `DamageDealt<T>` / `HealDealt<T>` / `Destroyed<T>` / `DamageBoostStack` involvement. **No** direct `Velocity2D` write.
 
 ## Stacking Behavior
@@ -66,7 +66,7 @@ Linear: `force = base_force + force_per_level * (stack - 1)`.
 `change_interval` is NOT stack-dependent — only force magnitude scales.
 
 ## Cross-Domain Dependencies
-- **bolt**: Consumes `ApplyBoltForce`. Owns force-aggregation + `Velocity2D` write.
+- **bolt**: Consumes `ApplyBoltForce` via `apply_bolt_forces` in `BoltSystems::ApplyForces`. Owns force-aggregation + `Velocity2D` write.
 - **shared**: Reads `Time`. Uses seeded `GameRng` for deterministic direction changes.
 
 ## Expected Behaviors (for test specs)
