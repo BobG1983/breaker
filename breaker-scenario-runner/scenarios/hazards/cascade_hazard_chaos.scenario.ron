@@ -1,0 +1,32 @@
+// Adversarial: Cascade hazard active at 3 stacks during dense simultaneous cell destruction.
+//
+// Every cell kill emits Destroyed<Cell> which cascade_heal_on_death processes to emit
+// HealDealt<Cell> per adjacent neighbour. Dense layout maximises the number of cells
+// in proximity — a single piercing pass can destroy several cells in one tick, firing
+// the cascade loop N^2 times (N kills × N neighbours each). This races the message
+// reader flush, the heal pipeline, and the HealCap::Starting clamp path simultaneously.
+//
+// Adversarial conditions:
+//   - Dense layout: maximises adjacency overlaps and simultaneous Destroyed<Cell> events
+//   - 3 stacks: heal_per_neighbour = base_heal + 2 * per_level_heal = 10 + 10 = 20 HP per
+//     neighbour — large enough to expose sign-extension or overflow in the heal formula
+//   - Chaos input (0.6): high chip-select throughput ensures sustained node transitions
+//     which exercise the in-body reader.clear() gate path each time Cascade deactivates
+//   - NoNaN: catches NaN propagation if victim_pos is derived from a just-despawned entity
+//   - NoEntityLeaks: catches unreleased HealDealt<Cell> message entities accumulating
+//   - BoltInBounds: catches physics instability from large heal events corrupting state
+//   - RunStatsMonotonic: cells_destroyed counter must never decrement under heal pressure
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.6)),
+    max_frames: 6000,
+    disallowed_failures: [BoltInBounds, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN, RunStatsMonotonic],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 5513,
+    frame_mutations: [
+        (frame: 30, mutation: InjectHazardStack(kind_name: "Cascade", stacks: 3)),
+    ],
+)

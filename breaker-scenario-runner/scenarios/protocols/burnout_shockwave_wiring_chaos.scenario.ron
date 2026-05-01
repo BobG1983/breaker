@@ -1,0 +1,45 @@
+// Adversarial: Burnout protocol activated via InjectProtocol, exercising the full
+// RON-config → ShockwaveConfig wiring path under chaos input.
+//
+// The existing cascade_shockwave_stress scenario hardcodes ShockwaveConfig directly in
+// initial_effects, giving false confidence: it does not exercise the path from
+// ProtocolTuning::Burnout { shockwave_base_range, shockwave_range_per_level,
+// shockwave_stacks, shockwave_speed } through activate() → BurnoutConfig insertion →
+// burnout_on_bump → commands.fire_effect(ShockwaveConfig { ... }).
+//
+// This scenario activates Burnout through the real dispatch path so that:
+//   1. BurnoutConfig is inserted with values from the loaded burnout.protocol.ron
+//      (base_range=64.0, range_per_level=16.0, stacks=1, speed=200.0)
+//   2. Chaos input at prob 0.8 forces high breaker movement, building heat rapidly
+//      (fill_duration=4.0 at 64 Hz → full heat in ~256 frames), then mega-bumps fire
+//      the shockwave via burnout_on_bump
+//   3. The shockwave entity lifecycle (spawn → expand → despawn) is stressed under
+//      sustained chaos across the full 8000-frame run
+//
+// Adversarial conditions:
+//   - InjectProtocol at frame 10: protocol activates before physics warms up, testing
+//     the lazy-insert BurnoutHeat path (first encounter inserts default, visible next tick)
+//   - Chaos input (0.8): high movement ensures heat fills rapidly, maximising shockwave
+//     spawns per run; also stresses breaker-edge positions during mega-bump timing
+//   - Dense layout: maximises cells in shockwave radius so each shockwave triggers
+//     the full HealDealt/DamageDealt pipeline, catching any NaN in range computation
+//   - NoEntityLeaks: shockwave entities must despawn after expansion; any accumulation
+//     indicates the shockwave lifecycle is broken under sustained bump pressure
+//   - BurnoutHeatClamped: heat must stay in [0.0, 1.0] throughout; catches off-by-one
+//     in burnout_update_heat fill/drain formula after the RON tuning sweep
+//   - BoltInBounds: speed boost from burnout_tick_speed_boost must not bypass max clamp
+//   - ExactlyOnePrimaryBolt: mega-bump + shockwave must not corrupt bolt entity count
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.8)),
+    max_frames: 8000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, BurnoutHeatClamped, ExactlyOnePrimaryBolt, NoEntityLeaks, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 1984,
+    frame_mutations: [
+        (frame: 10, mutation: InjectProtocol(kind_name: "Burnout")),
+    ],
+)

@@ -1,0 +1,36 @@
+// Adversarial: Overcharge hazard active at 3 stacks against a Dense layout with chaos
+// input, driving the per_kill_multiplier^kill_count compounding formula to its extremes.
+//
+// overcharge_count_kills tracks kills per bolt since the last bump. On a Dense board,
+// a Bolt can destroy many cells in a single sweep before the player bumps — the speed
+// multiplier is per_kill_multiplier^kill_count where per_kill_multiplier at 3 stacks
+// is 1.0 + 0.05 + 2*0.03 = 1.11. After 30 kills without a bump the multiplier is
+// 1.11^30 ≈ 22.9x, far above BoltMaxSpeed. The speed clamp must hold this value.
+//
+// Adversarial conditions:
+//   - Dense layout: maximises cells-per-sweep before the next bump arrives, driving
+//     kill_count high and exercising powi(kills) on large exponents
+//   - 3 stacks: per_level_frac scaling beyond stack 1; non-trivial multiplier > 1.0
+//   - Chaos input (0.5): moderate chaos ensures some bumps (resetting kill_count to 0)
+//     interleaved with chaos-miss periods (allowing kill_count to climb)
+//   - BoltSpeedAccurate: primary detector — compounding above BoltMaxSpeed is the failure
+//   - NoNaN: powi on large integers can produce inf if multiplier is slightly off
+//   - RunStatsMonotonic: cells_destroyed must not roll back when kill_count is reset by bump
+//
+// Edge case: overcharge_reset_on_bump runs after overcharge_count_kills in the same chain;
+// if the ordering breaks, kills from the current tick could be reset before apply_speed
+// sees them, or double-applied on the next tick.
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.5)),
+    max_frames: 6000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, NoEntityLeaks, NoNaN, RunStatsMonotonic],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 3377,
+    frame_mutations: [
+        (frame: 30, mutation: InjectHazardStack(kind_name: "Overcharge", stacks: 3)),
+    ],
+)

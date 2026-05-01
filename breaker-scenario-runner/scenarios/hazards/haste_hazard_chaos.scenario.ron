@@ -1,0 +1,35 @@
+// Adversarial: Haste hazard active at 4 stacks in a Corridor layout, driving the bolt
+// speed reconciliation loop under high wall-bounce frequency.
+//
+// haste_apply_speed runs every FixedUpdate tick and reconciles each Bolt's
+// EffectStack<SpeedBoostConfig> by retaining the hazard:haste source entry and pushing
+// the current multiplier. At 4 stacks the multiplier is 1 + (0.20 + 3*0.10) = 1.50,
+// adding 50% speed on top of whatever chip/protocol boosts exist. The Corridor layout
+// forces hundreds of wall bounces per run — each bounce re-enters the speed clamp
+// path. This stresses:
+//   - BoltSpeedAccurate: if haste_apply_speed double-applies or forgets to retain_by_source
+//     before pushing, speed accumulates multiplicatively and escapes BoltMaxSpeed.
+//   - NoNaN: multiplier arithmetic on large stack counts could produce inf or NaN if
+//     the formula is mis-scaled.
+//   - BoltInBounds: extreme speed without clamping pushes the bolt outside bounds.
+//
+// Adversarial conditions:
+//   - 4 stacks: exercises per_level_percent scaling beyond stack 1
+//   - Corridor layout: maximises wall bounces and speed-clamp re-entries per run
+//   - Chaos input (0.7): breaker movement variability forces the speed system to
+//     reconcile under all bump-quality distributions
+//   - BoltSpeedAccurate: primary detector for multiplier double-application
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 8000,
+    disallowed_failures: [BoltInBounds, BoltSpeedAccurate, BreakerCountReasonable, BreakerInBounds, BreakerPositionClamped, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 7722,
+    frame_mutations: [
+        (frame: 30, mutation: InjectHazardStack(kind_name: "Haste", stacks: 4)),
+    ],
+)
