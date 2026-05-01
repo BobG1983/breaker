@@ -224,7 +224,13 @@ fn config_added_later_does_not_replay_buffered_messages() {
 
     // Tick 2 — install config; write NO new message. Buffered message from
     // tick 1 must NOT retroactively increment the counter.
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 8 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      8,
+            divergence_angle_rad: 0.0,
+        },
+    );
     tick(&mut app);
 
     let counter = *app.world().resource::<FissionCounter>();

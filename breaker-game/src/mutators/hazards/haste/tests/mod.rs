@@ -16,5 +16,6 @@ mod apply_fresh;
 mod formula;
 mod no_config;
 mod reconcile;
+mod ron_asset;
 mod synergy;
 mod wire;

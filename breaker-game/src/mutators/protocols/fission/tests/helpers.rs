@@ -16,7 +16,9 @@ use bevy::{
     prelude::*,
 };
 
-use super::super::system::{FissionConfig, FissionCounter, activate, wire};
+use super::super::system::{
+    FISSION_DIVERGENCE_ANGLE_RAD, FissionConfig, FissionCounter, activate, wire,
+};
 use crate::{
     bolt::test_utils::default_bolt_definition,
     mutators::protocols::{
@@ -122,7 +124,10 @@ pub(super) fn build_fission_app_in_chip_selecting() -> App {
 /// `FissionConfig { kills_per_split: 8 }`. Intentionally DIFFERS from the RON
 /// asset's `kills_per_split: 10`, which is exercised only by `ron_asset.rs`.
 pub(super) const fn canonical_fission_config() -> FissionConfig {
-    FissionConfig { kills_per_split: 8 }
+    FissionConfig {
+        kills_per_split:      8,
+        divergence_angle_rad: FISSION_DIVERGENCE_ANGLE_RAD,
+    }
 }
 
 /// Inserts the given `FissionConfig` as a resource (overwrites existing).
@@ -144,7 +149,10 @@ pub(super) fn seed_active_protocols_with_fission(app: &mut App, kills_per_split:
             name:        "Fission".into(),
             description: String::new(),
             unlock_tier: 0,
-            tuning:      ProtocolTuning::Fission { kills_per_split },
+            tuning:      ProtocolTuning::Fission {
+                kills_per_split,
+                divergence_angle_rad: 0.0,
+            },
         });
 }
 

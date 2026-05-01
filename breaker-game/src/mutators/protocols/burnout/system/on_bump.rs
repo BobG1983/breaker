@@ -92,10 +92,10 @@ pub(crate) fn burnout_on_bump(
         commands.fire_effect(
             msg.breaker,
             EffectType::Shockwave(ShockwaveConfig {
-                base_range:      OrderedFloat(64.0),
-                range_per_level: OrderedFloat(16.0),
-                stacks:          1,
-                speed:           OrderedFloat(200.0),
+                base_range:      OrderedFloat(config.shockwave_base_range),
+                range_per_level: OrderedFloat(config.shockwave_range_per_level),
+                stacks:          config.shockwave_stacks,
+                speed:           OrderedFloat(config.shockwave_speed),
             }),
             SourceId::protocol(ProtocolKind::Burnout)
                 .action("shockwave")

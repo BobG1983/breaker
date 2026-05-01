@@ -257,8 +257,10 @@ fn register_wires_cleanup_on_exit_menu_state_main() {
 
     // Register Fission and install the config/counter.
     super::super::system::wire(&mut app);
-    app.world_mut()
-        .insert_resource(FissionConfig { kills_per_split: 8 });
+    app.world_mut().insert_resource(FissionConfig {
+        kills_per_split:      8,
+        divergence_angle_rad: 0.0,
+    });
     app.world_mut().insert_resource(FissionCounter { kills: 5 });
 
     // Transition MenuState away from Main.

@@ -47,7 +47,13 @@ fn nth_kill_resets_counter_to_zero_and_spawns_one_new_bolt() {
 #[test]
 fn kills_per_split_of_one_splits_on_every_kill() {
     let mut app = build_fission_app();
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 1 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      1,
+            divergence_angle_rad: 0.0,
+        },
+    );
     seed_active_protocols_with_fission(&mut app, 1);
     install_fission_counter(&mut app, 0);
     let parent = spawn_bolt_at_with_velocity(&mut app, Vec2::ZERO, Vec2::new(0.0, 400.0));
@@ -141,7 +147,13 @@ fn same_frame_multi_kill_crossing_threshold_splits_exactly_once() {
 #[test]
 fn same_frame_multi_kill_crossing_threshold_twice_splits_twice() {
     let mut app = build_fission_app();
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 2 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      2,
+            divergence_angle_rad: 0.0,
+        },
+    );
     seed_active_protocols_with_fission(&mut app, 2);
     install_fission_counter(&mut app, 7);
     let _parent = spawn_bolt_at_with_velocity(&mut app, Vec2::ZERO, Vec2::new(0.0, 400.0));

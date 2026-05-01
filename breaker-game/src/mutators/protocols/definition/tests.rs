@@ -123,6 +123,10 @@ fn all_tuning_variants() -> Vec<(ProtocolTuning, ProtocolKind)> {
                 still_threshold:             1.5,
                 full_heat_damage_multiplier: 4.0,
                 speed_boost_duration:        2.0,
+                shockwave_base_range:        0.0,
+                shockwave_range_per_level:   0.0,
+                shockwave_stacks:            0,
+                shockwave_speed:             0.0,
             },
             ProtocolKind::Burnout,
         ),
@@ -136,7 +140,8 @@ fn all_tuning_variants() -> Vec<(ProtocolTuning, ProtocolKind)> {
         ),
         (
             ProtocolTuning::Fission {
-                kills_per_split: 10,
+                kills_per_split:      10,
+                divergence_angle_rad: 0.0,
             },
             ProtocolKind::Fission,
         ),
@@ -218,6 +223,10 @@ fn protocol_tuning_effects_returns_none_for_custom_system_protocols() {
             still_threshold:             1.5,
             full_heat_damage_multiplier: 4.0,
             speed_boost_duration:        2.0,
+            shockwave_base_range:        0.0,
+            shockwave_range_per_level:   0.0,
+            shockwave_stacks:            0,
+            shockwave_speed:             0.0,
         },
         ProtocolTuning::Conductor,
         ProtocolTuning::Afterimage {
@@ -225,7 +234,8 @@ fn protocol_tuning_effects_returns_none_for_custom_system_protocols() {
             phantom_bolt_duration: 0.75,
         },
         ProtocolTuning::Fission {
-            kills_per_split: 10,
+            kills_per_split:      10,
+            divergence_angle_rad: 0.0,
         },
         ProtocolTuning::TierRegression { tiers_back: 1 },
     ];

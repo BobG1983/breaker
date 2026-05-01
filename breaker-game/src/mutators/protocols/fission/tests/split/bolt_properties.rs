@@ -219,7 +219,13 @@ fn parent_velocity_unchanged_after_split() {
 #[test]
 fn two_successive_splits_leave_parent_velocity_unchanged() {
     let mut app = build_fission_app();
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 1 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      1,
+            divergence_angle_rad: 0.0,
+        },
+    );
     seed_active_protocols_with_fission(&mut app, 1);
     let parent_vel = Vec2::new(0.0, 400.0);
     let parent = spawn_bolt_at_with_velocity(&mut app, Vec2::ZERO, parent_vel);
@@ -471,7 +477,13 @@ fn new_bolt_is_not_primary_and_has_extra_bolt() {
 #[test]
 fn only_one_primary_bolt_after_two_successive_splits() {
     let mut app = build_fission_app();
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 1 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      1,
+            divergence_angle_rad: 0.0,
+        },
+    );
     seed_active_protocols_with_fission(&mut app, 1);
     let parent = spawn_bolt_at_with_velocity(&mut app, Vec2::ZERO, Vec2::new(0.0, 400.0));
 

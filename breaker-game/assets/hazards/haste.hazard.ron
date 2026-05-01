@@ -1,9 +1,9 @@
 (
     name: "Haste",
-    description: "Cell timers tick faster — the node closes in on you.",
+    description: "Bolts move faster — harder to time your bumps.",
     unlock_tier: 0,
     tuning: Haste(
-        base_percent: 0.1,
-        per_level_percent: 0.05,
+        base_percent: 20.0,
+        per_level_percent: 10.0,
     ),
 )

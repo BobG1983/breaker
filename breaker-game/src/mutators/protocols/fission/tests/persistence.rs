@@ -166,8 +166,10 @@ fn on_exit_menu_state_main_removes_fission_config_and_counter() {
     app.update();
 
     wire(&mut app);
-    app.world_mut()
-        .insert_resource(FissionConfig { kills_per_split: 8 });
+    app.world_mut().insert_resource(FissionConfig {
+        kills_per_split:      8,
+        divergence_angle_rad: 0.0,
+    });
     app.world_mut().insert_resource(FissionCounter { kills: 5 });
 
     // Trigger OnExit(MenuState::Main).
@@ -212,8 +214,10 @@ fn cleanup_runs_even_when_fission_not_in_active_protocols() {
 
     wire(&mut app);
     // Do NOT seed Fission in ActiveProtocols.
-    app.world_mut()
-        .insert_resource(FissionConfig { kills_per_split: 8 });
+    app.world_mut().insert_resource(FissionConfig {
+        kills_per_split:      8,
+        divergence_angle_rad: 0.0,
+    });
     app.world_mut().insert_resource(FissionCounter { kills: 5 });
 
     app.world_mut()

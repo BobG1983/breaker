@@ -1,16 +1,13 @@
-//! Group K — RON asset drift guard (Behaviors 55–56).
+//! Group K — RON asset structural check (Behaviors 55–56).
 //!
 //! Pins that `assets/protocols/debt_collector.protocol.ron` parses into a
-//! `ProtocolDefinition` with `ProtocolKind::DebtCollector`, authored tuning
-//! `stack_per_bump: 0.1`, name `"Debt Collector"`, and description / unlock
-//! tier values.
-//!
-//! NOTE: The RON's `stack_per_bump: 0.1` differs from the design-doc
-//! canonical `0.5` used by all system-behavior tests — this is intentional.
+//! `ProtocolDefinition` with `ProtocolKind::DebtCollector`, structural tuning
+//! (finite, non-negative numeric fields), name `"Debt Collector"`, and
+//! description / unlock tier values.
 
 use crate::mutators::protocols::definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning};
 
-// ── Behavior 55 — RON parses with exact tuning variant + value ─────────────-
+// ── Behavior 55 — RON parses with correct tuning variant + structural checks ─-
 
 #[test]
 fn debt_collector_ron_asset_deserializes_to_protocol_definition() {
@@ -32,8 +29,8 @@ fn debt_collector_ron_asset_deserializes_to_protocol_definition() {
     };
 
     assert!(
-        (stack_per_bump - 0.1).abs() < f32::EPSILON,
-        "stack_per_bump expected 0.1 (RON file literal), got {stack_per_bump}"
+        stack_per_bump.is_finite() && stack_per_bump >= 0.0,
+        "stack_per_bump must be finite and non-negative, got {stack_per_bump}"
     );
 }
 

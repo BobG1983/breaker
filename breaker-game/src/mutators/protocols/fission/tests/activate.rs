@@ -20,7 +20,8 @@ fn activate_with_matching_tuning_inserts_config() {
     app.add_systems(Update, |mut commands: Commands| {
         super::super::system::activate(
             &ProtocolTuning::Fission {
-                kills_per_split: 10,
+                kills_per_split:      10,
+                divergence_angle_rad: 0.0,
             },
             &mut commands,
         );
@@ -43,7 +44,8 @@ fn activate_passes_non_trivial_values_through_verbatim() {
     activate_now(
         &mut app,
         &ProtocolTuning::Fission {
-            kills_per_split: 42,
+            kills_per_split:      42,
+            divergence_angle_rad: 0.0,
         },
     );
 
@@ -103,9 +105,21 @@ fn activate_with_iron_curtain_tuning_does_not_insert_fission_config() {
 #[test]
 fn second_activate_with_fission_tuning_overwrites_prior_config() {
     let mut app = TestAppBuilder::new().build();
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 8 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      8,
+            divergence_angle_rad: 0.0,
+        },
+    );
 
-    activate_now(&mut app, &ProtocolTuning::Fission { kills_per_split: 3 });
+    activate_now(
+        &mut app,
+        &ProtocolTuning::Fission {
+            kills_per_split:      3,
+            divergence_angle_rad: 0.0,
+        },
+    );
 
     let cfg = app
         .world()
@@ -123,7 +137,13 @@ fn second_activate_with_fission_tuning_overwrites_prior_config() {
 #[test]
 fn mismatched_activate_preserves_existing_fission_config() {
     let mut app = TestAppBuilder::new().build();
-    install_fission_config(&mut app, FissionConfig { kills_per_split: 8 });
+    install_fission_config(
+        &mut app,
+        FissionConfig {
+            kills_per_split:      8,
+            divergence_angle_rad: 0.0,
+        },
+    );
 
     activate_now(
         &mut app,
@@ -151,13 +171,44 @@ fn activate_does_not_reset_fission_counter() {
     let mut app = TestAppBuilder::new().build();
     install_fission_counter(&mut app, 5);
 
-    activate_now(&mut app, &ProtocolTuning::Fission { kills_per_split: 8 });
+    activate_now(
+        &mut app,
+        &ProtocolTuning::Fission {
+            kills_per_split:      8,
+            divergence_angle_rad: 0.0,
+        },
+    );
 
     let counter = *app.world().resource::<FissionCounter>();
     assert_eq!(
         counter,
         FissionCounter { kills: 5 },
         "activate must not reset FissionCounter; got {counter:?}"
+    );
+}
+
+// ── Behavior 1 (edge case) — divergence_angle_rad passes through verbatim ───
+
+#[test]
+fn fission_activate_passthrough_divergence_angle_rad() {
+    let mut app = TestAppBuilder::new().build();
+    activate_now(
+        &mut app,
+        &ProtocolTuning::Fission {
+            kills_per_split:      5,
+            divergence_angle_rad: 15.0_f32.to_radians(),
+        },
+    );
+
+    let cfg = app
+        .world()
+        .get_resource::<FissionConfig>()
+        .expect("FissionConfig should be inserted after matching activate");
+    assert!(
+        (cfg.divergence_angle_rad - 15.0_f32.to_radians()).abs() < f32::EPSILON,
+        "divergence_angle_rad must pass through verbatim; expected {}, got {}",
+        15.0_f32.to_radians(),
+        cfg.divergence_angle_rad
     );
 }
 
@@ -168,7 +219,13 @@ fn activate_leaves_zero_counter_unchanged() {
     let mut app = TestAppBuilder::new().build();
     install_fission_counter(&mut app, 0);
 
-    activate_now(&mut app, &ProtocolTuning::Fission { kills_per_split: 8 });
+    activate_now(
+        &mut app,
+        &ProtocolTuning::Fission {
+            kills_per_split:      8,
+            divergence_angle_rad: 0.0,
+        },
+    );
 
     let counter = *app.world().resource::<FissionCounter>();
     assert_eq!(

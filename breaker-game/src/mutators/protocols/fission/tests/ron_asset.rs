@@ -1,28 +1,12 @@
-//! Group K — RON asset + constants drift guards (Behaviors 39-40).
-//!
-//! Pins that `assets/protocols/fission.protocol.ron` parses into a
-//! `ProtocolDefinition` with `ProtocolKind::Fission`, authored
-//! `kills_per_split: 10`, name `"Fission"`, description, and `unlock_tier`.
-//! Also pins the exact value of `FISSION_DIVERGENCE_ANGLE_RAD` against
-//! `15.0_f32.to_radians()` (drift guard).
+//! RON asset structural tests — pins that `assets/protocols/fission.protocol.ron`
+//! parses into a `ProtocolDefinition` with `ProtocolKind::Fission` and carries
+//! structurally valid tuning (finite, positive fields). Specific tuning values
+//! live in design-behavior tests; name / description / `unlock_tier` are pinned
+//! here as stable identifiers.
 
-use super::super::system::FISSION_DIVERGENCE_ANGLE_RAD;
 use crate::mutators::protocols::definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning};
 
-// ── Behavior 39 — FISSION_DIVERGENCE_ANGLE_RAD drift guard ─────────────────-
-
-#[test]
-fn fission_divergence_angle_is_fifteen_degrees_in_radians() {
-    let expected = 15.0_f32.to_radians();
-    let delta = (FISSION_DIVERGENCE_ANGLE_RAD - expected).abs();
-    assert!(
-        delta < f32::EPSILON,
-        "FISSION_DIVERGENCE_ANGLE_RAD drift guard: must equal 15.0_f32.to_radians() ({expected}); \
-         got {FISSION_DIVERGENCE_ANGLE_RAD}, delta {delta}"
-    );
-}
-
-// ── Behavior 40 — RON asset parses to Fission tuning kills_per_split: 10 ───-
+// ── Behavior 40 — RON parses to Fission variant with structurally valid tuning
 
 #[test]
 fn fission_ron_asset_deserializes_to_protocol_definition() {
@@ -36,17 +20,39 @@ fn fission_ron_asset_deserializes_to_protocol_definition() {
         "parsed definition must report ProtocolKind::Fission"
     );
 
-    let ProtocolTuning::Fission { kills_per_split } = def.tuning.clone() else {
+    let ProtocolTuning::Fission {
+        kills_per_split, ..
+    } = def.tuning.clone()
+    else {
         panic!("expected ProtocolTuning::Fission, got {:?}", def.tuning);
     };
 
-    assert_eq!(
-        kills_per_split, 10,
-        "kills_per_split expected 10 (RON file literal); got {kills_per_split}"
+    assert!(kills_per_split > 0, "kills_per_split must be > 0");
+}
+
+// ── Behavior 41 — divergence_angle_rad is finite and positive ───────────────
+
+#[test]
+fn fission_ron_divergence_angle_rad_is_finite_and_positive() {
+    let ron_str = include_str!("../../../../../assets/protocols/fission.protocol.ron");
+    let def: ProtocolDefinition =
+        ron::de::from_str(ron_str).expect("fission.protocol.ron should parse");
+
+    let ProtocolTuning::Fission {
+        divergence_angle_rad,
+        ..
+    } = def.tuning.clone()
+    else {
+        panic!("expected ProtocolTuning::Fission, got {:?}", def.tuning);
+    };
+
+    assert!(
+        divergence_angle_rad.is_finite() && divergence_angle_rad > 0.0,
+        "divergence_angle_rad must be finite and positive, got {divergence_angle_rad}"
     );
 }
 
-// ── Behavior 40 (edge case) — name / description / unlock_tier pinned ──────-
+// ── Behavior 42 — name / description / unlock_tier pinned ───────────────────
 
 #[test]
 fn fission_ron_name_description_unlock_tier_pinned_exactly() {

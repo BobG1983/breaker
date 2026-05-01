@@ -87,7 +87,9 @@ pub(super) fn build_burnout_app_in_chip_selecting() -> App {
 /// Canonical Burnout config used across all system-behavior tests. Matches
 /// the design-doc source of truth — `fill_duration: 4.0, drain_duration: 2.0,
 /// still_threshold: 1.5, full_heat_damage_multiplier: 4.0,
-/// speed_boost_duration: 2.0`.
+/// speed_boost_duration: 2.0, shockwave_base_range: 64.0,
+/// shockwave_range_per_level: 16.0, shockwave_stacks: 1,
+/// shockwave_speed: 200.0`.
 pub(super) const fn canonical_burnout_config() -> BurnoutConfig {
     BurnoutConfig {
         fill_duration:               4.0,
@@ -95,6 +97,10 @@ pub(super) const fn canonical_burnout_config() -> BurnoutConfig {
         still_threshold:             1.5,
         full_heat_damage_multiplier: 4.0,
         speed_boost_duration:        2.0,
+        shockwave_base_range:        64.0,
+        shockwave_range_per_level:   16.0,
+        shockwave_stacks:            1,
+        shockwave_speed:             200.0,
     }
 }
 
@@ -125,6 +131,10 @@ pub(super) fn seed_active_protocols_with_burnout(
                 still_threshold,
                 full_heat_damage_multiplier,
                 speed_boost_duration,
+                shockwave_base_range: 0.0,
+                shockwave_range_per_level: 0.0,
+                shockwave_stacks: 0,
+                shockwave_speed: 0.0,
             },
         });
 }

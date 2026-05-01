@@ -3,6 +3,6 @@
     description: "Early and Late bumps stack damage debt; a Perfect bump cashes it out on the next cell kill. Bolt loss resets the stack.",
     unlock_tier: 0,
     tuning: DebtCollector(
-        stack_per_bump: 0.1,
+        stack_per_bump: 0.5,
     ),
 )

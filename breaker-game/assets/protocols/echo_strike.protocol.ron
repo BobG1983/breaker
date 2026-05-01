@@ -6,6 +6,6 @@
         max_echoes: 3,
         newest_fraction: 0.5,
         middle_fraction: 0.25,
-        oldest_fraction: 0.125,
+        oldest_fraction: 0.1,
     ),
 )

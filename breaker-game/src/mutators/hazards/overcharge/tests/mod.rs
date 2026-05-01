@@ -16,5 +16,6 @@ mod apply_speed;
 mod count_kills;
 mod formula;
 mod reset_on_bump;
+mod ron_asset;
 mod synergy;
 mod wire;

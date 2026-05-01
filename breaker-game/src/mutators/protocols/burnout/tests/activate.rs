@@ -24,6 +24,10 @@ fn activate_with_matching_tuning_inserts_config() {
             still_threshold:             1.5,
             full_heat_damage_multiplier: 4.0,
             speed_boost_duration:        2.0,
+            shockwave_base_range:        0.0,
+            shockwave_range_per_level:   0.0,
+            shockwave_stacks:            0,
+            shockwave_speed:             0.0,
         },
     );
 
@@ -71,6 +75,10 @@ fn activate_passes_non_trivial_values_through_verbatim() {
             still_threshold:             0.7,
             full_heat_damage_multiplier: 2.5,
             speed_boost_duration:        1.75,
+            shockwave_base_range:        0.0,
+            shockwave_range_per_level:   0.0,
+            shockwave_stacks:            0,
+            shockwave_speed:             0.0,
         },
     );
 
@@ -140,6 +148,10 @@ fn second_activate_with_burnout_tuning_overwrites_prior_config() {
             still_threshold:             0.1,
             full_heat_damage_multiplier: 1.0,
             speed_boost_duration:        10.0,
+            shockwave_base_range:        0.0,
+            shockwave_range_per_level:   0.0,
+            shockwave_stacks:            0,
+            shockwave_speed:             0.0,
         },
     );
 
@@ -155,6 +167,10 @@ fn second_activate_with_burnout_tuning_overwrites_prior_config() {
             still_threshold:             0.1,
             full_heat_damage_multiplier: 1.0,
             speed_boost_duration:        10.0,
+            shockwave_base_range:        0.0,
+            shockwave_range_per_level:   0.0,
+            shockwave_stacks:            0,
+            shockwave_speed:             0.0,
         },
         "last-write-wins overwrite"
     );
@@ -185,6 +201,10 @@ fn mismatched_activate_after_matched_activate_preserves_config() {
             still_threshold:             1.5,
             full_heat_damage_multiplier: 4.0,
             speed_boost_duration:        2.0,
+            shockwave_base_range:        64.0,
+            shockwave_range_per_level:   16.0,
+            shockwave_stacks:            1,
+            shockwave_speed:             200.0,
         },
     );
 

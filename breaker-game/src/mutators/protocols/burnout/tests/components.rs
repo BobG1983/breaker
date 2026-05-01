@@ -36,6 +36,10 @@ fn burnout_config_is_copy_clone_partial_eq() {
         still_threshold:             1.5,
         full_heat_damage_multiplier: 4.0,
         speed_boost_duration:        2.0,
+        shockwave_base_range:        0.0,
+        shockwave_range_per_level:   0.0,
+        shockwave_stacks:            0,
+        shockwave_speed:             0.0,
     };
 
     // PartialEq: two identical values compare equal.
@@ -45,6 +49,10 @@ fn burnout_config_is_copy_clone_partial_eq() {
         still_threshold:             1.5,
         full_heat_damage_multiplier: 4.0,
         speed_boost_duration:        2.0,
+        shockwave_base_range:        0.0,
+        shockwave_range_per_level:   0.0,
+        shockwave_stacks:            0,
+        shockwave_speed:             0.0,
     };
     assert_eq!(orig, same, "identical configs must compare equal");
 

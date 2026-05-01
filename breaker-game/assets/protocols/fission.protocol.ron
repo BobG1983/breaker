@@ -4,5 +4,6 @@
     unlock_tier: 0,
     tuning: Fission(
         kills_per_split: 10,
+        divergence_angle_rad: 0.261799,
     ),
 )

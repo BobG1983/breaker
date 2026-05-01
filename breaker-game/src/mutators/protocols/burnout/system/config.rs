@@ -20,6 +20,14 @@ pub(crate) struct BurnoutConfig {
     pub(crate) full_heat_damage_multiplier: f32,
     /// Seconds the `BurnoutSpeedBoost` component lasts after still-threshold.
     pub(crate) speed_boost_duration:        f32,
+    /// Base radius of the shockwave emitted on bump.
+    pub(crate) shockwave_base_range:        f32,
+    /// Additional shockwave radius added per protocol level.
+    pub(crate) shockwave_range_per_level:   f32,
+    /// Number of damage stacks the shockwave carries.
+    pub(crate) shockwave_stacks:            u32,
+    /// Travel speed of the shockwave pulse.
+    pub(crate) shockwave_speed:             f32,
 }
 
 // ── activate ────────────────────────────────────────────────────────────────
@@ -34,6 +42,10 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
         still_threshold,
         full_heat_damage_multiplier,
         speed_boost_duration,
+        shockwave_base_range,
+        shockwave_range_per_level,
+        shockwave_stacks,
+        shockwave_speed,
     } = *tuning
     else {
         warn!("burnout::activate called with non-Burnout tuning");
@@ -45,5 +57,9 @@ pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
         still_threshold,
         full_heat_damage_multiplier,
         speed_boost_duration,
+        shockwave_base_range,
+        shockwave_range_per_level,
+        shockwave_stacks,
+        shockwave_speed,
     });
 }

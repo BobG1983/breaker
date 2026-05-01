@@ -6,6 +6,7 @@
 //! post-tick `Hp.current`.
 
 mod helpers;
+mod ron_asset;
 
 mod group_a_formula;
 mod group_b_activate;

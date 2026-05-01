@@ -11,7 +11,7 @@
 //!   `fission_cleanup_run` into `OnExit(MenuState::Main)`.
 //! - [`fission_on_cell_destroyed`] — counts `Destroyed<Cell>` messages and
 //!   spawns a new (`ExtraBolt`, headless) bolt at the parent's position with
-//!   velocity rotated by [`FISSION_DIVERGENCE_ANGLE_RAD`] every Nth kill.
+//!   velocity rotated by `FissionConfig.divergence_angle_rad` every Nth kill.
 //! - [`fission_cleanup_run`] — removes both resources on run-start
 //!   (`OnExit(MenuState::Main)`).
 
@@ -31,8 +31,9 @@ use crate::{
 /// Clockwise rotation (radians) applied to the parent bolt's velocity to
 /// produce the new bolt's velocity on split. Pinned at 15 degrees.
 ///
-/// Design doc: "small angle (e.g., 15-20 degrees). Exact angle is a tuning
-/// value but not in RON config for now — hardcoded as a small constant."
+/// Used by test code as a reference value; production code reads
+/// `FissionConfig.divergence_angle_rad` instead.
+#[cfg(test)]
 pub(crate) const FISSION_DIVERGENCE_ANGLE_RAD: f32 = 15.0_f32 * std::f32::consts::PI / 180.0;
 
 // ── FissionConfig ───────────────────────────────────────────────────────────
@@ -40,10 +41,13 @@ pub(crate) const FISSION_DIVERGENCE_ANGLE_RAD: f32 = 15.0_f32 * std::f32::consts
 /// Per-run Fission tuning extracted from [`ProtocolTuning::Fission`] at
 /// activation time. Inserted by [`activate`], removed by
 /// [`fission_cleanup_run`] on `OnExit(MenuState::Main)`.
-#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct FissionConfig {
     /// Cell kills required to trigger a split.
-    pub(crate) kills_per_split: u32,
+    pub(crate) kills_per_split:      u32,
+    /// Clockwise rotation (radians) applied to the parent bolt's velocity to
+    /// produce the new bolt's velocity on split.
+    pub(crate) divergence_angle_rad: f32,
 }
 
 // ── FissionCounter ──────────────────────────────────────────────────────────
@@ -70,11 +74,18 @@ pub struct FissionCounter {
 /// Does NOT touch `FissionCounter` — the counter is plugin-initialised and
 /// persists across activations (re-activating mid-run must not reset progress).
 pub(crate) fn activate(tuning: &ProtocolTuning, commands: &mut Commands) {
-    let ProtocolTuning::Fission { kills_per_split } = *tuning else {
+    let ProtocolTuning::Fission {
+        kills_per_split,
+        divergence_angle_rad,
+    } = *tuning
+    else {
         warn!("fission::activate called with non-Fission tuning");
         return;
     };
-    commands.insert_resource(FissionConfig { kills_per_split });
+    commands.insert_resource(FissionConfig {
+        kills_per_split,
+        divergence_angle_rad,
+    });
 }
 
 // ── wire ────────────────────────────────────────────────────────────────
@@ -131,7 +142,7 @@ type FissionBoltQuery<'w, 's> = Query<
 /// 5. Look up the parent's `BoltDefinition` in `BoltRegistry` via
 ///    `BoltDefinitionRef.0`. If absent, log a warning and skip.
 /// 6. Compute the new bolt's velocity by rotating the parent's velocity
-///    clockwise by [`FISSION_DIVERGENCE_ANGLE_RAD`] via
+///    clockwise by `config.divergence_angle_rad` via
 ///    [`Velocity2D::rotate_by`] (preserves magnitude).
 /// 7. Spawn the new bolt at the parent's position with role `.extra()` and
 ///    visual `.headless()`. The single-`PrimaryBolt` invariant is preserved.
@@ -196,9 +207,9 @@ pub(crate) fn fission_on_cell_destroyed(
             continue;
         };
 
-        // Clockwise rotation by FISSION_DIVERGENCE_ANGLE_RAD; magnitude
+        // Clockwise rotation by `config.divergence_angle_rad`; magnitude
         // preserved by `Velocity2D::rotate_by`.
-        let new_velocity = parent_vel.rotate_by(FISSION_DIVERGENCE_ANGLE_RAD);
+        let new_velocity = parent_vel.rotate_by(config.divergence_angle_rad);
 
         let new_bolt = Bolt::builder()
             .at_position(parent_pos.0)

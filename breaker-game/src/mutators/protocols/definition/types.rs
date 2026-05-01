@@ -121,8 +121,7 @@ pub enum ProtocolTuning {
     IronCurtain {
         /// Fraction of node damage dealt by the wave.
         damage_fraction: f32,
-        /// Distance from breaker at which falloff begins (0.0–1.0 of
-        /// playfield height).
+        /// Distance from the breaker at which falloff begins (world units).
         falloff_start:   f32,
     },
     /// `EchoStrike` — echo-damage protocol; Perfect Bumps build an echo
@@ -177,6 +176,14 @@ pub enum ProtocolTuning {
         full_heat_damage_multiplier: f32,
         /// Duration of the speed burst emitted when heat vents.
         speed_boost_duration:        f32,
+        /// Base radius of the shockwave emitted on bump.
+        shockwave_base_range:        f32,
+        /// Additional shockwave radius added per protocol level.
+        shockwave_range_per_level:   f32,
+        /// Number of damage stacks the shockwave carries.
+        shockwave_stacks:            u32,
+        /// Travel speed of the shockwave pulse.
+        shockwave_speed:             f32,
     },
     /// Conductor — primary-swap protocol; no per-protocol tuning fields.
     Conductor,
@@ -192,7 +199,10 @@ pub enum ProtocolTuning {
     /// into two.
     Fission {
         /// Number of cell kills required to trigger a split.
-        kills_per_split: u32,
+        kills_per_split:      u32,
+        /// Clockwise rotation (radians) applied to the parent bolt's velocity
+        /// to produce the new bolt's velocity on split.
+        divergence_angle_rad: f32,
     },
     /// `TierRegression` — tier-back protocol; chip offers shift down by a
     /// number of rarity tiers.

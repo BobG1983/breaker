@@ -17,16 +17,11 @@ git flow config edit topic bugfix --prefix=fix/
 
 # 3. Set merge strategy (preserve branch topology)
 git config --local merge.ff false
-
-# 4. Install graphify for the knowledge graph MCP server (.mcp.json)
-pip install graphifyy
-graphify .                           # Initial graph build (outputs to graphify-out/)
 ```
 
 **Prerequisites:**
 - Rust toolchain (nightly)
 - [mold](https://github.com/rui314/mold) or lld recommended for fast linking
-- Python 3.10+ (for graphify knowledge graph)
 
 ## Build & Run
 
@@ -55,17 +50,6 @@ cargo install cargo-machete   # Unused dependency detection
 cargo install cargo-outdated  # Outdated dependency reporting
 ```
 
-## Knowledge Graph
-
-This project uses [graphify](https://github.com/safishamsi/graphify) to maintain a queryable knowledge graph of the codebase and documentation. The MCP server is configured project-locally in `.mcp.json` — Claude Code picks it up automatically after `pip install graphifyy`.
-
-```bash
-/graphify .                          # Full rebuild
-/graphify . --update                 # Incremental update (changed files only)
-```
-
-Outputs land in `graphify-out/` (gitignored): `graph.html` (interactive visualization), `GRAPH_REPORT.md` (audit report), `graph.json` (raw graph data).
-
 ## Documentation
 
 | Document | Contents |
@@ -78,32 +62,45 @@ Outputs land in `graphify-out/` (gitignored): `graph.html` (interactive visualiz
 ## Tech Stack
 
 - **Bevy 0.18** — ECS game engine
-- **Rust 2024 edition** — plugin-per-domain architecture, message-driven decoupling
+- **Rust 2024 edition (nightly)** — plugin-per-domain architecture, message-driven decoupling
 - **RON data files** — all content (chips, evolutions, cells, nodes, breakers, config) is data-driven
-- **Cargo workspace** — `breaker-game`, `rantzsoft_spatial2d`, `rantzsoft_physics2d`, `rantzsoft_stateflow`, `rantzsoft_defaults`/`_derive`, `breaker-scenario-runner`
+- **Cargo workspace** — `breaker-game`, `breaker-scenario-runner`, plus the `rantzsoft_*` crates below
 
-## Project Status
+**Reusable crates (game-agnostic):**
 
-**Phases 0–4 complete. Phase 5 (visual polish) planned, effect system refactor in progress.**
+| Crate | Purpose |
+|-------|---------|
+| `rantzsoft_spatial2d` | Position2D, Velocity2D, interpolation, propagation |
+| `rantzsoft_physics2d` | CCD, quadtree, collision layers, distance constraints |
+| `rantzsoft_dmg` | Damage pipeline — preview, application, armor, pierce |
+| `rantzsoft_stateflow` | State routing, screen transitions, cleanup markers |
+| `rantzsoft_defaults` | Config/defaults pipeline with derive macro |
 
-Core gameplay is fully playable: breaker movement with dash and tilt, bolt physics with CCD collision, bump grading (perfect/early/late/whiff), node timer with penalties, three breaker archetypes (Aegis, Chrono, Prism), six node layouts, four cell types (standard, tough, lock, regen with orbiting shields), toughness/HP scaling with exponential tier progression, and a full run loop (main menu → node sequence → chip select → run-end screen).
+## What's Built
 
-### Phase 4 Highlights
+Full run loop: main menu → node sequence → chip select → run-end screen.
 
-- **Chip system**: Unified TriggerChain-based effects (passive bolt/breaker upgrades and triggered abilities) — all data-driven via RON templates with per-rarity variants, pool depletion, and weight decay for build-crafting depth
-- **Evolution system**: 8 evolution recipes that combine maxed chips into ultimate abilities (Nova Lance, Voltchain, Phantom Breaker, Supernova, Dead Man's Hand, Railgun, Gravity Well, Second Wind)
-- **TriggerChain engine**: Nested trigger→effect chains with multi-step arming (e.g., OnPerfectBump → OnImpact(Cell) → Shockwave). 13 leaf effects, 8 trigger types
-- **Memorable moments**: In-game highlight popups with punch-scale animation, diversity-penalized scoring for run-end display
-- **Spreading shockwaves**: Expanding wavefront area damage with quadtree spatial queries
-- **Chain bolts**: Tethered bolt pairs via distance constraints with momentum conservation
-- **Shield system**: Temporary bolt-loss protection with timed expiry
+**Core mechanics:**
+- Breaker movement with dash, tilt, and three archetypes (Aegis, Chrono, Prism)
+- Bolt physics with continuous collision detection (CCD)
+- Bump grading — perfect / early / late / whiff — driving all protocol and chip triggers
+- Node timer with bolt-loss penalties
+- Six node layouts; four cell types (standard, tough, lock, regen with orbiting shields)
+- Toughness/HP scaling with exponential tier progression
 
-### Reusable Crates
+**Build system:**
+- Chip system — TriggerChain-based effects, all data-driven via RON templates with per-rarity variants, pool depletion, and weight decay
+- Evolution system — 8 recipes that combine maxed chips into ultimate abilities
+- TriggerChain engine — nested trigger→effect chains (13 leaf effects, 8 trigger types)
+- Protocols — 9 run modifiers that rewire how the bolt and breaker behave (Burnout, Fission, Echo Strike, Iron Curtain, Debt Collector, Overcharge, Haste, Cascade, and more)
 
-- **`rantzsoft_spatial2d`** — Position2D, Velocity2D, interpolation, propagation
-- **`rantzsoft_physics2d`** — CCD, quadtree, collision layers, distance constraints
-- **`rantzsoft_stateflow`** — State routing, screen transitions, cleanup
-- **`rantzsoft_defaults`** — Config/defaults pipeline with derive macro
+**Polish:**
+- Spreading shockwaves with quadtree spatial queries
+- Chain bolts — tethered pairs via distance constraints with momentum conservation
+- Shield system — temporary bolt-loss protection with timed expiry
+- Highlight popups with punch-scale animation; diversity-penalized run-end scoring
+
+**Not yet built:** graphics/VFX (placeholder), audio, save/load, content expansion, roguelite meta-progression.
 
 ## License
 

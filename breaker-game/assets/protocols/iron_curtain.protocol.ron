@@ -3,7 +3,7 @@
     description: "Losing a bolt triggers a damage wave — fractional damage with distance falloff toward farther cells.",
     unlock_tier: 0,
     tuning: IronCurtain(
-        damage_fraction: 0.25,
-        falloff_start: 0.5,
+        damage_fraction: 0.5,
+        falloff_start: 50.0,
     ),
 )

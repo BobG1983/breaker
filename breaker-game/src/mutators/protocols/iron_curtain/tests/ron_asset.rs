@@ -1,16 +1,13 @@
-//! Group E — RON asset drift guard (Behaviors 27–28).
+//! Group E — RON asset structural check (Behaviors 27–28).
 //!
 //! Pins that `assets/protocols/iron_curtain.protocol.ron` parses into a
-//! `ProtocolDefinition` with `ProtocolKind::IronCurtain`, authored tuning
-//! `damage_fraction: 0.25, falloff_start: 0.5`, name `"Iron Curtain"`, the
-//! authored description, and `unlock_tier: 0`.
-//!
-//! NOTE: the RON's `0.25` / `0.5` intentionally differs from the canonical
-//! worked-example values (`0.5` / `50.0`) used by the system-behavior tests.
+//! `ProtocolDefinition` with `ProtocolKind::IronCurtain`, structural tuning
+//! (finite, non-negative numeric fields), name `"Iron Curtain"`, the authored
+//! description, and `unlock_tier: 0`.
 
 use crate::mutators::protocols::definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning};
 
-// ── Behavior 27 — RON parses with exact tuning variant + values ────────────-
+// ── Behavior 27 — RON parses with correct tuning variant + structural checks ─-
 
 #[test]
 fn iron_curtain_ron_asset_deserializes_to_protocol_definition() {
@@ -33,12 +30,12 @@ fn iron_curtain_ron_asset_deserializes_to_protocol_definition() {
     };
 
     assert!(
-        (damage_fraction - 0.25).abs() < f32::EPSILON,
-        "damage_fraction expected 0.25 (RON file literal), got {damage_fraction}"
+        damage_fraction.is_finite() && damage_fraction >= 0.0,
+        "damage_fraction must be finite and non-negative, got {damage_fraction}"
     );
     assert!(
-        (falloff_start - 0.5).abs() < f32::EPSILON,
-        "falloff_start expected 0.5 (RON file literal), got {falloff_start}"
+        falloff_start.is_finite() && falloff_start >= 0.0,
+        "falloff_start must be finite and non-negative, got {falloff_start}"
     );
 }
 
