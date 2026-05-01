@@ -1,0 +1,43 @@
+// Adversarial: Drift hazard active at 3 stacks with live physics in a Corridor layout,
+// stressing the drift_apply_force → apply_bolt_forces pipeline end-to-end.
+//
+// drift_apply_force runs every FixedUpdate tick and emits ApplyBoltForce messages that
+// accelerate the bolt in the configured drift direction. apply_bolt_forces then reads
+// those messages and integrates them into Velocity2D. At 3 stacks the force magnitude
+// is larger than stack 1, and the force accumulates on every tick — the Corridor layout
+// forces hundreds of wall bounces per run, meaning the bolt re-enters the force pipeline
+// with a reflected velocity on every bounce. This stresses:
+//   - BoltInBounds: if force accumulation is unclamped or the apply step double-integrates,
+//     velocity can spike high enough to carry the bolt outside playfield bounds in one tick.
+//   - NoNaN: force vector arithmetic on accumulated ApplyBoltForce messages could produce
+//     inf or NaN if the message payload is malformed or the reader is double-consumed.
+//   - BreakerInBounds: Chaos input at 0.7 drives the breaker to wall edges; combined with
+//     high bolt speed from accumulated drift force, the bump geometry exercises the breaker
+//     clamping path under asymmetric load.
+//   - HazardStackValid: verifies the ActiveHazards entry for Drift retains its stack count
+//     across thousands of tick cycles without the entry being zeroed or dropped.
+//
+// Adversarial conditions:
+//   - 3 stacks: exercises per_level scaling beyond stack 1; non-trivial cumulative force
+//   - Corridor layout: maximises wall bounces and force-pipeline re-entries per run;
+//     the bolt spends more time under continuous drift force than in any other layout
+//   - Chaos input (0.7): breaker movement variability forces the force pipeline to
+//     accumulate under all bump-quality and bump-angle distributions
+//   - disable_physics: false (intentional) — live physics is required to exercise the
+//     full drift_apply_force → ApplyBoltForce → apply_bolt_forces → Velocity2D chain;
+//     the smoke test (scenarios/mechanic/drift_stack_3_smoke.scenario.ron) uses frozen
+//     physics and does not catch force-pipeline bugs
+(
+    breaker: "Aegis",
+    layout: "Corridor",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BreakerInBounds, HazardStackValid, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 4411,
+    frame_mutations: [
+        (frame: 30, mutation: InjectHazardStack(kind_name: "Drift", stacks: 3)),
+    ],
+)

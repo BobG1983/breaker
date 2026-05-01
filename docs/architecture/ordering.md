@@ -52,6 +52,8 @@ maintain_quadtree                                    [physics]
                   → DmgSystems::EmitHeal → ApplyHeal
 ```
 
+Hazard force emitters (`drift_apply_force`, `gravity_well_pull`) run before `BoltSystems::ApplyForces`. `apply_bolt_forces` (`BoltSystems::ApplyForces`) drains all `ApplyBoltForce` messages, sums forces per bolt, and applies `force * dt` to `Velocity2D` before `SpatialSystems::ApplyVelocity` integrates position.
+
 Then `process_despawn_requests` runs in `FixedPostUpdate` (after all `FixedUpdate` consumers have observed the dying entity).
 
 The `rantzsoft_dmg` chain (`EmitDamage → … → ApplyHeal`, 16 variants) is configured `.chain()` inside `RantzDmgPlugin` — game systems just tag in. **Game-side `DamageDealt<T>` writers MUST live in `DmgSystems::EmitDamage`** so emissions accumulate before the chain flushes. The exception: systems already in `EffectV3Systems::Tick` are transitively before `EmitDamage` and tagging them again creates a cycle.

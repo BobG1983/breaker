@@ -1,0 +1,49 @@
+// Adversarial: GravitySurge hazard active at 2 stacks with live physics in a Dense layout,
+// stressing the gravity_well_pull → apply_bolt_forces pipeline end-to-end.
+//
+// Gravity wells spawn at positions of destroyed cells. gravity_well_pull runs every
+// FixedUpdate tick for each live well entity, computing a pull force toward the well
+// centre and emitting ApplyBoltForce messages. apply_bolt_forces then reads those
+// messages and integrates them into Velocity2D. The Dense layout maximises cell
+// density — more cells destroyed means more wells spawned, which means more
+// concurrent pull forces accumulating on the bolt per tick. At 2 stacks the per-well
+// force magnitude is larger than stack 1, and multiple simultaneous wells each emit
+// their own ApplyBoltForce on the same tick. This stresses:
+//   - BoltInBounds: if pull forces from multiple concurrent wells add up without clamping,
+//     bolt velocity can spike and carry the bolt outside playfield bounds in one tick.
+//   - NoNaN: the force vector is derived from (well_pos - bolt_pos).normalize(); if the
+//     bolt position coincidentally equals the well position the normalise produces NaN.
+//     At high well density (Dense layout) this near-zero distance case is more likely.
+//   - BreakerInBounds: Chaos input at 0.7 pushes the breaker to edges; combined with
+//     pull-force-distorted bolt trajectory, bump geometry exercises all clamping paths.
+//   - HazardStackValid: verifies the ActiveHazards entry for GravitySurge retains its
+//     stack count across thousands of tick cycles without the entry being zeroed or dropped.
+//   - GravityWellCountReasonable: with 2 stacks and many cells on a Dense board, wells
+//     accumulate rapidly; this invariant confirms the runner's max_gravity_well_count
+//     bound is not exceeded (and that dead wells are properly despawned).
+//
+// Adversarial conditions:
+//   - Dense layout: maximises simultaneous cell destruction → maximises concurrent wells →
+//     maximises number of ApplyBoltForce messages per tick (N wells × 1 msg each)
+//   - 2 stacks: chosen over 3 to keep well count within GravityWellCountReasonable while
+//     still exercising per_level scaling beyond stack 1; 3 stacks may spawn too many wells
+//   - Chaos input (0.7): breaker movement variability ensures diverse bolt-to-well angles,
+//     exercising the full range of normalise() inputs including near-parallel trajectories
+//   - disable_physics: false (intentional) — live physics is required to exercise the
+//     full gravity_well_pull → ApplyBoltForce → apply_bolt_forces → Velocity2D chain;
+//     the smoke test (scenarios/mechanic/gravity_surge_stack_3_smoke.scenario.ron) uses
+//     frozen physics and does not catch force-pipeline bugs
+(
+    breaker: "Aegis",
+    layout: "Dense",
+    input: Chaos((action_prob: 0.7)),
+    max_frames: 3000,
+    disallowed_failures: [BoltInBounds, BreakerInBounds, GravityWellCountReasonable, HazardStackValid, NoNaN],
+    allowed_failures: None,
+    debug_setup: None,
+    allow_early_end: false,
+    seed: 9933,
+    frame_mutations: [
+        (frame: 30, mutation: InjectHazardStack(kind_name: "GravitySurge", stacks: 2)),
+    ],
+)

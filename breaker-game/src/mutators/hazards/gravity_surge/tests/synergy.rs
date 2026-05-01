@@ -3,7 +3,7 @@
 //! Gravity Surge's observable side-effect on bolts is emitting
 //! `ApplyBoltForce` messages (via `wire_with_force_consumer`, which also
 //! wires `apply_bolt_forces` so the messages land on `Velocity2D`).
-//! Drift also mutates `Velocity2D.0` directly (Drift is not migrated in this wave).
+//! Drift also emits `ApplyBoltForce` messages (migrated to message-based approach in Wave 2).
 //! These tests pin that both hazards, when both chains run on the same
 //! tick, compose cleanly — forces sum additively on the bolt's velocity
 //! with no interference.

@@ -1,11 +1,10 @@
-// Smoke test for GravitySurge hazard scaffold at stack 3.
+// Smoke test for GravitySurge hazard at stack 3.
 //
-// Activates 3 stacks of GravitySurge via the InjectHazardStack mutation. The
-// hazard module is currently a config-insertion + warn-once scaffold;
-// this scenario validates that the activation path runs without
-// panicking and that no invariants regress as a side effect of the
-// installed config resource. When runtime behaviour lands, this
-// scenario will start exercising it without spec changes.
+// Verifies that activating 3 GravitySurge stacks via InjectHazardStack does not
+// panic and that core invariants (NoNaN, BoltInBounds, HazardStackValid) hold.
+// Physics is intentionally disabled (disable_physics: true) to keep this as a
+// lightweight activation test. End-to-end force pipeline coverage is in
+// scenarios/hazards/gravity_surge_hazard_chaos.scenario.ron.
 (
     breaker: "Aegis",
     layout: "Corridor",

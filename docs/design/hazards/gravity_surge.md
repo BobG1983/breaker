@@ -7,7 +7,7 @@ Destroyed cells spawn short-lived gravity wells that pull the bolt. Wells are vi
 ## Config Resource
 
 ```rust
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Copy)]
 pub(crate) struct GravitySurgeConfig {
     pub base_duration_secs: f32,         // 2.0 seconds
     pub per_level_duration_secs: f32,    // 1.0 s per additional stack
@@ -41,7 +41,7 @@ pub(crate) struct GravityWell {
 }
 ```
 
-Gravity-well entity has a `Position2D` at the destroyed cell's position and a `GravityWell` component. The `fx` domain renders the telegraph; no sprite lives on the core component.
+Gravity-well entity has a `Position2D` at the destroyed cell's world position and a `GravityWell` component, plus `CleanupOnExit::<NodeState>` to ensure stale wells don't leak across nodes. The `fx` domain reads `GravityWell` to render the telegraph; no sprite lives on the core component.
 
 ## Messages
 **Reads**: `Destroyed<Cell>` (from `rantzsoft_dmg`).
@@ -50,18 +50,18 @@ Gravity-well entity has a `Position2D` at the destroyed cell's position and a `G
 ## Systems
 
 ### `spawn_gravity_wells`
-- **Schedule**: `FixedUpdate`, `.after(DeathPipelineSystems::ApplyKill)`.
-- **run_if**: `hazard_active(HazardKind::GravitySurge)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Reads `Destroyed<Cell>`. For each victim, computes `duration = base_duration + duration_per_level * (stack - 1)` and `strength = strength_for_stacks(stack)`. Spawns a new entity at the victim's world position with `GravityWell { strength, remaining: duration }` + `Transform`.
+- **Schedule**: `FixedUpdate`, `.before(gravity_well_pull)` (no `.run_if` at the registration level — gated in-body to avoid message buffering leaks).
+- **run_if**: In-body check — drains via `reader.clear()` and returns early when `GravitySurge` is not active, `NodeState` is not `Playing`, `GravitySurgeConfig` is absent, or computed duration/strength is zero.
+- **Behavior**: Reads `Destroyed<Cell>`. For each victim, computes `duration = config.duration_secs(stacks)` and `strength = config.strength(stacks)`. Spawns a new entity at the victim's `victim_pos` with `GravityWell { strength, remaining: duration }` + `Position2D` + `CleanupOnExit::<NodeState>`.
 
 ### `gravity_well_pull`
-- **Schedule**: `FixedUpdate`, `.before(BoltSystems::ApplyForces)`.
-- **run_if**: `hazard_active(HazardKind::GravitySurge)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Ticks each `GravityWell.remaining -= delta_secs`. For each bolt, sums `force = sum_over_wells(direction * strength / distance.max(MIN_PULL_DISTANCE))` then emits ONE `ApplyBoltForce { bolt, force }` with the aggregate acceleration (no `dt` multiply — consumer handles that).
+- **Schedule**: `FixedUpdate`, `.before(BoltSystems::ApplyForces)` (from chained tuple with `despawn_expired_gravity_wells`).
+- **run_if**: `hazard_active(HazardKind::GravitySurge)` + `in_state(NodeState::Playing)` (from chained tuple).
+- **Behavior**: Ticks each `GravityWell.remaining -= delta_secs`; snapshots only still-live wells (`remaining > 0.0`) into a local buffer. For each bolt, sums `force = sum_over_live_wells(direction * strength / distance.max(MIN_PULL_DISTANCE))` then emits ONE `ApplyBoltForce { bolt, force }` with the aggregate acceleration (no `dt` multiply — consumer handles that). Wells that expired this tick contribute no force.
 
 ### `despawn_expired_gravity_wells`
-- **Schedule**: `FixedUpdate`, `.after(gravity_well_pull)`.
-- **run_if**: `hazard_active(HazardKind::GravitySurge)` + `in_state(NodeState::Playing)`.
+- **Schedule**: `FixedUpdate`, `.after(gravity_well_pull)` (enforced by `.chain()` in the same tuple as `gravity_well_pull`).
+- **run_if**: `hazard_active(HazardKind::GravitySurge)` + `in_state(NodeState::Playing)` (from chained tuple).
 - **Behavior**: Despawns entities with `GravityWell.remaining <= 0.0`.
 
 ## Pipeline position (dmg crate)
