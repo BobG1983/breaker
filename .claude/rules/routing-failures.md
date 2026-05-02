@@ -1,6 +1,6 @@
 # Failure Routing
 
-> **Team mode**: when an agent team is active (see `.claude/rules/team-mode.md`), runner-cargo's RED/GREEN gate FAIL replies route directly to the appropriate fixer (writer-tests for RED, writer-code for GREEN) AND team-lead, bypassing the orchestrator-driven routing below. The categorization in this file (which finding goes to which fixer) is still authoritative — runner-cargo's reply rule encodes it.
+> **Team mode**: when an agent team is active (see `.claude/rules/team-mode.md`), runner-cargo's RED/GREEN gate FAIL replies route directly to the appropriate fixer (`writer-tests-<slot>` for RED, `writer-code-<slot>` for GREEN) AND `wave-coordinator` AND `team-lead`, bypassing the orchestrator-driven routing below. The categorization in this file (which finding goes to which fixer) is still authoritative — runner-cargo's reply rule encodes it. The slot suffix on the fixer comes from the failed sub-wave (e.g., a Wave 4B failure routes to whichever `writer-code-<slot>` was assigned to 4B).
 
 Read this when a verification agent reports a failure. Each failure type routes to a different fix path.
 
@@ -85,6 +85,19 @@ reviewer-file-length returns the split plan inline (summary table + refactor spe
 | BLOCKING (missing behavior, production logic in stub) | Test revision spec → **writer-tests** |
 | IMPORTANT (wrong values, partial coverage) | Main agent triages → **writer-tests** if warranted |
 | MINOR (naming, style) | Note and proceed to RED gate |
+
+## Speculation invalidated (team mode)
+
+When runner-cargo's GREEN gate FAILs and the failure matches an `abandonment_trigger` from a downstream speculative wave's plan header, the wave-coordinator messages the speculative writer with `abandon_draft`.
+
+| Failure profile | Route |
+|---|---|
+| Speculative test spec in flight, predecessor GREEN failed on type matching abandonment trigger | wave-coordinator → planning-writer-specs-tests-<slot> with `abandon_draft` (writer deletes the `.draft.md` file, idles); wave row returns to `pending` |
+| Speculative writer-tests in flight (rare — speculative draft was promoted then predecessor GREEN failed afterward) | wave-coordinator → writer-tests-<slot> with `abandon_draft`; the test file on disk is reverted via git; wave returns to `pending` |
+| Trigger fired but writer-tests already produced failing tests AND predecessor's GREEN later passed | NO abandonment — the speculative work is salvageable; coordinator promotes the draft as if no speculation existed |
+| Failure doesn't match any abandonment trigger | NO abandonment — speculative draft continues; promote when predecessor GREEN passes |
+
+The wave-coordinator notifies team-lead on every abandonment so session-state's Spec Progress table stays accurate. team-lead does NOT triage abandonment decisions — they are policy-driven by the plan's `abandonment_triggers:` field.
 
 ## writer-scenarios output
 

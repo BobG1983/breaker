@@ -73,7 +73,11 @@ Keep under 80 lines. Use this exact structure:
 - REVISED: [old decision] → [new decision] — [why]
 
 ## Spec Progress
-| Domain | Test Spec | Test-Spec Review | Writer-Tests | Test Review | RED Gate | Code Spec | Code-Spec Review | Writer-Code | GREEN | Notes |
+| Wave | Sub-wave | Spec | Test Spec | Test-Spec Review | Writer-Tests | Test Review | RED Gate | Code Spec | Code-Spec Review | Writer-Code | GREEN | Notes |
+
+The `Wave` column is the parent wave id (e.g., `4`). The `Sub-wave` column is empty for non-parallel waves and the sub-wave letter (e.g., `4A`, `4B`, `4C`) for parallel sub-waves. Each parallel sub-wave gets its own row. The `Spec` column is `regular` for normal specs or `speculative` for drafts authored ahead of an in-flight predecessor wave (will become `regular` on promotion or `abandoned` on discard).
+
+When a wave declares parallel sub-waves in the plan, ALL sub-waves get rows; the parent row may be omitted unless it carries shared state.
 
 ## Verification Results
 | Agent | Status | Action Needed |
@@ -112,7 +116,15 @@ Use these exact status values in the Specs table:
 | `revising` | Spec being revised after review |
 | `PASS` | Gate passed |
 | `FAIL` | Gate failed — see Active Failures |
+| `speculative` | Speculative draft (Spec column only) — drafted ahead of an in-flight predecessor; will be promoted on PASS or `abandoned` on a matching abandonment trigger |
+| `abandoned` | Speculative draft discarded due to abandonment trigger; row will be re-dispatched as `regular` once predecessor lands |
 | `-` | Not applicable yet |
+
+## Wave-coordinator interplay
+
+In team mode, the `wave-coordinator` agent owns wave dispatch. It maintains its own canonical wave state at `.claude/agent-memory/wave-coordinator/plan-state.md`. The orchestrator's session-state Spec Progress table mirrors it for human readability. When the coordinator surfaces a milestone, the orchestrator updates the matching row.
+
+If the two diverge, the coordinator's `plan-state.md` is the source of truth for wave/sub-wave status; session-state is the source of truth for human-facing notes (Active Failures, Active Investigations, Decisions, Stuck).
 
 ## Decision Revisions
 

@@ -63,19 +63,35 @@ If step 3 (tests) fails, report fmt+clippy outputs (likely clean) AND the test f
 
 A gate PASS requires all three steps clean. A gate FAIL is anything else.
 
-## Reply routing
+## Reply routing (with wave-coordinator fan-out)
+
+When `wave-coordinator` is on the team (default), every reply also goes to `wave-coordinator` — the coordinator owns wave-state transitions.
 
 ### RED gate result
-- **PASS** → reply to `team-lead` (RED gate is a milestone team-lead acts on next).
-- **FAIL** → reply to `writer-tests` (the test author / fixer for compile or test-shape errors) AND `team-lead`. Use a Fix spec hint format from `.claude/rules/hint-formats.md`. The sender (typically `reviewer-tests`) does NOT need to be replied to — they're done with their phase.
+- **PASS** → reply to `wave-coordinator` AND `team-lead` (the coordinator dispatches the code-spec phase; team-lead notes the milestone in session-state).
+- **FAIL** → reply to the appropriate `writer-tests-<slot>` (see Sub-wave attribution below) AND `wave-coordinator` AND `team-lead`. Use a Fix spec hint format from `.claude/rules/hint-formats.md`.
 
 ### GREEN gate result
-- **PASS** → reply to `team-lead` (GREEN gate triggers Standard Verification Tier next).
-- **FAIL** → reply to `writer-code` (the implementer / fixer; they route to debugger as needed) AND `team-lead`. Use a Fix spec hint format. The sender (typically `writer-code` themselves) gets the reply naturally.
+- **PASS** → reply to `wave-coordinator` AND `team-lead` (coordinator surfaces "ready for Standard tier" to team-lead).
+- **FAIL** → reply to the appropriate `writer-code-<slot>` AND `wave-coordinator` AND `team-lead`. Use a Fix spec hint format.
+
+### Sub-wave attribution
+
+When the failing tests are scoped to multiple sub-waves (a batched gate covering 4A, 4B, 4C), categorize failures by sub-wave (match the failing test path to the sub-wave's owned files per the plan / wave-coordinator's plan-state.md). Reply once per sub-wave to the appropriate writer slot:
+- 4A failure → `writer-tests-1` (or whichever slot owns 4A — wave-coordinator can confirm)
+- 4B failure → `writer-tests-2`
+- 4C failure → `writer-tests-3`
+
+Each reply contains only that sub-wave's failures. Always copy `wave-coordinator` and `team-lead` on every reply.
+
+If you cannot disambiguate which slot owns which sub-wave, reply to `wave-coordinator` only with the categorized failure list and let it route.
 
 ### Other commands
-- For ad-hoc cargo aliases ("Run cargo dtest <test>"), reply to BOTH the sender AND `team-lead`.
-- Never report only to the sender — `team-lead` always needs to know.
+- For ad-hoc cargo aliases ("Run cargo dtest <test>"), reply to BOTH the sender AND `wave-coordinator` AND `team-lead`.
+- Never report only to the sender — `wave-coordinator` and `team-lead` always need to know.
+
+### Fallback (no wave-coordinator)
+If no `wave-coordinator` exists in the team config (legacy / partial team), route to fixer + `team-lead` only. The orchestrator handles wave dispatch in that case.
 
 ## Output format
 For each run, reply with:

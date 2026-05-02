@@ -27,20 +27,28 @@ See `delegating-to-subagents.md` for the full pipeline flow (spec → review →
 
 ## RED Gate Procedure
 
-When implementing multiple domains, sequence these steps correctly:
+When implementing parallel sub-waves (e.g., `parallel: [4A, 4B, 4C]` per `plan-format.md`), sequence these steps correctly:
 
-1. Launch ALL **writer-tests** in parallel (one per domain, background) — each reads its test spec from `.claude/specs/`
-2. As each writer-tests completes: launch its **reviewer-tests** immediately (background)
-3. After ALL reviewer-tests pass: launch a single **runner-cargo** (cargo — serialized)
-4. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
+1. Dispatch ALL **writer-tests** in parallel (one slot per sub-wave, background) — each reads its test spec from `.claude/specs/wave<N><LETTER>-<feature>-tests.md`
+2. As each writer-tests completes: dispatch its **reviewer-tests** immediately (background)
+3. After ALL sub-waves' reviewer-tests pass: dispatch a single **runner-cargo** (cargo — serialized) for the BATCHED RED gate
+4. **Tests must compile.** If they don't → route back to the appropriate writer-tests slot with the compiler error
 5. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
-6. After the RED gate passes: launch ALL **planning-writer-specs-code** in parallel (one per domain) — they read both the test spec AND the failing tests on disk; the failing tests are the authoritative contract
-7. As each code spec completes: launch its **planning-reviewer-specs-code** (background); revise via the spec revision loop until every code spec is clean
-8. Only after every code spec is clean: launch ALL **writer-codes** in parallel (background)
+6. After the RED gate passes: dispatch ALL **planning-writer-specs-code** in parallel (one slot per sub-wave) — each reads both its test spec AND its failing tests on disk; the failing tests are the authoritative contract
+7. As each code spec completes: dispatch its **planning-reviewer-specs-code** (background); revise via the spec revision loop until every code spec is clean
+8. Only after every code spec is clean: dispatch ALL **writer-codes** in parallel (background)
 
-For single-domain work, the same sequence applies — it just has one agent per step.
+For non-parallel waves (single sub-wave), the same sequence applies with one slot per step.
 
-Track RED gate status in session-state.md (the `RED Gate` column in the Specs table). Track the code spec phase in the `Code Spec` and `Code-Spec Review` columns.
+In team mode, the wave-coordinator drives this sequence — see `.claude/rules/team-mode.md`. The orchestrator (team-lead) only sees the milestone events the coordinator surfaces.
+
+Track RED gate status in session-state.md (the `RED Gate` column in the Specs table, one row per sub-wave). Track the code spec phase in the `Code Spec` and `Code-Spec Review` columns.
+
+### Single batched gate, not per-sub-wave gates
+
+The RED gate (and GREEN gate) runs ONCE per wave, after ALL sub-waves are ready. Running runner-cargo per sub-wave would multiply cargo invocations and serialize them anyway. The batched gate proves all sub-waves' tests fail together AND none of them broke each other (e.g., 4A's tests don't accidentally pass because 4B's stub is wrong).
+
+Routing on a batched failure: runner-cargo categorizes failures by sub-wave (matching the failing test path's directory) and replies to each sub-wave's writer-tests slot independently. wave-coordinator and team-lead are CC'd. See `.claude/rules/routing-failures.md` (team-mode addendum).
 
 ## When to Commit and Merge
 

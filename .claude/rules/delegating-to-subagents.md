@@ -77,11 +77,27 @@ Writing the impl spec **after** the failing tests exist on disk lets the impl sp
 - **GREEN gate**: single `runner-cargo` after ALL writer-codes complete (cargo — serialized)
 - **Planning ahead**: launch test-spec writers for upcoming phases while current implementation is in flight
 
-## Parallel Waves
+## Parallel Waves and Sub-waves
 
-When producing a plan, the main agent **MUST** identify which parts of the work can run in parallel. Group independent work into **waves**.
+When producing a plan, the main agent **MUST** identify which parts of the work can run in parallel. Group independent work into **waves**, and group independent work *within* a wave into **parallel sub-waves**.
 
-**How to identify waves:**
+### Sub-wave declaration
+
+A wave with parallel sub-waves is declared in the plan's YAML wave header per `.claude/rules/plan-format.md`:
+
+```yaml
+id: 4
+parallel: [4A, 4B, 4C]
+blocks: [2]
+```
+
+Each sub-wave (`4A`, `4B`, `4C`) gets its own `### Wave 4X` heading + YAML block. Each runs an independent test-spec → review → writer-tests → review → code-spec → review → writer-code pipeline. RED and GREEN gates **batch** across sub-waves: ONE runner-cargo invocation after ALL sub-waves are ready, not one per sub-wave.
+
+In team mode, the wave-coordinator dispatches all sub-waves in one turn, picking idle slot agents (`writer-tests-1`, `writer-tests-2`, `writer-tests-3`) for each. Sub-wave letters appear in spec file paths (`.claude/specs/wave4a-<feature>-tests.md`) and in every kickoff/reply message.
+
+### Sub-wave criteria
+
+**How to identify parallel sub-waves within one wave:**
 - Work that touches **different files** can run in parallel
 - Work that touches **different domains** can usually run in parallel
 - Work with **no data dependencies** can run in parallel

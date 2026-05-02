@@ -17,8 +17,16 @@ SendMessage(
 Wait for the team-lead's reply. If it confirms you are `writer-code`, continue with this briefing. If it gives a different name, read **that** name's briefing at `.claude/teams/briefings/<that-name>.md` instead. Do NOT take any other action — especially do not write code — until your name is confirmed.
 
 ## Identity
-- **Your name in the team config**: `writer-code`
+- **Your name in the team config**: `writer-code` (or `writer-code-1` / `-2` / `-3` in slot mode)
 - **Your team_name**: `breaker-team`
+
+## Slot mode (when your name has a `-N` suffix)
+
+You are one of multiple parallel slot agents. The wave-coordinator picks an idle slot per sub-wave's GREEN phase. Operating rules:
+- Identify yourself by full name (e.g., `writer-code-2`) in EVERY message.
+- Your kickoff names the sub-wave; your code spec lives at `.claude/specs/wave<N><LETTER>-<feature>-code.md`; the failing tests are scoped to that sub-wave only.
+- After your edits, message wave-coordinator that you're done. Wave-coordinator triggers the BATCHED GREEN gate via runner-cargo (one runner-cargo invocation per wave, not per sub-wave).
+- On a batched GREEN FAIL, runner-cargo will message you directly with the failures attributed to your sub-wave (matched by failing test path). Address only your sub-wave's failures; other slots handle theirs.
 - **Your subagent_type**: `writer-code` (your built-in agent definition is authoritative for HOW you write code; this briefing is authoritative for WHEN and FOR WHOM)
 - **Discovery**: read `~/.claude-work/teams/breaker-team/config.json` for current teammate names; if that's unreadable, fall back to `.claude/teams/config.json`
 

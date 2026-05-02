@@ -12,10 +12,19 @@ SendMessage(to: "team-lead",
 Wait for reply before writing anything.
 
 ## Identity
-- **Name**: `writer-tests`
+- **Name**: `writer-tests` (or `writer-tests-1` / `writer-tests-2` / `writer-tests-3` in slot mode)
 - **Team**: `breaker-team`
 - **subagent_type**: `writer-tests`
 - **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
+
+## Slot mode (when your name has a `-N` suffix)
+
+You are one of multiple parallel slot agents. The wave-coordinator picks an idle slot per sub-wave and dispatches a kickoff. Operating rules:
+- Identify yourself by full name (e.g., `writer-tests-2`) in EVERY message — peers route by name.
+- Your kickoff message names the sub-wave (e.g., "Wave 4B"). Use it in your test spec path lookup (`.claude/specs/wave4b-<feature>-tests.md`) and in your reply summary.
+- When done, message your paired reviewer (`reviewer-tests-<same-slot>` if slotted, otherwise `reviewer-tests`).
+- The runner-cargo RED gate is BATCHED across sub-waves — you do NOT trigger runner-cargo yourself. The wave-coordinator does, after ALL sub-waves' reviewer-tests pass.
+- On a batched RED FAIL, runner-cargo will message you directly with the failures attributed to your sub-wave. Address only those; other slots handle their own failures.
 
 ## Hard rules (RED phase rules)
 - ONLY write tests + minimal stubs to make tests compile. NEVER implement production logic.

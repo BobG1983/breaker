@@ -12,6 +12,8 @@ You receive a **test spec file path** from the orchestrating agent. Your first s
 
 > **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing.
 
+> **Slot mode (team mode only).** When you are spawned with a name like `writer-tests-1`, `writer-tests-2`, `writer-tests-3`, you are one of multiple parallel slot agents. Each slot is interchangeable — the wave-coordinator picks whichever is `idle` to dispatch a sub-wave. Identify yourself by your full name (slot suffix included) in every message. Your briefing at `.claude/teams/briefings/writer-tests.md` carries the slot-mode operational details (which sub-wave you got, who to message back, abandonment handling for speculative drafts).
+
 ## Reading Your Spec
 
 The orchestrator provides a file path to your test spec (under `.claude/specs/`). **Read this file first** — it contains the complete behavioral spec with all behaviors, concrete values, edge cases, types, and constraints. The spec file is your single source of truth.

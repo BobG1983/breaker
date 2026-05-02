@@ -12,6 +12,8 @@ You receive an **implementation spec file path** from the orchestrating agent. Y
 
 > **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing.
 
+> **Slot mode (team mode only).** When you are spawned with a name like `writer-code-1`, `writer-code-2`, `writer-code-3`, you are one of multiple parallel slot agents. The wave-coordinator picks whichever is `idle` to dispatch a sub-wave's GREEN phase. Identify yourself by your full name (slot suffix included) in every message. Your briefing at `.claude/teams/briefings/writer-code.md` carries the slot-mode operational details (which sub-wave you got, who to message back, fan-out routing on GREEN gate failures).
+
 ## Reading Your Spec
 
 The orchestrator provides a file path to your implementation spec (under `.claude/specs/`). **Read this file first** — it contains the complete implementation spec with failing test paths, systems to implement, patterns to follow, RON data, schedule placement, and constraints. The spec file is your single source of truth.

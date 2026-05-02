@@ -15,7 +15,24 @@ All specs are written to `.claude/specs/` (gitignored). Naming convention:
 - Test spec: `.claude/specs/<wave>-<feature>-tests.md`
 - Implementation spec: `.claude/specs/<wave>-<feature>-code.md`
 
-The orchestrator provides the exact file paths when launching spec agents.
+The orchestrator (or wave-coordinator in team mode) provides the exact file paths when launching spec agents.
+
+### Parallel sub-waves
+
+When a wave declares parallel sub-waves (per `.claude/rules/plan-format.md`), each sub-wave gets its own spec file:
+- Test spec: `.claude/specs/wave<N><LETTER>-<feature>-tests.md` (e.g., `wave4a-phantom-breaker-tests.md`)
+- Code spec: `.claude/specs/wave<N><LETTER>-<feature>-code.md`
+
+Sub-wave letters are lowercase in file paths but UPPERCASE in plan headers and message subject lines (matching the plan's `parallel: [4A, 4B, 4C]` declaration).
+
+### Speculative drafts (team mode only)
+
+When the wave-coordinator authorizes a speculative draft of Wave N+1's test spec while Wave N is still in flight, the spec file gets a `.draft.md` suffix:
+- Speculative test spec: `.claude/specs/wave<N+1>-<feature>-tests.draft.md`
+
+On promotion (predecessor wave's GREEN gate PASS, abandonment triggers not fired), the writer renames the file to drop the `.draft` and notifies the reviewer. On abandonment, the file is deleted and the wave row in `plan-state.md` returns to `pending`.
+
+Code specs are NEVER drafted speculatively — code specs require the failing tests on disk as their authoritative contract, and those tests don't exist until RED gate passes for the predecessor wave (and the speculative test spec has been promoted and writer-tests has run).
 
 ## Briefing Spec Writers
 

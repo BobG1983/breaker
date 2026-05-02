@@ -12,12 +12,13 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 
 | Action | Always delegate to |
 |--------|---------------------|
-| Write or modify production code (`.rs`, `.ron`, `.toml` source) | `writer-code` (after the full pipeline) or `/quickfix` |
-| Write or modify tests | `writer-tests` (after test spec is reviewed) or `/quickfix` |
+| Wave-by-wave dispatch (kickoffs, batching, speculation) | `wave-coordinator` (team mode) — you only send the initial `dispatch_first_wave` |
+| Write or modify production code (`.rs`, `.ron`, `.toml` source) | `writer-code-<slot>` (after the full pipeline) or `/quickfix` |
+| Write or modify tests | `writer-tests-<slot>` (after test spec is reviewed) or `/quickfix` |
 | Run `cargo` (test / check / clippy / build / scenario / fmt) | `runner-cargo` / `runner-release` |
-| Write a behavioral test spec | `planning-writer-specs-tests` |
-| Write an implementation spec | `planning-writer-specs-code` (only after the RED gate) |
-| Review any spec | `planning-reviewer-specs-tests` / `planning-reviewer-specs-code` |
+| Write a behavioral test spec | `planning-writer-specs-tests-<slot>` |
+| Write an implementation spec | `planning-writer-specs-code-<slot>` (only after the RED gate) |
+| Review any spec | `planning-reviewer-specs-tests-<slot>` / `planning-reviewer-specs-code-<slot>` |
 | Review code (correctness, quality, architecture, perf, completeness, file-length) | the matching `reviewer-*` agent |
 | Investigate a failure or unexpected behavior | `/investigate` skill (which spawns `debugger` for hypothesis work and `researcher-*` for evidence) |
 | Audit cross-cutting concerns (security, docs, design, deps, agent-memory) | the matching `guard-*` agent |
@@ -29,9 +30,13 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 
 - Read user input; pick the right skill from the Skills table below
 - Read files **for triage** (understanding subagent output) and **for briefing** (giving subagents context). Reading 1–3 files to brief well is fine. Reading 5+ files to "understand the system" is a `researcher-codebase` job — delegate it.
+- **Initial wave kickoff (team mode)**: send `dispatch_first_wave` to `wave-coordinator` after `/start-dev` or `/implement` confirms the plan + branch. The coordinator owns all subsequent wave dispatch — do NOT send wave kickoffs yourself in team mode.
 - Update `.claude/state/session-state.md` after every agent notification — see `.claude/rules/session-state.md`
 - Pass hint blocks **verbatim** to fix agents — never rephrase them
 - Make routing decisions per `.claude/rules/routing-failures.md`
+- **Standard tier triggers**: when `wave-coordinator` reports `green_gate_pass`, launch the 5 Standard tier reviewers in parallel; reply `standard_tier_pass` to coordinator on clean.
+- **Full tier triggers**: before `/finish-dev`, run guards + reviewer-scenarios + reviewer-file-length.
+- **Escalations**: handle circuit-breaks, contradictions, missing tools, plan wrongness, invalidated speculation. The coordinator escalates; you decide.
 - Apply inline edits **only** where one of these explicitly authorizes it:
   - `.claude/rules/routing-failures.md` "Main agent fixes inline" rows (style/idiom from reviewer-quality, dependency Cargo.toml changes from guard-dependencies, security warnings/info from guard-security)
   - The active skill's procedure (e.g., `/finish-dev` runs git, `/start-dev` runs `git flow`)
@@ -67,8 +72,9 @@ Skills are the primary workflow entry points. Match the user's intent to a skill
 
 | Situation | Skill |
 |-----------|-------|
-| Starting a new work item (optionally from a todo) | `/start-dev` |
-| Implementing a feature or plan task | `/implement` |
+| No team config exists / briefings or rules changed and team needs re-rolling | `/spawn-team` |
+| Starting a new work item (optionally from a todo) | `/start-dev` (auto-runs `/spawn-team` if team missing) |
+| Implementing a feature or plan task | `/implement` (auto-runs `/spawn-team` if team missing) |
 | Small, single-file fix (one function, one test, a rename) | `/quickfix` |
 | Checking code health | `/verify` |
 | Reviewing changed code for quality | `/simplify` |

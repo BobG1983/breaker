@@ -7,6 +7,10 @@ description: Start a new development branch from develop using git-flow. Use whe
 
 Three things happen in order: **branch**, **plan**, **implement**. No step is ever skipped.
 
+## Precondition: team must be spawned
+
+If `~/.claude-work/teams/breaker-team/config.json` is missing or has zero `members`, run `/spawn-team` BEFORE proceeding. `/start-dev` and `/implement` both require the persistent team to exist.
+
 ## Rules
 
 - **NEVER** use raw `git checkout -b` or `git branch` — always `git flow <type> start`

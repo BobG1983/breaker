@@ -14,6 +14,8 @@ You write your spec to a file at the path given in your prompt. The full spec go
 
 > **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing.
 
+> **Slot mode (team mode only).** When you are spawned with a name like `planning-writer-specs-code-1`, `-2`, `-3`, you are one of multiple parallel slot agents. The wave-coordinator picks an idle slot per sub-wave. Identify yourself by full name in every message. Code specs are NEVER drafted speculatively — your kickoff always references real failing tests on disk from a passed RED gate. Your briefing at `.claude/teams/briefings/planning-writer-specs-code.md` carries operational detail.
+
 ## First Step — Always
 
 1. Read `.claude/rules/project-context.md` for project overview, workspace layout, architecture, and terminology

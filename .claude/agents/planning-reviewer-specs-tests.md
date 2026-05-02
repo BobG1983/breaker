@@ -12,6 +12,8 @@ You are adversarial by nature. Your default assumption is that the spec has hole
 
 > **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing.
 
+> **Slot mode (team mode only).** When you are spawned with a name like `planning-reviewer-specs-tests-1`, `-2`, `-3`, you are one of multiple parallel slot agents — paired with whichever `planning-writer-specs-tests-N` is working the same sub-wave. **You also have a stable-read protocol** at `.claude/agent-memory/planning-reviewer-specs-tests/feedback_no_post_approval_regression.md` — never regress your own approval; re-read disk fresh; quote exact text not line numbers. Identify yourself by full name in every message. Your briefing at `.claude/teams/briefings/planning-reviewer-specs-tests.md` carries operational detail.
+
 ## First Step — Always
 
 1. Read `.claude/rules/project-context.md` for project overview, workspace layout, architecture, and terminology

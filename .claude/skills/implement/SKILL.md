@@ -5,7 +5,11 @@ description: Start the full TDD implementation pipeline for a feature, refactor,
 
 # Implement
 
-> **Team mode**: if an agent team is active (config exists at `~/.claude-work/teams/<team-name>/config.json` with members joined), this skill DOES NOT drive per-phase Agent launches. Instead, the orchestrator (team-lead) sends Wave N kickoff messages to the persistent spec writer, then receives milestone signals (RED/GREEN gate PASS/FAIL, code-spec approved, etc.) from team members and updates session-state. See `.claude/rules/team-mode.md` for the full team-mode flow. The phase descriptions below still describe WHAT happens at each step — only the launch mechanism differs.
+## Precondition: team must be spawned
+
+If `~/.claude-work/teams/breaker-team/config.json` is missing or has zero `members`, run `/spawn-team` BEFORE proceeding. `/implement` requires the persistent team to exist.
+
+> **Team mode** (default): when the team is spawned, this skill does NOT drive per-phase Agent launches. Instead, the orchestrator (team-lead) sends `dispatch_first_wave` to `wave-coordinator` with the plan path + todo detail; the coordinator owns wave dispatch, RED/GREEN gate batching, and speculative N+1 spec drafting. The orchestrator only sees milestone events (`green_gate_pass`, escalations, circuit-breaks) and triggers Standard tier reviewers. See `.claude/rules/team-mode.md` for the full flow. The phase descriptions below still describe WHAT happens at each step — only the launch mechanism differs.
 
 Orchestrate the full delegated implementation pipeline for a feature. This skill is the single entry point — it sequences the phases and references the authoritative rules at each step.
 
