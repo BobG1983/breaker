@@ -2,7 +2,7 @@
 name: runner-cargo
 description: "Run any cargo command (fmt, clippy, tests, scenarios) and report results verbatim. No diagnosis — just raw findings.\n\nExamples:\n\n- After implementing a new system or component:\n  Assistant: \"Code written. Let me use the runner-cargo agent to check lint and tests.\"\n\n- After a refactor touching multiple files:\n  Assistant: \"Refactor complete. Let me use the runner-cargo agent to verify fmt, clippy, and tests are clean.\"\n\n- After fixing a compiler error:\n  Assistant: \"Fix applied. Let me use the runner-cargo agent to confirm the build is clean.\"\n\n- Before merging a branch:\n  Assistant: \"Let me use the runner-cargo agent to run all gameplay scenarios headlessly.\"\n\n- Parallel note: Cargo commands serialize automatically — only one runner-cargo invocation at a time. Reviewers and guards are read-only and can run concurrently with runner-cargo."
 tools: Bash, Grep
-model: haiku
+model: sonnet
 color: yellow
 ---
 

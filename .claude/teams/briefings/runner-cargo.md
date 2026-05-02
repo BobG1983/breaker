@@ -44,19 +44,38 @@ Bare `cargo build` / `cargo check` / `cargo test` / `cargo clippy` are PROHIBITE
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| Any peer (e.g. `reviewer-tests`, `team-lead`) | "Run RED gate — tests at `<paths>`" | Execute `cargo all-dtest`. **PASS** = all listed tests FAIL as expected. **FAIL** = either tests passed (defect) or compile error. Reply per Universal reply rule below. |
-| Any peer (e.g. `writer-code`, `team-lead`) | "Run GREEN gate" | Execute `cargo all-dtest`. **PASS** = all tests pass. **FAIL** = any failure. Reply per Universal reply rule. |
-| `team-lead` | "Run lint" | Execute `cargo fmt`, then `cargo all-dclippy`. Report PASS / FAIL with verbatim clippy output. |
-| `team-lead` | "Run scenarios" | Execute `cargo scenario -- --all`. Report PASS / FAIL with violation output. |
-| Any peer | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Reply per Universal reply rule. |
+| Any peer (e.g. `reviewer-tests`, `team-lead`) | "Run RED gate — tests at `<paths>`" | Run the **gate sequence** (see below). **PASS** = fmt clean + clippy clean + all listed tests FAIL as expected. **FAIL** at any step. Reply per RED gate reply rule. |
+| Any peer (e.g. `writer-code`, `team-lead`) | "Run GREEN gate" | Run the **gate sequence**. **PASS** = fmt clean + clippy clean + all tests pass. **FAIL** at any step. Reply per GREEN gate reply rule. |
+| `team-lead` | "Run scenarios" | Execute `cargo scenario -- --all`. Report PASS / FAIL with violation output. Reply to `team-lead`. |
+| Any peer | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Reply to BOTH sender AND `team-lead` with verbatim output. |
 | Anyone | unexpected | Ask before acting. |
 
-## Universal reply rule
+## Gate sequence (RED and GREEN)
 
-After any cargo run, reply to **BOTH** the sender AND `team-lead`:
-- The sender needs the result to drive their next peer step (e.g., GREEN FAIL → writer-code routes to debugger; RED FAIL compile error → writer-tests fixes).
-- `team-lead` needs the result for session-state updates and pipeline tier transitions.
-If the sender IS `team-lead`, one reply suffices (no double-message).
+Both gates run the same three commands **in this order**:
+1. `cargo fmt` — auto-applies formatting; if it modifies files, that's still a clean step (no FAIL).
+2. `cargo all-dclippy` — must produce zero errors. Warnings are OK unless escalated to errors by the workspace lints (most are).
+3. `cargo all-dtest` — runs all tests across all crates.
+
+If step 1 modifies files but 2 and 3 pass, the gate PASSES (note that fmt auto-applied changes in your reply).
+If step 2 (clippy) fails, STOP — do not run step 3. The compile failure blocks tests anyway. Report fmt+clippy outputs.
+If step 3 (tests) fails, report fmt+clippy outputs (likely clean) AND the test failure output.
+
+A gate PASS requires all three steps clean. A gate FAIL is anything else.
+
+## Reply routing
+
+### RED gate result
+- **PASS** → reply to `team-lead` (RED gate is a milestone team-lead acts on next).
+- **FAIL** → reply to `writer-tests` (the test author / fixer for compile or test-shape errors) AND `team-lead`. Use a Fix spec hint format from `.claude/rules/hint-formats.md`. The sender (typically `reviewer-tests`) does NOT need to be replied to — they're done with their phase.
+
+### GREEN gate result
+- **PASS** → reply to `team-lead` (GREEN gate triggers Standard Verification Tier next).
+- **FAIL** → reply to `writer-code` (the implementer / fixer; they route to debugger as needed) AND `team-lead`. Use a Fix spec hint format. The sender (typically `writer-code` themselves) gets the reply naturally.
+
+### Other commands
+- For ad-hoc cargo aliases ("Run cargo dtest <test>"), reply to BOTH the sender AND `team-lead`.
+- Never report only to the sender — `team-lead` always needs to know.
 
 ## Output format
 For each run, reply with:
