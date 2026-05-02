@@ -148,6 +148,19 @@ pub struct BumpSettings {
     pub feedback:         BumpFeedbackSettings,
 }
 
+/// Parameters for spawning a phantom breaker via the builder.
+#[derive(Debug, Clone, Copy)]
+pub struct BreakerPhantomParams {
+    /// Phantom lifetime in seconds.
+    pub lifespan:          f32,
+    /// Color tint mixed with the base breaker color.
+    pub phantom_color_rgb: [f32; 3],
+    /// Flicker frequency in Hz.
+    pub flicker_frequency: f32,
+    /// Minimum alpha during flicker.
+    pub flicker_min_alpha: f32,
+}
+
 /// Bump pop animation feedback parameters.
 #[derive(Clone, Copy)]
 pub struct BumpFeedbackSettings {
@@ -191,6 +204,8 @@ pub(crate) struct OptionalBreakerData {
     pub(crate) salvo_hit:                  Option<RootNode>,
     /// `BoltLossBehavior` carried in from `.definition()`. Inserted on spawn.
     pub(crate) bolt_loss_behavior:         Option<BoltLossBehavior>,
+    /// Phantom parameters — `Some` when `.phantom(params)` was called.
+    pub(crate) phantom:                    Option<BreakerPhantomParams>,
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────

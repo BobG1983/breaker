@@ -36,10 +36,12 @@ mod wire;
 // directly from `crate::effect_v3::effects::phantom_bolt::components`).
 pub(crate) use activate::activate;
 #[cfg(test)]
-pub(crate) use components::{PhantomBreaker, PhantomBreakerLifetime};
+pub(crate) use components::PhantomBreakerLifetime;
 #[cfg(test)]
 pub(crate) use config::AfterimageConfig;
 pub(crate) use wire::wire;
 
+#[cfg(test)]
+pub(crate) use crate::breaker::components::PhantomBreaker;
 #[cfg(test)]
 pub(crate) use crate::effect_v3::effects::phantom_bolt::components::PhantomBolt;

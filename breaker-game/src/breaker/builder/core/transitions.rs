@@ -151,11 +151,15 @@ impl<D, Mv, Da, Sp, Bm, R> BreakerBuilder<D, Mv, Da, Sp, Bm, Unvisual, R> {
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<ColorMaterial>,
     ) -> BreakerBuilder<D, Mv, Da, Sp, Bm, Rendered, R> {
-        let color_rgb = self
+        let base_rgb = self
             .optional
             .color_rgb
             .unwrap_or(crate::breaker::definition::DEFAULT_COLOR_RGB);
-        let color = crate::shared::color_from_rgb(color_rgb);
+        let final_rgb = match self.optional.phantom {
+            Some(p) => mix_phantom_rgb(base_rgb, p.phantom_color_rgb),
+            None => base_rgb,
+        };
+        let color = crate::shared::color_from_rgb(final_rgb);
         BreakerBuilder {
             dimensions: self.dimensions,
             movement:   self.movement,
@@ -330,6 +334,14 @@ impl<D, Mv, Da, Sp, Bm, V, R> BreakerBuilder<D, Mv, Da, Sp, Bm, V, R> {
         self.optional.color_rgb = Some(rgb);
         self
     }
+
+    /// Marks the breaker as a phantom with the given parameters. Optional
+    /// chainable; works on any typestate.
+    #[must_use]
+    pub const fn phantom(mut self, params: BreakerPhantomParams) -> Self {
+        self.optional.phantom = Some(params);
+        self
+    }
 }
 
 // ── Override methods (require relevant dimension to be satisfied) ────────
@@ -384,4 +396,15 @@ impl<D, Mv, Da, Bm, V, R> BreakerBuilder<D, Mv, Da, HasSpread, Bm, V, R> {
         self.optional.override_reflection_spread = Some(degrees);
         self
     }
+}
+
+/// Per-channel arithmetic mean blend of two RGB triples.
+///
+/// Idempotency: `mix_phantom_rgb(c, c) == c` for every channel — a true blend.
+fn mix_phantom_rgb(base: [f32; 3], tint: [f32; 3]) -> [f32; 3] {
+    [
+        (base[0] + tint[0]) * 0.5,
+        (base[1] + tint[1]) * 0.5,
+        (base[2] + tint[2]) * 0.5,
+    ]
 }

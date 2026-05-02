@@ -1,11 +1,13 @@
 use bevy::prelude::*;
 use rantzsoft_physics2d::{aabb::Aabb2D, quadtree::circle_overlaps_aabb};
 
-use super::{components::PhantomBreaker, config::AfterimageConfig};
+use super::config::AfterimageConfig;
 use crate::{
     bolt::{components::BoltRadius, filters::ActiveFilter},
     breaker::{
-        components::{BaseHeight, BaseWidth, BumpLateWindow, BumpPerfectWindow, BumpState},
+        components::{
+            BaseHeight, BaseWidth, BumpLateWindow, BumpPerfectWindow, BumpState, PhantomBreaker,
+        },
         messages::BumpGrade,
         systems::{forward_grade, retroactive_grade},
     },

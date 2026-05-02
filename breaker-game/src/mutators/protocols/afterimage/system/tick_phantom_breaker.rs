@@ -1,9 +1,7 @@
 use bevy::prelude::*;
 
-use super::{
-    components::{PhantomBreaker, PhantomBreakerLifetime},
-    config::AfterimageConfig,
-};
+use super::{components::PhantomBreakerLifetime, config::AfterimageConfig};
+use crate::breaker::components::PhantomBreaker;
 
 // ── System 2 — afterimage_tick_phantom_breaker ──────────────────────────────
 

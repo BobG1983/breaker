@@ -32,6 +32,10 @@ pub struct ExtraBreaker;
 #[derive(Component)]
 pub struct BreakerInitialized;
 
+/// Marker: this breaker entity is a phantom-breaker ghost.
+#[derive(Component, Debug)]
+pub struct PhantomBreaker;
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::BaseSpeed;
 
-use super::{components::PhantomBreaker, config::AfterimageConfig};
+use super::config::AfterimageConfig;
 use crate::{
     bolt::{
         components::{BoltBaseDamage, BoltRadius},
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    breaker::messages::BumpGrade,
+    breaker::{components::PhantomBreaker, messages::BumpGrade},
     effect_v3::effects::phantom_bolt::components::{PhantomBolt, PhantomLifetime, PhantomOwner},
     mutators::protocols::{definition::ProtocolKind, systems::ProtocolGate},
     prelude::*,

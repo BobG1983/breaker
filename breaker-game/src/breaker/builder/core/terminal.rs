@@ -10,13 +10,13 @@ use crate::{
         BreakerInitialized, BreakerReflectionSpread, BreakerTilt, BumpEarlyWindow, BumpFeedback,
         BumpLateWindow, BumpPerfectCooldown, BumpPerfectWindow, BumpState, BumpWeakCooldown,
         DashDuration, DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase,
-        DecelEasing, ExtraBreaker, PreviousDashState, PrimaryBreaker, SettleDuration,
-        SettleTiltEase,
+        DecelEasing, ExtraBreaker, PhantomBreaker, PreviousDashState, PrimaryBreaker,
+        SettleDuration, SettleTiltEase,
     },
     effect_v3::{commands::EffectCommandsExt, types::RootNode},
     prelude::*,
     shared::{
-        BaseHeight, BaseWidth, GameDrawLayer,
+        BaseHeight, BaseWidth, GameDrawLayer, Lifespan, PhantomFlicker,
         size::{MaxHeight, MaxWidth, MinHeight, MinWidth},
     },
 };
@@ -215,6 +215,34 @@ fn apply_bolt_loss_behavior(
     commands.entity(entity).insert(behavior);
 }
 
+/// Insert phantom-only components when `optional.phantom.is_some()`.
+///
+/// Always inserts `PhantomBreaker` + `Lifespan { remaining: params.lifespan }`.
+/// When `is_rendered` is `true`, ALSO inserts
+/// `PhantomFlicker { frequency: params.flicker_frequency, min_alpha: params.flicker_min_alpha }`.
+fn apply_phantom(
+    commands: &mut Commands,
+    entity: Entity,
+    optional: &OptionalBreakerData,
+    is_rendered: bool,
+) {
+    let Some(params) = optional.phantom else {
+        return;
+    };
+    commands.entity(entity).insert((
+        PhantomBreaker,
+        Lifespan {
+            remaining: params.lifespan,
+        },
+    ));
+    if is_rendered {
+        commands.entity(entity).insert(PhantomFlicker {
+            frequency: params.flicker_frequency,
+            min_alpha: params.flicker_min_alpha,
+        });
+    }
+}
+
 // ── spawn() terminal impls ────────────────────────────────────────────────
 
 impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, Rendered, Primary> {
@@ -242,6 +270,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             .id();
         apply_hp(commands, entity, &self.optional);
         apply_bolt_loss_behavior(commands, entity, &self.optional);
+        apply_phantom(commands, entity, &self.optional, true);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -275,6 +304,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             .id();
         apply_hp(commands, entity, &self.optional);
         apply_bolt_loss_behavior(commands, entity, &self.optional);
+        apply_phantom(commands, entity, &self.optional, true);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -301,6 +331,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             .id();
         apply_hp(commands, entity, &self.optional);
         apply_bolt_loss_behavior(commands, entity, &self.optional);
+        apply_phantom(commands, entity, &self.optional, false);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }
@@ -327,6 +358,7 @@ impl BreakerBuilder<HasDimensions, HasMovement, HasDashing, HasSpread, HasBump, 
             .id();
         apply_hp(commands, entity, &self.optional);
         apply_bolt_loss_behavior(commands, entity, &self.optional);
+        apply_phantom(commands, entity, &self.optional, false);
         if let Some(effects) = effects.filter(|e| !e.is_empty()) {
             stamp_root_nodes(commands, entity, &effects);
         }

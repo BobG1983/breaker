@@ -1,11 +1,8 @@
 use bevy::prelude::*;
 
-use super::{
-    components::{PhantomBreaker, PhantomBreakerLifetime},
-    config::AfterimageConfig,
-};
+use super::{components::PhantomBreakerLifetime, config::AfterimageConfig};
 use crate::{
-    breaker::components::{BaseHeight, BaseWidth, DashState},
+    breaker::components::{BaseHeight, BaseWidth, DashState, PhantomBreaker},
     prelude::*,
 };
 

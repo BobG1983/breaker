@@ -10,7 +10,7 @@ mod state;
 
 pub use core::{
     Breaker, BreakerBaseY, BreakerInitialized, BreakerReflectionSpread, ExtraBreaker,
-    PrimaryBreaker,
+    PhantomBreaker, PrimaryBreaker,
 };
 
 pub use bolt_loss_behavior::BoltLossBehavior;
