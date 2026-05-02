@@ -32,7 +32,7 @@ See `.claude/rules/git.md` for git usage and rules.
  8. Launch writer-tests per wave (reads test spec from .claude/specs/)          ── RED phase
     in parallel
  9. Launch reviewer-tests as each writer-tests completes (in parallel)
-10. After ALL reviewer-tests pass: single runner-tests                          ── RED gate
+10. After ALL reviewer-tests pass: single runner-cargo                          ── RED gate
 11. Launch planning-writer-specs-code per wave (in parallel)                    ── CODE SPEC
     Each reads BOTH the test spec AND the failing tests on disk; writes its
     impl spec to .claude/specs/<wave>-<feature>-code.md
@@ -42,7 +42,7 @@ See `.claude/rules/git.md` for git usage and rules.
 13. Main agent triages reviews, sends revisions back to code-spec writers
 14. Repeat 12–13 until every code spec is clean
 15. Launch ALL writer-codes in parallel (reads code spec from .claude/specs/)   ── GREEN phase
-16. After ALL writer-codes complete: single runner-tests                        ── GREEN gate
+16. After ALL writer-codes complete: single runner-cargo                        ── GREEN gate
 17. Basic Verification Tier                                                    ─┐
 18. Route failures → fix agents → Basic Verification Tier after each fix        │ REFACTOR
 19. /simplify on changed code → Basic Verification Tier if changes              │
@@ -68,11 +68,11 @@ Writing the impl spec **after** the failing tests exist on disk lets the impl sp
 - **Test-spec reviewers**: one per wave, in parallel (no cargo)
 - **Writer-tests**: one per wave, in parallel (no cargo)
 - **Reviewer-tests**: launch as each writer-tests completes, in parallel (no cargo)
-- **RED gate**: single `runner-tests` after ALL reviewer-tests pass (cargo — serialized)
+- **RED gate**: single `runner-cargo` after ALL reviewer-tests pass (cargo — serialized)
 - **Code-spec writers**: one per wave, in parallel — but ONLY after RED gate (no cargo)
 - **Code-spec reviewers**: one per wave, in parallel (no cargo)
 - **Writer-codes**: one per wave, in parallel (no cargo)
-- **GREEN gate**: single `runner-tests` after ALL writer-codes complete (cargo — serialized)
+- **GREEN gate**: single `runner-cargo` after ALL writer-codes complete (cargo — serialized)
 - **Planning ahead**: launch test-spec writers for upcoming phases while current implementation is in flight
 
 ## Parallel Waves

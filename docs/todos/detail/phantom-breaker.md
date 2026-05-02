@@ -14,151 +14,81 @@ Agent teams (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: 1` in `.claude/settings.json
 
 **Key difference from background agents**: teammates can message each other directly via `SendMessage(to: "teammate-name", ...)` — no orchestrator round-trip required. The orchestrator receives a brief idle notification when this happens, keeping visibility without being in the loop for every exchange.
 
-**I (the orchestrator) spawn and manage the team programmatically.** You don't touch the UI to set it up. You can optionally use **Shift+Down** in the Claude Code UI to inspect a teammate's conversation history, but that's observational — all routing is via my tool calls.
+**This trial uses the actual agent definitions** (`subagent_type:` fields) rather than custom hybrid agents. Each agent already has the right model, tools, rules, and memory for its role.
 
-### Team composition for this trial
+**Teammate discovery**: `TeamCreate` writes `~/.claude/teams/breaker-team/config.json` automatically as agents join. Every agent reads this file on startup to learn all teammates' names — no hardcoded names in prompts.
 
-Seven persistent team members, spanning the full pipeline from spec to production code to design and architecture validation. All spawn before Wave 1.
+### Team composition
 
----
+All agents spawn at once before Wave 1. They wait idle until messaged.
 
-#### 1. `spec-writer` — unified spec writer (test specs + code specs)
+#### Pipeline coordinator — persistent
 
-**Role**: Writes both test specs (Phase 1) and implementation specs (Phase 3) for every wave. Unified because the code spec writer benefits enormously from remembering every decision made during the test spec it just wrote.
+| Name | `subagent_type` | Role |
+|------|----------------|------|
+| `tdd-guard` | `general-purpose` | Drives wave transitions. Reads the plan file once at spawn. When it receives a wave-complete signal, it looks up the next wave and messages `planning-writer-specs-tests` with the kickoff. Escalates to orchestrator only for circuit breaks and design decisions. Does NOT need wave details — only needs to know which wave just completed and what the next wave is. |
 
-**What it accumulates across waves**:
-- Domain shape: builder typestate structure, shared infra paths, message types introduced in prior waves
-- Which behaviors were tricky to specify and why (avoids relitigating in later waves)
-- What the spec-reviewer flagged in prior waves (self-corrects before reviewer even sees it)
-- Cross-wave constraints (e.g., "Wave 2 established that WithoutPhantomBreaker goes on the query, not inline")
+Brief: "Read the plan file at `<path>`. When you receive `wave N complete`, message planning-writer-specs-tests with the wave N+1 kickoff from the plan. Message orchestrator with each wave transition for session-state. Escalate to orchestrator for circuit breaks or design decisions. Do not initiate."
 
-**Peer communication**:
-- `spec-writer` → `spec-reviewer`: "test spec ready, please review" — starts the revision loop directly
-- `spec-writer` → `guard-design`: "considering approach X for the phantom material tint — does that conflict with our visual design pillars?" — design check without orchestrator mediation
-- `spec-writer` responds to `spec-reviewer` and `test-writer` clarifying questions directly
+#### Core pipeline — persistent
 
----
+Spawn once, message across every wave. Accumulate codebase shape, spec decisions, test helper paths, import patterns, and failure history so they never re-read static context.
 
-#### 2. `spec-reviewer` — unified spec reviewer (test-spec + code-spec review)
+| Name | `subagent_type` | Accumulates across waves |
+|------|----------------|--------------------------|
+| `planning-writer-specs-tests` | `planning-writer-specs-tests` | domain shape, prior spec decisions, reviewer flags already cleared |
+| `planning-reviewer-specs-tests` | `planning-reviewer-specs-tests` | what was approved vs dismissed — never re-raises cleared points |
+| `writer-tests` | `writer-tests` | helper functions, app setup patterns, import paths, naming conventions |
+| `reviewer-tests` | `reviewer-tests` | approved test patterns — doesn't re-flag the same idiom in wave 4 that cleared in wave 2 |
+| `planning-writer-specs-code` | `planning-writer-specs-code` | failing test contracts from prior waves, system topology |
+| `planning-reviewer-specs-code` | `planning-reviewer-specs-code` | approved impl patterns — same as above |
+| `writer-code` | `writer-code` | builder API shape, module structure, gating idioms, ordering constraints |
+| `debugger` | `debugger` | full failure history, disproven hypotheses, ECS scheduling gotchas |
 
-**Role**: Reviews both test specs and code specs for every wave. Handles what `planning-reviewer-specs-tests` and `planning-reviewer-specs-code` do in the standard pipeline.
+#### Single persistent runner
 
-**What it accumulates across waves**:
-- Which review findings were accepted vs. rejected (doesn't re-raise dismissed points)
-- Patterns it already approved (doesn't re-flag the same idiom as a finding in Wave 4 that it cleared in Wave 2)
-- Understood codebase patterns (no need to re-read architecture docs each wave)
+One `runner-cargo` teammate handles all cargo execution. It serializes cargo naturally (only one run at a time) and reports results directly back to whoever requested the run — no orchestrator round-trip needed for routine gates. The orchestrator only hears about results when session-state needs updating (gate pass/fail).
 
-**The key win — direct revision loop**:
+| Name | `subagent_type` | Handles |
+|------|----------------|---------|
+| `runner-cargo` | `runner-cargo` | RED gate, GREEN gate, lint runs, scenario runs — all via `SendMessage` requests |
 
-In the standard pipeline, spec revision is 4 round-trips through the orchestrator:
-```
-orchestrator → spec-writer → orchestrator ← spec-writer → orchestrator → spec-reviewer → orchestrator
-```
+#### Verification tier — persistent
 
-With teams, the revision loop is peer-to-peer:
-```
-spec-writer → spec-reviewer  (review request)
-spec-reviewer → spec-writer  (BLOCKING: fix these 3 things)
-spec-writer → spec-reviewer  (revised, re-check)
-spec-reviewer → orchestrator (approved — route to test-writer)
-```
+Spawn once. Used at the commit gate (Standard) and pre-merge gate (Full). Accumulate what was reviewed and approved so they don't re-flag already-cleared patterns in later waves.
 
-The orchestrator only sees the final "approved" notification.
+| Name | `subagent_type` |
+|------|----------------|
+| `reviewer-completeness` | `reviewer-completeness` |
+| `reviewer-correctness` | `reviewer-correctness` |
+| `reviewer-quality` | `reviewer-quality` |
+| `reviewer-bevy-api` | `reviewer-bevy-api` |
+| `reviewer-architecture` | `reviewer-architecture` |
+| `reviewer-performance` | `reviewer-performance` |
+| `reviewer-file-length` | `reviewer-file-length` |
+| `reviewer-scenarios` | `reviewer-scenarios` |
 
-**Peer communication**:
-- `spec-reviewer` → `spec-writer`: revision findings (direct loop)
-- `spec-reviewer` → `test-writer`: "test spec at .claude/specs/wave3-tests.md is approved — write tests for these behaviors: ..."
-- `spec-reviewer` → `implementer`: "code spec at .claude/specs/wave3-code.md is approved — implement what the failing tests require"
-- `spec-reviewer` → `orchestrator`: phase completions and anything requiring a cargo run
+#### On-demand consultants — persistent
 
----
+Spawn once; stay idle. **Any peer can message them directly** before committing to an approach. They never initiate. They accumulate what they've validated so they don't re-check the same decision in wave 5 that was cleared in wave 2. Escalate to the orchestrator only for genuine new decisions requiring human input.
 
-#### 3. `test-writer` — persistent test writer
+| Name | `subagent_type` | Consult when |
+|------|----------------|--------------|
+| `guard-game-design` | `guard-game-design` | approach touches player-facing behavior |
+| `guard-docs` | `guard-docs` | new/changed public types, deleted systems |
+| `guard-security` | `guard-security` | unsafe, asset loading, RON deserialization |
+| `guard-dependencies` | `guard-dependencies` | new crate added or version bumped |
+| `guard-agent-memory` | `guard-agent-memory` | memory drift suspected |
+| `researcher-codebase` | `researcher-codebase` | tracing data flow through unfamiliar domain |
+| `researcher-system-dependencies` | `researcher-system-dependencies` | checking for system ordering conflicts |
+| `researcher-bevy-api` | `researcher-bevy-api` | unfamiliar Bevy 0.18 API |
+| `researcher-impact` | `researcher-impact` | before renaming or changing a signature |
 
-**Role**: Writes failing RED-phase tests for every wave. Does NOT write production code.
+#### Stateless on-demand (no cross-wave accumulation benefit)
 
-**What it accumulates across waves**:
-- Test helper functions already written (import paths, helper signatures — never re-reads them)
-- App setup patterns established in Wave 1 (which plugins, which messages initialized)
-- Which behaviors required non-obvious test approaches (avoids re-discovering)
-- Naming conventions established in early waves
+Spawn fresh each time via background `Agent` calls as needed.
 
-**Peer communication**:
-- `test-writer` receives work from `spec-reviewer` (not orchestrator) when spec is approved
-- `test-writer` → `spec-writer`: "Behavior 7 says 'DashState::Idle after phantom spawn' — does that mean before or after the first FixedUpdate tick?" — spec clarification without going through orchestrator
-- `test-writer` → `orchestrator`: "tests written at path X — please run reviewer-tests and then the RED gate"
-
----
-
-#### 4. `implementer` — persistent production code writer
-
-**Role**: Implements all GREEN-phase production code across every wave. Does NOT run cargo, does NOT write tests, does NOT modify test files.
-
-**What it accumulates across waves**:
-- Builder typestate API shape (reads it once in Wave 1, never again)
-- Location and structure of shared phantom infra (canonical paths, derived once)
-- Gating pattern idioms (`Without<PhantomBreaker>`) — knows it cold after Wave 2
-- System ordering constraints established across earlier waves
-- Which imports are needed in which modules (no re-discovering)
-
-**Peer communication**:
-- `implementer` receives work from `spec-reviewer` when code spec is approved
-- `implementer` → `spec-writer`: "The spec says gate at the query level but the existing system gates inline — which should I follow?" — clarifies ambiguity without orchestrator
-- `implementer` → `debugger`: "GREEN gate FAIL — here's the error and what I changed" — routes failure directly
-- `implementer` → `orchestrator`: "implementation done — please run GREEN gate"
-
----
-
-#### 5. `debugger` — persistent debugging agent
-
-**Role**: Full DEBUG protocol (hypothesis generation, Five Whys, root-cause confirmation). Handles GREEN gate failures and any unexpected behavior mid-wave. Stays idle when GREEN passes immediately.
-
-**What it accumulates across waves**:
-- Full error chains from prior failures (not just the top-line message)
-- Which hypotheses were ruled out (never re-tries a disproven approach)
-- ECS scheduling gotchas discovered (system ordering, query conflict patterns, archetype issues)
-- History of fix attempts and outcomes across the entire item
-
-**Peer communication**:
-- `debugger` → `implementer`: "root cause confirmed: X. Fix: change Y at Z:line" — delivers fix spec directly
-- `debugger` → `spec-writer`: "the failure suggests the spec's assumption about message ordering was wrong — can you check?" — catches spec defects found at GREEN
-- `debugger` → `orchestrator`: "3 attempts, still failing, need human input" — circuit-break escalation
-- `debugger` accumulates across multiple fix cycles in the same wave without any re-briefing
-
----
-
-#### 6. `guard-design` — persistent game design guard
-
-**Role**: Evaluates design-adjacent decisions against the game's identity pillars. Any team member can consult it before committing to an approach that touches player-facing behavior. Currently the standard pipeline routes this only at Full Verification Tier (pre-merge); making it a teammate lets the spec writer catch design drift at the cheapest moment — before specs are written.
-
-**What it accumulates across waves**:
-- The design decisions already validated (no re-checking the same thing)
-- The design implications of the phantom mechanic as it develops across waves
-- Which concerns were raised and how they were resolved
-
-**Peer communication**:
-- Any teammate can message `guard-design` with a quick check: "I'm about to specify X — is that a design problem?"
-- `guard-design` → `spec-writer`: "approach X is fine, approach Y would change the 'perfect bump = skill reward' pillar"
-- `guard-design` → `orchestrator`: anything that rises to a genuine design decision requiring human input
-
----
-
-#### 7. `guard-architecture` — persistent architecture guard
-
-**Role**: Validates plugin boundaries, module structure, message patterns, and cross-domain wiring when consulted. Any team member can ask before committing to a structural approach. This catches architectural drift at the cheapest moment — before specs lock in a pattern that will violate the plugin boundaries or message conventions.
-
-**What it accumulates across waves**:
-- Which architectural patterns have already been approved (no re-validating the same thing in Wave 5 that was cleared in Wave 2)
-- Cross-domain data-flow decisions established in earlier waves (knows the full message topology as it develops)
-- Which concerns were raised and resolved (never re-raises dismissed points)
-
-**Peer communication**:
-- Any teammate can message `guard-architecture` with a structural check: "I'm about to specify X crossing into the Y domain via Z mechanism — is that the right channel?"
-- `guard-architecture` → asker: "fine" OR "flag: [specific architecture rule or plugin boundary this violates] — the correct pattern is [alternative]"
-- `guard-architecture` → `spec-writer`: can proactively flag if a spec it's reviewing encodes a cross-domain violation (e.g., direct component mutation across plugin boundary instead of a message)
-- `guard-architecture` → `orchestrator`: genuine architectural decision-points requiring human judgment (e.g., "the phantom infra placement has two valid homes — which domain owns it?")
-
-**Onboarding reading**: `docs/architecture/` in full, especially `plugins.md`, `messages.md`, and `system-ordering.md`.
+`writer-scenarios`, `researcher-rust-errors`, `researcher-rust-idioms`, `researcher-git`, `researcher-crates`
 
 ---
 
@@ -167,333 +97,154 @@ The orchestrator only sees the final "approved" notification.
 ```
 orchestrator
   │
-  ├─ → spec-writer: "wave N, feature, scope, decisions made"
+  ├─→ planning-writer-specs-tests: "wave N, scope, decisions, spec path"
   │        │
-  │        ↕  (revision loop — no orchestrator)
+  │        ↕ (revision loop, peer-to-peer)
   │        │
-  │   spec-reviewer ──→ test-writer: "spec approved, write tests for..."
-  │        │                │
-  │        │                ↕  (clarifications — no orchestrator)
-  │        │                │
-  │        │           spec-writer
+  │   planning-reviewer-specs-tests ──→ writer-tests: "approved, write tests at spec path"
+  │        │                                 │
+  │        │                                 ↕ (spec clarifications)
+  │        │                       planning-writer-specs-tests
   │        │
-  │   spec-reviewer ──→ implementer: "code spec approved, implement..."
-  │                          │
-  │                          ↕  (spec clarifications — no orchestrator)
-  │                          │
-  │                     spec-writer
-  │                          │
-  │                          ↓ (GREEN gate FAIL)
-  │                       debugger ──→ implementer: "fix spec hint"
+  │   planning-reviewer-specs-tests ──→ orchestrator: "test spec approved, tests written at <path>"
   │
-  ├─ ← test-writer: "tests written, please review + RED gate"
-  ├─ ← implementer: "implementation done, please GREEN gate"
-  ├─ ← debugger: "circuit-break — N attempts, need human input"
-  ├─ ← spec-reviewer: "wave N complete"
+  ├─→ runner-cargo: "run RED gate — tests at <path>"
+  │   runner-cargo ──→ orchestrator: "RED PASS" or "RED FAIL: <output>"
   │
-  └─ runs cargo (runner-tests, runner-linting — always stateless)
+  ├─→ planning-writer-specs-code: "RED passed, failing tests at <path>"
+  │        │
+  │        ↕ (revision loop, peer-to-peer)
+  │        │
+  │   planning-reviewer-specs-code ──→ writer-code: "approved, implement, tests at <path>"
+  │                                         │
+  │                                         ↕ (spec clarifications)
+  │                               planning-writer-specs-code
+  │                                         │
+  │                                         ↓  messages orchestrator: "done, run GREEN gate"
+  │
+  ├─→ runner-cargo: "run GREEN gate"
+  │   runner-cargo ──→ orchestrator: "GREEN PASS" or "GREEN FAIL: <output>"
+  │   (on FAIL) orchestrator ──→ writer-code: "GREEN FAIL, <verbatim output>"
+  │                writer-code ──→ debugger: "fix spec"
+  │                debugger ──→ writer-code: "root cause + fix hint"
+  │                writer-code ──→ orchestrator: "fixed, re-run GREEN gate"
+  │
+  └─ updates session-state after every notification
 
-Any teammate ──→ guard-design: "design check before I commit to approach X"
-guard-design ──→ Any teammate: "fine" or "flag: violates pillar Y"
-
-Any teammate ──→ guard-architecture: "architecture check before I commit to approach X"
-guard-architecture ──→ Any teammate: "fine" or "flag: violates plugin boundary / message pattern Y"
+Any pipeline peer ──→ guard-game-design / guard-docs / researcher-*: "check X before I commit"
+On-demand consultant ──→ asker: "fine" or "flag: [issue]"
+On-demand consultant ──→ orchestrator: only for genuine decisions requiring human input
 ```
 
-The orchestrator's job narrows to: triggering wave starts, running cargo (via stateless runner agents), updating session-state, and handling circuit-break escalations. Everything inside a wave self-organizes.
+The orchestrator's job: wave kickoffs, cargo requests to `runner`, session-state updates, circuit-break escalations. Everything inside a wave self-organizes.
 
 ---
 
 ### How the orchestrator spawns the team
 
-At the start of the phantom-breaker work item, before Wave 1, I run:
+**Step 1 — Create the team first.** This generates `~/.claude/teams/breaker-team/config.json`, which every subsequently spawned agent reads to discover teammates by name.
 
-**Step 1 — Create the team:**
 ```
 TeamCreate({
-  name: "phantom-breaker-team",
+  team_name: "breaker-team",
   description: "Full pipeline team for phantom-breaker refactor, waves 1-7"
 })
 ```
 
-**Step 2 — Spawn all seven teammates in parallel:**
+**Step 2 — Spawn all persistent teammates in parallel** using their actual `subagent_type`. Each prompt tells the agent to read the config file for teammate names and wait for a message before acting.
 
+Core pipeline (8 agents):
 ```
-Agent({
-  name: "spec-writer",
-  team_name: "phantom-breaker-team",
-  description: "Persistent spec writer — test specs and code specs",
-  prompt: """
-You are the persistent spec writer for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now. That is your primary brief.
-Also read .claude/rules/spec-format-tests.md and .claude/rules/spec-format-code.md.
+Agent({ name: "planning-writer-specs-tests",  subagent_type: "planning-writer-specs-tests",  team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json to learn teammate names. You are the persistent test-spec writer. After writing a test spec, message planning-reviewer-specs-tests directly. Wait for your first message before acting." })
 
-Your role: write test specs AND code specs for every wave of this item.
-- Test specs go to .claude/specs/wave<N>-phantom-breaker-tests.md
-- Code specs go to .claude/specs/wave<N>-phantom-breaker-code.md (only after RED gate)
-- Write test specs first; code specs only after the orchestrator confirms RED gate passed
+Agent({ name: "planning-reviewer-specs-tests", subagent_type: "planning-reviewer-specs-tests", team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Review test specs from planning-writer-specs-tests. Run revision loop peer-to-peer. When approved, message writer-tests AND orchestrator." })
 
-After writing a spec, message spec-reviewer directly:
-  SendMessage(to: "spec-reviewer", message: "test spec for wave N ready at .claude/specs/...", summary: "wave N test spec")
+Agent({ name: "writer-tests",          subagent_type: "writer-tests",                  team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Write failing tests when planning-reviewer-specs-tests sends an approved spec. Message orchestrator when done." })
 
-Iterate with spec-reviewer directly when it returns findings — no orchestrator needed.
-When spec-reviewer approves the test spec, notify the orchestrator so it can route to test-writer.
-When spec-reviewer approves the code spec, notify the orchestrator so it can route to implementer.
+Agent({ name: "reviewer-tests",        subagent_type: "reviewer-tests",                team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Review tests when orchestrator sends the test file path. Message orchestrator with findings." })
 
-You may also receive clarifying questions from test-writer and implementer — answer them directly.
-You may message guard-design to check design implications before committing to an approach:
-  SendMessage(to: "guard-design", message: "...", summary: "design check")
+Agent({ name: "planning-writer-specs-code",     subagent_type: "planning-writer-specs-code",    team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Write code specs after RED gate confirmation. Message planning-reviewer-specs-code directly." })
 
-Do NOT run cargo. Accumulate your understanding of the codebase across waves.
-Wait for the orchestrator's first SendMessage before acting.
-"""
-})
+Agent({ name: "planning-reviewer-specs-code",   subagent_type: "planning-reviewer-specs-code",  team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Review code specs from planning-writer-specs-code. When approved, message writer-code AND orchestrator." })
 
-Agent({
-  name: "spec-reviewer",
-  team_name: "phantom-breaker-team",
-  description: "Persistent spec reviewer — test-spec and code-spec review",
-  prompt: """
-You are the persistent spec reviewer for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now.
-Also read .claude/rules/spec-format-tests.md and .claude/rules/spec-format-code.md.
+Agent({ name: "writer-code",          subagent_type: "writer-code",                   team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Implement production code when planning-reviewer-specs-code sends approval. On GREEN FAIL, message debugger with full error. Message orchestrator when done." })
 
-Your role: review test specs and code specs for every wave.
-- Test spec review: check behaviors, concrete values, edge cases, scope — use BLOCKING/IMPORTANT/MINOR
-- Code spec review: cross-check impl plan against the actual failing tests on disk
-
-You receive review requests directly from spec-writer. Run the revision loop peer-to-peer:
-  SendMessage(to: "spec-writer", message: "BLOCKING: ...", summary: "wave N test spec review findings")
-
-When a spec is clean, notify the appropriate next agent AND the orchestrator:
-- Test spec approved → message test-writer AND orchestrator
-- Code spec approved → message implementer AND orchestrator
-
-Do NOT run cargo. Accumulate what you've approved and flagged across waves.
-Wait for spec-writer to message you with a review request.
-"""
-})
-
-Agent({
-  name: "test-writer",
-  team_name: "phantom-breaker-team",
-  description: "Persistent test writer — writer-tests role",
-  prompt: """
-You are the persistent test writer for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now.
-Also read .claude/rules/tdd.md (the RED phase rules).
-
-Your role: write failing tests for every wave. Do NOT write production code. Do NOT run cargo.
-
-You receive work directly from spec-reviewer when a test spec is approved:
-  "test spec for wave N ready at .claude/specs/wave<N>-phantom-breaker-tests.md — write tests"
-
-You may message spec-writer directly to clarify spec intent:
-  SendMessage(to: "spec-writer", message: "Behavior 7 says X — does that mean before or after the first tick?", summary: "clarifying Q")
-
-When tests are written, message the orchestrator:
-  SendMessage(to: "orchestrator", message: "Wave N tests written at <path>. Please run reviewer-tests then the RED gate.", summary: "wave N tests ready")
-
-Accumulate test helpers, app setup patterns, and import paths across waves — never re-read static context.
-Wait for spec-reviewer to message you with an approved spec.
-"""
-})
-
-Agent({
-  name: "implementer",
-  team_name: "phantom-breaker-team",
-  description: "Persistent production code writer — writer-code role",
-  prompt: """
-You are the persistent implementer for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now. That is your brief.
-
-Your role: implement all GREEN-phase production code. Do NOT run cargo. Do NOT modify test files.
-If a test seems wrong, flag it to the orchestrator — do not change it.
-
-You receive work directly from spec-reviewer when a code spec is approved:
-  "code spec for wave N at .claude/specs/wave<N>-phantom-breaker-code.md — failing tests at <path>"
-
-You may message spec-writer to clarify spec ambiguity:
-  SendMessage(to: "spec-writer", message: "...", summary: "spec clarification")
-
-When GREEN gate fails, route the failure to debugger:
-  SendMessage(to: "debugger", message: "GREEN gate FAIL wave N attempt K. Error: [full output]. I changed: [list]. Fix spec from runner: [verbatim]", summary: "GREEN FAIL wave N attempt K")
-
-When implementation is complete:
-  SendMessage(to: "orchestrator", message: "Wave N implementation done. Please run GREEN gate.", summary: "wave N impl done")
-
-Accumulate codebase knowledge across waves. After reading the builder API once, never re-read it.
-Wait for spec-reviewer to message you with an approved code spec.
-"""
-})
-
-Agent({
-  name: "debugger",
-  team_name: "phantom-breaker-team",
-  description: "Persistent debugger — DEBUG protocol, GREEN gate failures",
-  prompt: """
-You are the persistent debugger for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now.
-
-Your role: diagnose failures using the DEBUG protocol (hypothesis generation, ranking, Five Whys,
-root-cause confirmation). You handle GREEN gate failures routed from the implementer.
-Do NOT run cargo. Do NOT write production code yourself — return fix spec hints.
-
-You receive failures directly from implementer. Your response is always a fix spec hint:
-  SendMessage(to: "implementer", message: "Root cause: X. Fix: change Y at file:line. Rationale: Z", summary: "fix spec wave N attempt K")
-
-If you need to understand what the implementer changed, ask directly:
-  SendMessage(to: "implementer", message: "What exactly did you change in the query?", summary: "clarifying Q")
-
-If a spec defect seems to be the cause, flag it:
-  SendMessage(to: "spec-writer", message: "The error suggests the spec's assumption about X was wrong. Check behavior N.", summary: "spec defect flag")
-
-After 3 failed attempts on the same failure, escalate:
-  SendMessage(to: "orchestrator", message: "3 attempts failed. Root cause analysis: [summary]. Needs human input.", summary: "circuit break wave N")
-
-Accumulate your full diagnostic history across waves — never re-try a disproven hypothesis.
-Wait idle between waves where GREEN passes. You only act when implementer routes a failure to you.
-"""
-})
-
-Agent({
-  name: "guard-design",
-  team_name: "phantom-breaker-team",
-  description: "Persistent game design guard — design pillar checks on demand",
-  prompt: """
-You are the persistent game design guard for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now.
-Also read docs/design/ (especially design pillars) and docs/design/terminology/.
-
-Your role: evaluate design-adjacent decisions against the game's identity pillars when consulted.
-Any team member may ask you a question. You answer it and return directly to the asker.
-
-You are NOT in the critical path — you only act when messaged. No proactive outreach.
-
-When consulted:
-- Evaluate the proposed approach against the design pillars
-- Return: "fine" OR "flag: [specific pillar this conflicts with] — consider [alternative]"
-- If a genuine new design decision is required (not a correctness fix), flag to orchestrator
-
-You accumulate understanding of what's been validated and what concerns were raised, so you
-don't re-raise dismissed points in later waves.
-
-Message the orchestrator only for genuine new design decisions requiring human input:
-  SendMessage(to: "orchestrator", message: "Design decision needed: ...", summary: "design decision required")
-
-Wait to be consulted. Do not initiate.
-"""
-})
-
-Agent({
-  name: "guard-architecture",
-  team_name: "phantom-breaker-team",
-  description: "Persistent architecture guard — plugin boundary and message pattern checks on demand",
-  prompt: """
-You are the persistent architecture guard for the phantom-breaker refactor.
-Read docs/todos/detail/phantom-breaker.md in full now.
-Also read docs/architecture/ in full, with special attention to plugins.md, messages.md, and
-any system-ordering doc. These define the rules you enforce.
-
-Your role: validate plugin boundaries, module structure, message patterns, and cross-domain wiring
-when consulted. Any team member may ask you a question. You answer it and return directly to the asker.
-
-You are NOT in the critical path — you only act when messaged. No proactive outreach.
-
-When consulted:
-- Evaluate the proposed approach against the architecture rules (plugin ownership, message-only
-  cross-domain communication, system ordering, component vs resource vs message placement)
-- Return: "fine" OR "flag: [specific rule this violates] — the correct pattern is [alternative]"
-- If a genuine new architectural decision is required (no existing rule covers it), flag to orchestrator
-
-You accumulate understanding of what's been validated and what concerns were raised, so you
-don't re-raise dismissed points in later waves. After seeing the phantom infra placement decision
-in Wave 1, you don't question it again in Wave 4.
-
-Message the orchestrator only for genuine architectural decisions requiring human input:
-  SendMessage(to: "orchestrator", message: "Architectural decision needed: ...", summary: "arch decision required")
-
-Wait to be consulted. Do not initiate.
-"""
-})
+Agent({ name: "debugger",             subagent_type: "debugger",                      team_name: "breaker-team",
+  prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json. Diagnose GREEN failures from writer-code. Return fix spec hints to writer-code. After 3 failed attempts, escalate to orchestrator." })
 ```
 
-After all seven `Agent` calls complete, the team is idle. I trigger the pipeline with a single message to `spec-writer` per wave.
+Single runner:
+```
+Agent({ name: "runner-cargo", subagent_type: "runner-cargo", team_name: "breaker-team",
+  prompt: "Read ~/.claude/teams/breaker-team/config.json. You handle all cargo execution: tests (RED gate, GREEN gate), lint, scenarios. Any teammate may ask you to run a gate. Execute the requested cargo command and message back PASS or FAIL with the full output. Also message orchestrator with the result for session-state." })
+```
+
+Verification tier (8 agents) — same pattern, subagent_type per table above.
+
+On-demand consultants (9 agents) — same pattern, subagent_type per table above, each with:
+```
+prompt: "Read docs/todos/detail/phantom-breaker.md. Read ~/.claude/teams/breaker-team/config.json.
+Answer questions from any teammate. Do not initiate. Escalate to orchestrator only for genuine new decisions."
+```
+
+After all `Agent` calls complete, the team is idle. Trigger Wave 1:
+```
+SendMessage(to: "planning-writer-specs-tests", message: "Wave 1: <description>. Scope: <...>. Decisions: <...>. Write test spec to .claude/specs/wave1-phantom-breaker-tests.md.", summary: "wave 1 start")
+```
 
 ---
 
 ### Wave flow with the team
 
-Here is the per-wave sequence. Bold lines are orchestrator actions; everything else is peer-to-peer.
+**Orchestrator starts wave** (SendMessage to planning-writer-specs-tests with scope + decisions).
 
-**Orchestrator starts wave:**
-```
-SendMessage(to: "spec-writer", message: """
-Wave 3: grade_bump .single_mut() → .iter_mut() migration.
-Scope: system in breaker/systems/bump/system.rs; match incoming BoltImpactBreaker by entity.
-Decisions: each breaker grades against its own messages; BumpPerformed carries breaker entity.
-No cross-domain changes this wave.
-Write the test spec to .claude/specs/wave3-phantom-breaker-tests.md.
-""", summary: "wave 3 start")
-```
+**Peer loop — test spec (no orchestrator):**
+- `planning-writer-specs-tests` writes → messages `planning-reviewer-specs-tests`
+- Revision loop runs peer-to-peer
+- `planning-reviewer-specs-tests` messages `writer-tests` + orchestrator: "approved"
 
-**Peer loop (no orchestrator):**
-- `spec-writer` writes test spec → messages `spec-reviewer`
-- `spec-reviewer` ↔ `spec-writer` revision loop (0–3 rounds, direct)
-- `spec-reviewer` messages `test-writer` + orchestrator: "test spec approved"
+**Orchestrator routes writer-tests output:**
+- Sends test file path to `reviewer-tests` for review
+- Then: `SendMessage(to: "runner-cargo", message: "run RED gate — tests at <path>", summary: "RED gate wave N")`
 
-**Orchestrator runs reviewer-tests (stateless background agent), then RED gate:**
-```
-runner-tests (background, stateless) → RED gate
-```
+**Runner reports back:**
+- PASS: orchestrator messages `planning-writer-specs-code` with failing test paths
+- FAIL (compile): orchestrator messages `writer-tests` with error
 
-**If RED passes, orchestrator confirms to spec-writer:**
-```
-SendMessage(to: "spec-writer", message: "RED gate passed. Failing tests at breaker-game/src/breaker/systems/bump/tests/grade_bump_iter.rs — write code spec.", summary: "RED gate passed wave 3")
-```
+**Peer loop — code spec (no orchestrator):**
+- `planning-writer-specs-code` writes → messages `planning-reviewer-specs-code` → revision loop → approved
+- `planning-reviewer-specs-code` messages `writer-code` + orchestrator
 
-**Peer loop (no orchestrator):**
-- `spec-writer` writes code spec → messages `spec-reviewer`
-- `spec-reviewer` ↔ `spec-writer` revision loop (direct)
-- `spec-reviewer` messages `implementer` + orchestrator: "code spec approved"
-
-**Peer loop — GREEN phase (no orchestrator):**
-- `implementer` reads spec, implements, messages orchestrator: "done, run GREEN gate"
-
-**Orchestrator runs GREEN gate (stateless runner):**
-- If PASS → orchestrator updates session-state, routes to verification tier
-- If FAIL → implementer messages `debugger` directly with full error
-  - `debugger` ↔ `implementer` fix loop (direct, 1-3 rounds)
-  - `implementer` messages orchestrator: "fixed, please re-run GREEN gate"
-  - If circuit-break: `debugger` messages orchestrator for human input
+**GREEN phase:**
+- `writer-code` implements → messages orchestrator: "done, run GREEN gate"
+- `SendMessage(to: "runner-cargo", message: "run GREEN gate", summary: "GREEN gate wave N")`
+- Runner reports: PASS → orchestrator updates session-state, routes to verification tier
+- Runner reports: FAIL → orchestrator forwards to writer-code → writer-code → debugger loop
+- Circuit-break (3 attempts): `debugger` → orchestrator for human input
 
 ---
 
-### What the orchestrator owns (unchanged)
+### What the orchestrator owns
 
 | Orchestrator always does | Team handles |
 |---|---|
-| Start each wave | Spec writing + revision loop |
-| Run cargo (runner-tests, runner-linting — stateless) | Test writing + spec clarifications |
-| Update session-state after each notification | GREEN phase implementation |
-| Standard + Full Verification tiers (stateless agents) | GREEN failure diagnosis + fix |
-| Human judgment: new design decisions, wave scoping | Design-adjacent checks via guard-design |
+| Start each wave (SendMessage to planning-writer-specs-tests) | Spec writing + revision loops |
+| Request cargo runs (SendMessage to runner-cargo) | Test writing + spec clarifications |
+| Update session-state after every notification | GREEN phase implementation |
+| Trigger verification tiers (SendMessage to reviewer-*) | GREEN failure diagnosis + fix |
+| Human judgment: new design decisions, wave scope | Design/arch checks via on-demand consultants |
 | Circuit-break escalation (3 attempts) | In-wave peer communication |
-
-### What still runs as stateless background agents
-
-Runner agents (runner-tests, runner-linting, runner-scenarios) always remain stateless — cargo cannot live inside a team conversation turn. Standard and Full Verification tier reviewers (reviewer-correctness, reviewer-quality, reviewer-architecture, reviewer-bevy-api, reviewer-performance, reviewer-completeness, guard-docs, guard-security, guard-dependencies, guard-agent-memory) also remain stateless — they run at phase boundaries and their check is always a clean slate against the committed code.
-
-### Shared task list
-
-The team shares a task list at `~/.claude/tasks/phantom-breaker-team/`. Use it for wave-level coordination:
-- Orchestrator creates "Wave 3 test spec", spec-writer claims it
-- Spec-writer marks it done, creates "Wave 3 test-spec review"
-- And so on — task list is the wave progress ledger the whole team reads
 
 ### Session-state notes for this trial
 
-Update session-state after each notification from a teammate, exactly as with background agents. The key difference: many columns that normally require orchestrator round-trips (spec revision status, test-writer handoff, implementer briefing) are now peer-to-peer and only surface to session-state at phase completion points (spec approved, RED gate, GREEN gate).
+Update session-state after each notification from a teammate, exactly as with background agents. Many columns that normally require orchestrator round-trips (spec revision status, test-writer handoff, implementer briefing) are now peer-to-peer and only surface to session-state at phase completion points (spec approved, RED gate, GREEN gate). The runner's PASS/FAIL report is the primary trigger for gate-column updates.
 
 ---
 

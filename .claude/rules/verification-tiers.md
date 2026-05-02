@@ -8,8 +8,8 @@ Single source of truth for what agents run at each verification tier. All other 
 
 | Agent | Purpose |
 |-------|---------|
-| **runner-linting** | fmt + clippy across all workspace crates |
-| **runner-tests** | tests across all workspace crates |
+| **runner-cargo** | fmt + clippy across all workspace crates (lint step) |
+| **runner-cargo** | tests across all workspace crates (test step) |
 
 **Question answered**: "Does it compile, pass tests, and lint clean?"
 
@@ -42,7 +42,7 @@ Includes everything in Standard Verification Tier, plus:
 
 | Agent | Purpose |
 |-------|---------|
-| **runner-scenarios** | Automated gameplay testing under chaos input |
+| **runner-cargo** | Automated gameplay testing under chaos input (scenario step) |
 | **guard-security** | Unsafe blocks, deserialization, supply chain risks |
 | **guard-docs** | Documentation drift from code |
 | **guard-game-design** | Mechanic changes against design pillars |
@@ -58,9 +58,9 @@ ALL compiler and clippy ERRORS AND WARNINGS, ALL failing tests, ALL failing scen
 ## Pipeline Summary
 
 ```
-GREEN gate (runner-tests only)
+GREEN gate (runner-cargo — tests only)
     ↓
-Basic Verification Tier (lint + tests)
+Basic Verification Tier (lint + tests, both via runner-cargo)
     ↓ fix failures → Basic Verification Tier again
 /simplify
     ↓ if changes → Basic Verification Tier again
@@ -78,7 +78,7 @@ Merge
 ## Parallelism Rules
 
 - All agents within a tier launch in parallel
-- Cargo commands serialize automatically (only one runner at a time)
+- Cargo commands serialize automatically (only one runner-cargo invocation at a time)
 - Reviewers and guards are read-only — safe to run concurrently with each other
 - After a fix cycle, re-run Basic Verification Tier first (fast), then Standard Verification Tier (if Basic passes)
 - Never skip a tier — Basic before Standard, Standard before Full

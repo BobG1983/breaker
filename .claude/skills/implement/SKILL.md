@@ -118,7 +118,7 @@ Update session-state after each agent notification.
 For each wave:
 1. Launch **writer-tests** (reads spec from `.claude/specs/<wave>-<feature>-tests.md`)
 2. As each completes, launch **reviewer-tests** immediately
-3. After ALL reviewer-tests pass, launch a single **runner-tests** (RED gate)
+3. After ALL reviewer-tests pass, launch a single **runner-cargo** (RED gate)
 
 **RED gate rules** (from `tdd.md`):
 - Tests MUST compile
@@ -153,7 +153,7 @@ Update session-state after each agent notification.
 
 After every code spec is clean:
 1. Launch ALL **writer-codes** in parallel (one per wave, reads spec from `.claude/specs/<wave>-<feature>-code.md`)
-2. After ALL complete, launch a single **runner-tests** (GREEN gate)
+2. After ALL complete, launch a single **runner-cargo** (GREEN gate)
 
 **GREEN gate rules** (from `tdd.md`):
 - ALL tests must pass

@@ -14,7 +14,7 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 |--------|---------------------|
 | Write or modify production code (`.rs`, `.ron`, `.toml` source) | `writer-code` (after the full pipeline) or `/quickfix` |
 | Write or modify tests | `writer-tests` (after test spec is reviewed) or `/quickfix` |
-| Run `cargo` (test / check / clippy / build / scenario / fmt) | `runner-tests` / `runner-linting` / `runner-scenarios` / `runner-release` |
+| Run `cargo` (test / check / clippy / build / scenario / fmt) | `runner-cargo` / `runner-release` |
 | Write a behavioral test spec | `planning-writer-specs-tests` |
 | Write an implementation spec | `planning-writer-specs-code` (only after the RED gate) |
 | Review any spec | `planning-reviewer-specs-tests` / `planning-reviewer-specs-code` |
@@ -22,7 +22,7 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 | Investigate a failure or unexpected behavior | `/investigate` skill (which spawns `debugger` for hypothesis work and `researcher-*` for evidence) |
 | Audit cross-cutting concerns (security, docs, design, deps, agent-memory) | the matching `guard-*` agent |
 | Trace data flow / find references / understand system behavior | `researcher-codebase` / `researcher-impact` / `researcher-system-dependencies` |
-| Decode a Rust compiler error | `researcher-rust-errors` |
+| Decode a Rust compiler error or pick a Rust idiom | `researcher-rust` |
 | Verify a Bevy API for our version | `researcher-bevy-api` |
 
 ### What you DO yourself

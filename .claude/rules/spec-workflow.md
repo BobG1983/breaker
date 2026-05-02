@@ -76,7 +76,7 @@ After every test spec is clean, drive to RED:
 
 1. Launch **writer-tests** per wave (in parallel) — reads its test spec
 2. Launch **reviewer-tests** as each writer-tests completes (in parallel)
-3. Single **runner-tests** RED gate after ALL reviewer-tests pass
+3. Single **runner-cargo** RED gate after ALL reviewer-tests pass
 
 ## Phase 3 — Code Spec
 
@@ -98,7 +98,7 @@ Only AFTER the RED gate passes are code specs written. The failing tests on disk
 After every code spec is clean, drive to GREEN:
 
 1. Launch **writer-code** per wave (in parallel) — reads its impl spec AND the failing tests
-2. Single **runner-tests** GREEN gate after ALL writer-codes complete
+2. Single **runner-cargo** GREEN gate after ALL writer-codes complete
 3. Route any failing tests back to writer-code via fix spec hints (see `.claude/rules/routing-failures.md`)
 4. **Update session-state** after each agent notification
 
@@ -106,9 +106,9 @@ After every code spec is clean, drive to GREEN:
 
 ```
 test spec  →  review test spec (loop)
-            →  writer-tests  →  reviewer-tests  →  RED gate (runner-tests)
+            →  writer-tests  →  reviewer-tests  →  RED gate (runner-cargo)
             →  code spec    →  review code spec (loop)
-            →  writer-code  →  GREEN gate (runner-tests)
+            →  writer-code  →  GREEN gate (runner-cargo)
             →  REFACTOR
 ```
 

@@ -67,7 +67,7 @@ These aliases include `--features hot-reload` to ensure propagation systems and 
 
 These workspace-wide aliases include `--features bevy/dynamic_linking,hot-reload` and cover every workspace member in a single invocation.
 
-**runner-tests** and **runner-linting** should use `cargo all-dtest` and `cargo all-dclippy` instead of running per-crate aliases individually. The per-crate aliases below are still available for targeted runs:
+**runner-cargo** should use `cargo all-dtest` and `cargo all-dclippy` instead of running per-crate aliases individually. The per-crate aliases below are still available for targeted runs:
 - `cargo dtest` + `cargo spatial2dtest` + `cargo physics2dtest` + `cargo defaultstest` + `cargo dstest`
 - `cargo dclippy` + `cargo spatial2dclippy` + `cargo physics2dclippy` + `cargo defaultsclippy` + `cargo dsclippy`
 

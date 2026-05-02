@@ -86,7 +86,7 @@ Create `.claude/state/session-state.md`:
    - Include: concrete values, expected behavior, edge cases from the description
    - Point to reference files in the relevant domain
 2. Launch **reviewer-tests** when writer-tests completes
-3. Launch **runner-tests** (RED gate) when reviewer-tests passes
+3. Launch **runner-cargo** (RED gate) when reviewer-tests passes
 
 **RED gate rules** (from `tdd.md`):
 - Tests MUST compile
@@ -96,7 +96,7 @@ Create `.claude/state/session-state.md`:
 ### Step 4 — GREEN phase
 
 1. Launch **writer-code** with the description + failing test file as context
-2. Launch **runner-tests** (GREEN gate) when writer-code completes
+2. Launch **runner-cargo** (GREEN gate) when writer-code completes
 
 **GREEN gate rules** (from `tdd.md`):
 - ALL tests must pass

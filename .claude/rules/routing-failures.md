@@ -9,22 +9,22 @@ See `.claude/rules/routing-repeated-failures.md` for when to stop retrying and e
 
 When routing failures to writer-code or writer-tests, pass the runner/reviewer agent's hint blocks **verbatim** — do NOT rewrite them. The hint formats are standardized so downstream agents can consume them directly. The main agent triages (decides which hints to act on and which to dismiss) but does not rephrase the hints themselves.
 
-## runner-linting failures
+## runner-cargo lint failures
 
 | Failure type | Route |
 |---|---|
 | Clippy errors | Fix spec hint → **writer-code** (no writer-tests needed) |
-| Format failures | runner-linting auto-formats — no further routing needed |
+| Format failures | runner-cargo auto-formats — no further routing needed |
 
-## runner-tests failures
+## runner-cargo test failures
 
 | Failure type | Route |
 |---|---|
 | Existing test broke | Fix spec hint → **writer-code** (test exists, skip writer-tests) |
-| Build failure (compiler error) | hint → **researcher-rust-errors** → **writer-code** |
+| Build failure (compiler error) | hint → **researcher-rust** → **writer-code** |
 | No test exists for broken behavior | hint → **writer-tests** (regression spec) → **writer-code** |
 
-## runner-scenarios failures
+## runner-cargo scenario failures
 
 | Confidence | Route |
 |---|---|
@@ -91,4 +91,4 @@ reviewer-file-length returns the split plan inline (summary table + refactor spe
 |---|---|
 | Scenarios created, all pass | Done — committed with the feature |
 | Scenarios created, some fail | Investigate — may indicate a real bug (route to writer-tests → writer-code) |
-| Compilation failure | Fix scenario code — may need **researcher-rust-errors** |
+| Compilation failure | Fix scenario code — may need **researcher-rust** |

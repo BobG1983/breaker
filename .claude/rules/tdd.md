@@ -6,10 +6,10 @@
 |-------|--------|-----------|
 | Test spec | planning-writer-specs-tests → planning-reviewer-specs-tests (revision loop) | Test spec must be clean before RED phase begins. |
 | RED | writer-tests → reviewer-tests | Tests MUST fail. NEVER implement production logic. Stubs must compile but do nothing. |
-| RED gate | runner-tests | Tests must compile AND fail. MUST pass before launching the code spec phase. |
+| RED gate | runner-cargo | Tests must compile AND fail. MUST pass before launching the code spec phase. |
 | Code spec | planning-writer-specs-code → planning-reviewer-specs-code (revision loop) | Code spec is written AFTER RED gate; failing tests on disk are the authoritative contract. Must be clean before writer-code runs. |
 | GREEN | writer-code | NEVER modify tests. NEVER add untested features. |
-| GREEN gate | runner-tests | All tests must pass. |
+| GREEN gate | runner-cargo | All tests must pass. |
 | REFACTOR | See `verification-tiers.md` | Complete when Standard Verification Tier is clean and /simplify finds nothing. |
 
 The full sequence: **test spec → review test spec (loop) → writer-tests → reviewer-tests → RED gate → code spec → review code spec (loop) → writer-code → GREEN gate → REFACTOR**.
@@ -29,7 +29,7 @@ When implementing multiple domains, sequence these steps correctly:
 
 1. Launch ALL **writer-tests** in parallel (one per domain, background) — each reads its test spec from `.claude/specs/`
 2. As each writer-tests completes: launch its **reviewer-tests** immediately (background)
-3. After ALL reviewer-tests pass: launch a single **runner-tests** (cargo — serialized)
+3. After ALL reviewer-tests pass: launch a single **runner-cargo** (cargo — serialized)
 4. **Tests must compile.** If they don't → route back to writer-tests with the compiler error
 5. **Tests must fail.** If any pass → the test is wrong or the behavior already exists. Investigate before proceeding.
 6. After the RED gate passes: launch ALL **planning-writer-specs-code** in parallel (one per domain) — they read both the test spec AND the failing tests on disk; the failing tests are the authoritative contract

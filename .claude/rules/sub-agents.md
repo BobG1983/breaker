@@ -22,9 +22,7 @@ Execute cargo commands and report results. Only runners run cargo — see `.clau
 
 | Agent | Purpose | When to use |
 |-------|---------|-------------|
-| **runner-linting** | `cargo fmt` + `cargo all-dclippy` across all workspace crates | Basic Verification Tier — after each writer-code wave, after fixes |
-| **runner-tests** | `cargo all-dtest` across all workspace crates | Basic Verification Tier — RED gate, GREEN gate, after fixes |
-| **runner-scenarios** | `cargo scenario -- --all` automated gameplay testing under chaos input | Full Verification Tier — pre-merge gate |
+| **runner-cargo** | `cargo fmt` + `cargo all-dclippy` + `cargo all-dtest` + `cargo scenario -- --all` | All verification tiers — lint and tests (Basic), scenarios (Full); RED gate, GREEN gate |
 
 ## Reviewer Agents
 
@@ -64,8 +62,7 @@ Used during pre-planning research (see `delegating-to-subagents.md` step 2) and 
 | **researcher-bevy-api** | Verifies Bevy API usage, looks up signatures, checks deprecations | Unfamiliar Bevy 0.18 API or pattern |
 | **researcher-impact** | Finds ALL references to a type/system/message before modifying it | Before renaming, refactoring, or changing signatures |
 | **researcher-codebase** | Traces end-to-end data flow through ECS for a feature | Need to understand current behavior before modifying it |
-| **researcher-rust-idioms** | Evaluates idiomatic Rust patterns for a specific situation | Choosing between idiom alternatives |
-| **researcher-rust-errors** | Translates compiler errors into actionable fix instructions | Build failures that need diagnosis |
+| **researcher-rust** | Decodes compiler/clippy errors AND evaluates idiomatic Rust patterns (pure Rust, not framework APIs) | Build failures needing diagnosis, or choosing between idiom alternatives |
 | **researcher-crates** | Evaluates crate options against project criteria | Choosing a new dependency |
 | **researcher-git** | Analyzes git history for a file, function, or feature area | Modifying code with non-obvious history |
 

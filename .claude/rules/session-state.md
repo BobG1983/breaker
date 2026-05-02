@@ -28,13 +28,13 @@ Every one of these events requires an immediate session-state update:
 | planning-reviewer-specs-tests | Specs table → Test-Spec Review column |
 | writer-tests | Specs table → Writer-Tests column |
 | reviewer-tests | Specs table → Test Review column |
-| runner-tests (RED gate) | Specs table → RED Gate column |
+| runner-cargo (RED gate) | Specs table → RED Gate column |
 | planning-writer-specs-code | Specs table → Code Spec column |
 | planning-reviewer-specs-code | Specs table → Code-Spec Review column |
 | writer-code | Specs table → Writer-Code column |
-| runner-tests (GREEN gate) | Specs table → GREEN column |
-| runner-linting | Verification Results table |
-| runner-tests (verification) | Verification Results table |
+| runner-cargo (GREEN gate) | Specs table → GREEN column |
+| runner-cargo (lint) | Verification Results table |
+| runner-cargo (tests) | Verification Results table |
 | reviewer-completeness | Verification Results table |
 | Any reviewer (Standard tier) | Verification Results table |
 | Any guard (Full tier) | Verification Results table |

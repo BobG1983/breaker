@@ -1,6 +1,6 @@
 ---
 name: reviewer-scenarios
-description: "Use this agent to audit scenario coverage against the full mechanic list. Identifies which gameplay behaviors have no scenario exercising them, checks invariant checker completeness, flags scenarios that test current behavior instead of desired behavior, and evaluates whether scenarios are adversarial enough.\n\nExamples:\n\n- After completing a feature:\n  Assistant: \"Let me use the reviewer-scenarios agent to check scenario coverage for the new effect system.\"\n\n- After a major refactor:\n  Assistant: \"Let me use the reviewer-scenarios agent to verify scenarios still cover all intended behaviors.\"\n\n- When expanding scenario coverage:\n  Assistant: \"Let me use the reviewer-scenarios agent to identify the highest-value gaps before launching writer-scenarios.\"\n\n- Parallel note: Run alongside reviewer-tests, reviewer-correctness, runner-scenarios, and other post-implementation agents — all are independent."
+description: "Use this agent to audit scenario coverage against the full mechanic list. Identifies which gameplay behaviors have no scenario exercising them, checks invariant checker completeness, flags scenarios that test current behavior instead of desired behavior, and evaluates whether scenarios are adversarial enough.\n\nExamples:\n\n- After completing a feature:\n  Assistant: \"Let me use the reviewer-scenarios agent to check scenario coverage for the new effect system.\"\n\n- After a major refactor:\n  Assistant: \"Let me use the reviewer-scenarios agent to verify scenarios still cover all intended behaviors.\"\n\n- When expanding scenario coverage:\n  Assistant: \"Let me use the reviewer-scenarios agent to identify the highest-value gaps before launching writer-scenarios.\"\n\n- Parallel note: Run alongside reviewer-tests, reviewer-correctness, runner-cargo, and other post-implementation agents — all are independent."
 tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: cyan
@@ -103,7 +103,7 @@ For each gap:
 - Compare scenarios against DESIGN DOCS, not just code — if the design says X should happen and no scenario verifies it, that's a HIGH gap
 - Flag scenarios that only test "doesn't crash" without verifying correct behavior
 - Flag missing self-test scenarios for invariants
-- Do NOT run scenarios — that's runner-scenarios' job
+- Do NOT run scenarios — that's runner-cargo's job
 - Do NOT write scenarios — that's writer-scenarios' job
 - Do NOT modify any source files
 - The ONLY files you may write/edit are your own memory files under `.claude/agent-memory/reviewer-scenarios/`

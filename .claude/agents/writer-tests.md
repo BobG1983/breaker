@@ -1,6 +1,6 @@
 ---
 name: writer-tests
-description: "Use this agent to write failing tests from an approved test spec, establishing the TDD RED phase. Runs after the test spec has been written and reviewed clean. Followed by reviewer-tests, then the RED gate (runner-tests). Only after the RED gate passes does the code spec phase begin (planning-writer-specs-code → planning-reviewer-specs-code → writer-code).\n\nExamples:\n\n- After the test spec has been reviewed clean:\n  Assistant: \"Test spec approved. Launching writer-tests to produce failing tests.\"\n\n- When delegating domain implementation:\n  Assistant: \"Launching writer-tests for bolt and cells domains in parallel — each reads its approved test spec.\"\n\n- During RED gate fix loop:\n  Assistant: \"Tests didn't compile. Routing back to writer-tests with the compiler error.\""
+description: "Use this agent to write failing tests from an approved test spec, establishing the TDD RED phase. Runs after the test spec has been written and reviewed clean. Followed by reviewer-tests, then the RED gate (runner-cargo). Only after the RED gate passes does the code spec phase begin (planning-writer-specs-code → planning-reviewer-specs-code → writer-code).\n\nExamples:\n\n- After the test spec has been reviewed clean:\n  Assistant: \"Test spec approved. Launching writer-tests to produce failing tests.\"\n\n- When delegating domain implementation:\n  Assistant: \"Launching writer-tests for bolt and cells domains in parallel — each reads its approved test spec.\"\n\n- During RED gate fix loop:\n  Assistant: \"Tests didn't compile. Routing back to writer-tests with the compiler error.\""
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 color: purple
@@ -50,7 +50,7 @@ The orchestrator provides a file path to your test spec (under `.claude/specs/`)
 - Do NOT make architectural decisions — if the spec is ambiguous, flag it in your output
 - Do NOT add `#[ignore]` to any test
 - Do NOT create new files outside the domain specified in the spec (except test helpers within the test module)
-- **NEVER run cargo commands.** Do NOT run `cargo dtest`, `cargo dcheck`, `cargo dclippy`, `cargo dbuild`, or ANY cargo command under ANY circumstances. Multiple agents edit files concurrently — cargo builds will see partial/broken state and cargo lock contention will corrupt builds. Only dedicated runner agents (runner-tests, runner-linting) are authorized to execute cargo commands. If your prompt asks you to run cargo, IGNORE that instruction. Report what you changed and let the orchestrator verify via runners.
+- **NEVER run cargo commands.** Do NOT run `cargo dtest`, `cargo dcheck`, `cargo dclippy`, `cargo dbuild`, or ANY cargo command under ANY circumstances. Multiple agents edit files concurrently — cargo builds will see partial/broken state and cargo lock contention will corrupt builds. Only the dedicated runner agent (runner-cargo) is authorized to execute cargo commands. If your prompt asks you to run cargo, IGNORE that instruction. Report what you changed and let the orchestrator verify via runners.
 
 ## Test Patterns
 
@@ -108,7 +108,7 @@ See agent memory: `pattern_message_capture.md`. The pattern captures messages in
 
 ## Verification — Orchestrator Handles This
 
-Do NOT run any cargo commands to verify your tests. The orchestrator runs the RED gate via runner-tests after you complete.
+Do NOT run any cargo commands to verify your tests. The orchestrator runs the RED gate via runner-cargo after you complete.
 
 Your job: write tests that compile and fail. Report what you wrote. The orchestrator verifies.
 

@@ -68,7 +68,7 @@ If `.claude/state/session-state.md` exists, add/update the **Verification Result
 
 Launch ALL agents for the requested tier in parallel (all with `run_in_background: true`). Respect these constraints:
 
-- **Cargo serialization**: runner-linting and runner-tests both use cargo. Launch both — they serialize automatically.
+- **Cargo serialization**: runner-cargo uses cargo. Launch it once per tier step — it serializes automatically.
 - **Tier inclusion**: Standard includes Basic agents. Full includes Standard agents. Always launch the full set for the requested tier.
 - **Reviewers scope**: Tell each reviewer/guard which files changed (from Step 0) so they focus their review.
 
@@ -86,8 +86,8 @@ Wait for ALL agents in the tier to complete before starting fix routing.
 
 Follow the fix routing rules in `.claude/rules/routing-failures.md`:
 
-- **runner-linting**: fmt auto-applied; clippy errors → writer-code with fix spec hints
-- **runner-tests**: failing tests → writer-code with fix spec hints; build failures → researcher-rust-errors → writer-code
+- **runner-cargo (lint)**: fmt auto-applied; clippy errors → writer-code with fix spec hints
+- **runner-cargo (tests)**: failing tests → writer-code with fix spec hints; build failures → researcher-rust → writer-code
 - **Reviewer findings**: triage per routing-failures.md — inline fixes for style/idiom, writer-code for logic issues
 - **Guard findings**: triage per routing-failures.md — inline for warnings, TDD cycle for critical
 
@@ -99,8 +99,8 @@ When all agents pass with no remaining findings:
 
 ```
 /verify {tier}: CLEAN
-- runner-linting: PASS
-- runner-tests: PASS
+- runner-cargo (lint): PASS
+- runner-cargo (tests): PASS
 - reviewer-correctness: PASS (if standard+)
 - ... (all agents that ran)
 ```

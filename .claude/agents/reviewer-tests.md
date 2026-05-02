@@ -77,7 +77,7 @@ N/M spec behaviors covered. [0|N] blocking findings.
 - Compare EVERY numbered behavior in the spec against the test file — flag missing ones as BLOCKING
 - Verify concrete values match the spec (not arbitrary/different values)
 - Verify stubs contain NO production logic (the RED/GREEN boundary)
-- Do NOT evaluate whether the tests will pass/fail — that's runner-tests' job
+- Do NOT evaluate whether the tests will pass/fail — that's runner-cargo's job
 - Do NOT suggest implementation details — stay in your lane
 - Do NOT modify test files — report findings only
 - If the spec is ambiguous and the test interpretation is reasonable, flag as MINOR not BLOCKING

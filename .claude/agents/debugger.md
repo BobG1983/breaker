@@ -97,7 +97,7 @@ Update the file in place across iterations — do not create a new file each spa
 [one-line description] (likelihood: high | medium | low)
 
 ### Next Action
-[what the orchestrator should do next: spawn writer-tests with the regression spec hint | run targeted runner-tests against test path X for hypothesis Y | spawn researcher-codebase to trace data flow Z | re-launch debugger with the test result]
+[what the orchestrator should do next: spawn writer-tests with the regression spec hint | run targeted runner-cargo against test path X for hypothesis Y | spawn researcher-codebase to trace data flow Z | re-launch debugger with the test result]
 
 ### Confidence
 [high | medium | low — for the current hypothesis]
@@ -153,7 +153,7 @@ You are not trying to one-shot the investigation. Each spawn is one round of ana
 
 ## Cargo and Code Boundaries
 
-- **NEVER run cargo.** Not `cargo dtest`, not `cargo dcheck`, nothing. Only runner agents run cargo. If you need a test result, recommend the orchestrator spawn `runner-tests` against a specific test path.
+- **NEVER run cargo.** Not `cargo dtest`, not `cargo dcheck`, nothing. Only runner agents run cargo. If you need a test result, recommend the orchestrator spawn `runner-cargo` against a specific test path.
 - **NEVER edit production code or tests.** Your edits are limited to `.claude/state/investigation-state.md` and your own memory files.
 - **NEVER spawn other agents.** This codebase's subagents do not launch subagents. If researcher work is needed, recommend the orchestrator spawn the right researcher.
 

@@ -74,12 +74,12 @@ The debugger returns a **Next Action** in its summary. Execute it, then re-launc
 
 | Debugger says | Orchestrator does |
 |---------------|-------------------|
-| "Spawn `runner-tests` against test path X" | Spawn `runner-tests` for that specific test, capture pass/fail + output |
+| "Spawn `runner-cargo` against test path X" | Spawn `runner-cargo` for that specific test, capture pass/fail + output |
 | "Spawn `researcher-codebase` to trace data flow Z" | Spawn the researcher with the specific question, capture findings |
 | "Spawn `researcher-impact` for type T" | Spawn the researcher, capture reference list |
 | "Spawn `researcher-git` for file F" | Spawn the researcher, capture history |
 | "Spawn `researcher-bevy-api` for API X" | Spawn the researcher, capture verification |
-| "Spawn `researcher-rust-errors` for error E" | Spawn the researcher, capture diagnosis |
+| "Spawn `researcher-rust` for error E or idiom Q" | Spawn the researcher, capture diagnosis |
 | "Re-launch debugger with [evidence]" | Spawn `debugger` again, briefing with the new evidence |
 | "Root cause confirmed; regression spec hint at investigation-state.md" | Exit loop → Step 5 |
 
