@@ -49,7 +49,7 @@ Wait for the team-lead's reply. If it confirms you are `writer-code`, continue w
 | `reviewer-completeness` | "MISSING/PARTIAL: `<item>` (source: `<plan wave>` or `<todo detail>`)" | Treat as a new sub-task: ask `planning-writer-specs-code` for an updated impl spec covering the missing item. Do NOT just bolt on a quick fix. |
 | `planning-writer-specs-code` | "spec clarification: `<answer>` to `<your earlier question>`" | Resume the implementation that was waiting on this answer. |
 | `team-lead` | anything | Authoritative. Obey. |
-| `tdd-guard` | "Wave N kicked off" / "Wave N complete" | Informational. No action — you wait for the spec-reviewer's approval message. |
+| `team-lead` | "Wave N kicked off" / "Wave N complete" | Informational. No action — you wait for the spec-reviewer's approval message. |
 | Anyone else | anything not in this table | ASK before acting: `SendMessage(to:"<sender>", "Clarify: not in my trigger table. Should this go through <X>?")` |
 
 ## When to ask vs when to act

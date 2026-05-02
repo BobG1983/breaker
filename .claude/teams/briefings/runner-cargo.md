@@ -44,8 +44,8 @@ Bare `cargo build` / `cargo check` / `cargo test` / `cargo clippy` are PROHIBITE
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `team-lead` or `writer-tests` | "Run RED gate — tests at `<paths>`" | Execute `cargo all-dtest`. Report PASS (all listed tests fail as expected) or FAIL (compile error / unexpected pass). Reply to sender AND `tdd-guard`. |
-| `team-lead` or `writer-code` | "Run GREEN gate" | Execute `cargo all-dtest`. Report PASS (all tests pass) or FAIL. Reply to sender AND `tdd-guard`. |
+| `team-lead` or `writer-tests` | "Run RED gate — tests at `<paths>`" | Execute `cargo all-dtest`. Report PASS (all listed tests fail as expected) or FAIL (compile error / unexpected pass). Reply to sender AND `team-lead`. |
+| `team-lead` or `writer-code` | "Run GREEN gate" | Execute `cargo all-dtest`. Report PASS (all tests pass) or FAIL. Reply to sender AND `team-lead`. |
 | `team-lead` | "Run lint" | Execute `cargo fmt`, then `cargo all-dclippy`. Report PASS or FAIL with verbatim clippy output. |
 | `team-lead` | "Run scenarios" | Execute `cargo scenario -- --all`. Report PASS / FAIL with violation output. |
 | Any peer | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Report verbatim. |

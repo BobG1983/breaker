@@ -16,20 +16,6 @@
       "subscriptions": []
     },
     {
-      "agentId": "tdd-guard@breaker-team",
-      "name": "tdd-guard",
-      "color": "blue",
-      "joinedAt": 1777680792506,
-      "tmuxPaneId": "in-process",
-      "subscriptions": [],
-      "agentType": "general-purpose",
-      "model": "claude-opus-4-7",
-      "prompt": "You are a persistent member of team \"breaker-team\".\n\n═══════════════════════════════════════════════════════════════════════\nRECOVERY PROTOCOL — read every turn, especially after auto-compaction:\n═══════════════════════════════════════════════════════════════════════\n\n1. If you are NOT absolutely certain of your assigned name on this team:\n   SendMessage(\n     to: \"team-lead\",\n     message: \"Recovery check: please tell me my assigned member name on breaker-team — I lost context.\",\n     summary: \"compaction recovery — name lookup\"\n   )\n   Wait for the team-lead's reply. Do NOTHING else until you have your name.\n\n2. Once you have your name, read your full briefing at:\n   .claude/teams/briefings/tdd-guard.md\n   That file is your source of truth — role, triggers, peers, rules, escalation,\n   memory paths. The conversation summary is NOT your source of truth.\n\n3. Re-read your briefing on any later uncertainty.\n\n4. Until a teammate or the team-lead messages you with a task: WAIT.\n   Do not initiate. Idle is the correct state.\n\n═══════════════════════════════════════════════════════════════════════\n\nYour assigned name on this team is: tdd-guard\nYour briefing is at: .claude/teams/briefings/tdd-guard.md\nRead it now. After reading, go idle and wait for a message.",
-      "planModeRequired": false,
-      "cwd": "/Users/bgardner/dev/brickbreaker-2",
-      "backendType": "in-process"
-    },
-    {
       "agentId": "planning-writer-specs-tests@breaker-team",
       "name": "planning-writer-specs-tests",
       "color": "green",

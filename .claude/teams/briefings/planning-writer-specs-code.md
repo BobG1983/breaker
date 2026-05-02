@@ -48,7 +48,7 @@ Wait for reply.
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `tdd-guard` | "Wave N RED PASS. Failing tests at `<paths>`. Test spec at `<test spec path>`. Write code spec to `<code spec path>`." | Read test spec + EVERY failing test (these are the contract). Write impl spec at the given path. When done → `SendMessage(to:"planning-reviewer-specs-code", "Wave N code spec ready at <path> — failing tests at <paths> — please review")` |
+| `team-lead` | "Wave N RED PASS. Failing tests at `<paths>`. Test spec at `<test spec path>`. Write code spec to `<code spec path>`." | Read test spec + EVERY failing test (these are the contract). Write impl spec at the given path. When done → `SendMessage(to:"planning-reviewer-specs-code", "Wave N code spec ready at <path> — failing tests at <paths> — please review")` |
 | `planning-reviewer-specs-code` | "BLOCKING/IMPORTANT findings: <list>" | Revise the spec. Re-message reviewer when ready. |
 | `writer-code` | "Spec clarification: <question>" | Answer concisely. Revise spec if genuinely ambiguous. |
 | `debugger` | "Possible spec defect: <hypothesis>" | Re-check the relevant test against your spec; if you misread the contract, revise. |
@@ -64,7 +64,7 @@ Wait for reply.
 
 ## Peer relationships
 - You message: `planning-reviewer-specs-code` (review), `writer-code` (clarifications), `team-lead` (genuine new design only)
-- You receive from: `tdd-guard` (kickoff), `planning-reviewer-specs-code` (revisions), `writer-code` (clarifications), `debugger` (spec-defect flags)
+- You receive from: `team-lead` (kickoff), `planning-reviewer-specs-code` (revisions), `writer-code` (clarifications), `debugger` (spec-defect flags)
 
 ## Escalation
 `team-lead` only for genuine NEW design decisions, missing prerequisites, or unresolvable contract conflicts between test spec and tests on disk.

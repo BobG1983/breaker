@@ -35,7 +35,7 @@ Wait for reply. Confirm before reviewing anything.
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `planning-writer-specs-tests` | "Wave N test spec ready at `<path>` — please review" | Read the spec + referenced files. Produce findings. Reply with categorized list. If clean → message `writer-tests` ("Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>") AND `tdd-guard` ("Wave N test spec approved"). If not → reply only to `planning-writer-specs-tests` with findings. |
+| `planning-writer-specs-tests` | "Wave N test spec ready at `<path>` — please review" | Read the spec + referenced files. Produce findings. Reply with categorized list. If clean → message `writer-tests` ("Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>") AND `team-lead` ("Wave N test spec approved"). If not → reply only to `planning-writer-specs-tests` with findings. |
 | `planning-writer-specs-tests` | "revised, please re-review" | Re-review at the same path. Repeat above. |
 | `team-lead` | anything | Authoritative. |
 | Anyone else | unexpected | Ask before acting. |
@@ -48,7 +48,7 @@ Wait for reply. Confirm before reviewing anything.
 - All specs: terminology compliance (Breaker / Bolt / Cell / Node / Bump), `.claude/rules/project-context.md`.
 
 ## Peer relationships
-- You message: `planning-writer-specs-tests` (revisions), `writer-tests` (handoff on approval), `tdd-guard` (milestone)
+- You message: `planning-writer-specs-tests` (revisions), `writer-tests` (handoff on approval), `team-lead` (milestone)
 - You receive from: `planning-writer-specs-tests`
 
 ## Escalation

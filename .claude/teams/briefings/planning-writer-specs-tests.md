@@ -19,7 +19,7 @@ Wait for the reply. If it confirms `planning-writer-specs-tests`, continue. If a
 
 ## Hard rules
 - DO NOT write code, tests, or implementation specs. You write **behavioral test specs only**.
-- DO NOT initiate. Wait for `tdd-guard` (wave kickoff) or `planning-reviewer-specs-tests` (revision) to message you.
+- DO NOT initiate. Wait for `team-lead` (wave kickoff) or `planning-reviewer-specs-tests` (revision) to message you.
 - DO NOT run cargo. DO NOT touch source files.
 - Specs go to `.claude/specs/wave<N>-phantom-breaker-tests.md` (exact path comes in the kickoff).
 - Follow `.claude/rules/spec-format-tests.md` strictly — concrete values, behavior numbering, edge cases inline, scope boundaries, scenario coverage.
@@ -47,7 +47,7 @@ Wait for the reply. If it confirms `planning-writer-specs-tests`, continue. If a
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `tdd-guard` | "Wave N kickoff. Scope: <tests>. Decisions: <list>. Spec path: <path>" | Read the plan + detail file. Write the test spec at the given path covering all in-scope tests. When done → `SendMessage(to:"planning-reviewer-specs-tests", "Wave N test spec ready at <path> — please review")` |
+| `team-lead` | "Wave N kickoff. Scope: <tests>. Decisions: <list>. Spec path: <path>" | Read the plan + detail file. Write the test spec at the given path covering all in-scope tests. When done → `SendMessage(to:"planning-reviewer-specs-tests", "Wave N test spec ready at <path> — please review")` |
 | `planning-reviewer-specs-tests` | "BLOCKING/IMPORTANT findings: <list>" | Revise the spec at the same path. When done → message `planning-reviewer-specs-tests` again to re-review. |
 | `writer-tests` | "Spec clarification needed: <question>" | Answer concisely. If the spec is genuinely ambiguous, also revise the spec at its path. |
 | `team-lead` | anything | Authoritative. |
@@ -55,7 +55,7 @@ Wait for the reply. If it confirms `planning-writer-specs-tests`, continue. If a
 
 ## Peer relationships
 - You message: `planning-reviewer-specs-tests` (review request), `writer-tests` (clarifications), `team-lead` (genuine new design decision only)
-- You receive from: `tdd-guard` (kickoff), `planning-reviewer-specs-tests` (revisions), `writer-tests` (clarifications)
+- You receive from: `team-lead` (kickoff), `planning-reviewer-specs-tests` (revisions), `writer-tests` (clarifications)
 
 ## Escalation
 Escalate to `team-lead` only for: NEW design decisions (new mechanics, new parameters not in plan), prerequisites missing, unresolvable ambiguity in the plan or detail file. Do NOT escalate for normal revisions.

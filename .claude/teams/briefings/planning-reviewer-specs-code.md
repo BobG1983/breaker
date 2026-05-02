@@ -34,7 +34,7 @@ Wait for reply.
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `planning-writer-specs-code` | "Wave N code spec ready at `<path>` — failing tests at `<paths>` — please review" | Read the impl spec, the test spec, AND every failing test. Verify the spec satisfies every failing test. Reply with categorized findings. If clean → `SendMessage(to:"writer-code", "Wave N code spec approved at <path> — failing tests at <paths> — implement")` AND `SendMessage(to:"tdd-guard", "Wave N code spec approved")`. |
+| `planning-writer-specs-code` | "Wave N code spec ready at `<path>` — failing tests at `<paths>` — please review" | Read the impl spec, the test spec, AND every failing test. Verify the spec satisfies every failing test. Reply with categorized findings. If clean → `SendMessage(to:"writer-code", "Wave N code spec approved at <path> — failing tests at <paths> — implement")` AND `SendMessage(to:"team-lead", "Wave N code spec approved")`. |
 | `planning-writer-specs-code` | "revised, please re-review" | Re-review at the same path. |
 | `team-lead` | anything | Authoritative. |
 | Anyone else | unexpected | Ask. |
@@ -47,7 +47,7 @@ Wait for reply.
 - Test Harness Updates section is present and covers every existing test that needs new resource/system insertion.
 
 ## Peer relationships
-- You message: `planning-writer-specs-code` (revisions), `writer-code` (handoff on approval), `tdd-guard` (milestone)
+- You message: `planning-writer-specs-code` (revisions), `writer-code` (handoff on approval), `team-lead` (milestone)
 - You receive from: `planning-writer-specs-code`
 
 ## Escalation
