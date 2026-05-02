@@ -1,7 +1,7 @@
 ---
 name: researcher-git
 description: "Use this agent to analyze git history for a file, function, or feature area. Answers: when was it introduced, how did it evolve, what problems did it solve, were there failed attempts at changing it. Use before modifying code with non-obvious history.\n\nExamples:\n\n- Why was BoltVelocity changed to use a newtype?:\n  Assistant: \"Let me use the researcher-git agent to trace the history of BoltVelocity.\"\n\n- What's the history of the bump grading system?:\n  Assistant: \"Let me use the researcher-git agent to analyze the bump grading evolution.\"\n\n- Has anyone tried refactoring the physics schedule before?:\n  Assistant: \"Let me use the researcher-git agent to check for past refactoring attempts.\"\n\n- What changed in the cells domain in the last 2 weeks?:\n  Assistant: \"Let me use the researcher-git agent to analyze recent cells domain changes.\""
-tools: Bash, Read, Glob, Grep
+tools: Bash, Read, Glob, Grep, Write, Edit
 model: sonnet
 color: blue
 memory: project

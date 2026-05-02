@@ -1,7 +1,7 @@
 ---
 name: researcher-crates
 description: "Use this agent to evaluate crate options for a given need against project-specific criteria: Bevy compatibility, maintenance status, license, binary size, feature set. Use before adding a new dependency.\n\nExamples:\n\n- Which RNG crate works best with Bevy for seeded gameplay?:\n  Assistant: \"Let me use the researcher-crates agent to evaluate RNG crate options.\"\n\n- Evaluate audio crates compatible with Bevy 0.18:\n  Assistant: \"Let me use the researcher-crates agent to evaluate audio crate options.\"\n\n- Is there a better alternative to crate X?:\n  Assistant: \"Let me use the researcher-crates agent to evaluate alternatives to crate X.\"\n\n- We need a particle system crate:\n  Assistant: \"Let me use the researcher-crates agent to evaluate particle system crate options.\""
-tools: Read, Glob, Grep, WebSearch, WebFetch, Bash
+tools: Read, Glob, Grep, WebSearch, WebFetch, Bash, Write, Edit
 model: sonnet
 color: blue
 memory: project

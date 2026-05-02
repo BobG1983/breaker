@@ -1,5 +1,7 @@
 # Delegating to Sub-Agents
 
+> **Team mode**: when an agent team is active (see `.claude/rules/team-mode.md`), the pipeline below still describes WHO does what — but agents are persistent and message each other directly via `SendMessage` instead of being launched per phase. The orchestrator's job in team mode is wave kickoff, milestone tracking, and escalation handling, not phase-by-phase Agent launches.
+
 All implementation goes through the delegated pipeline. The main agent is the orchestrator — it describes features, reviews outputs, and routes failures. The pipeline runs **test specs first, all the way to RED, before code specs are written** — the failing tests on disk are the contract the impl spec is written against.
 
 ```

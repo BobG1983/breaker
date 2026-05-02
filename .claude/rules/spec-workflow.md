@@ -1,5 +1,7 @@
 # Spec Workflow
 
+> **Team mode**: when an agent team is active (see `.claude/rules/team-mode.md`), the spec writers/reviewers are persistent team members. Spec revision loops happen peer-to-peer between the writer and reviewer; on approval, the reviewer triggers the next-stage agent (writer-tests / writer-code) directly. The orchestrator only sees the kickoff and the final approval milestone. Briefing requirements below still apply — spec writers in team mode get the same context they need in standard mode, just delivered via messages instead of launch prompts.
+
 Read this before creating or reviewing specs. The pipeline produces a **test spec → failing tests → code spec → production code** sequence: the test spec is written first, gets reviewed clean, drives writer-tests, passes the RED gate, and only THEN is the impl spec written — with the failing tests on disk as primary input.
 
 See `.claude/rules/spec-format-tests.md` and `.claude/rules/spec-format-code.md` for spec templates and quality rules.

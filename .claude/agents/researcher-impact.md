@@ -1,7 +1,7 @@
 ---
 name: researcher-impact
 description: "Use this agent to find ALL references to a type, system, message, or component across the codebase before modifying it. Categorizes references by relationship type (reads, writes, tests, configures). Use before refactoring, renaming, or changing signatures.\n\nExamples:\n\n- Before renaming BoltVelocity:\n  Assistant: \"Let me use the researcher-impact agent to find all references to BoltVelocity before renaming it.\"\n\n- Before changing the CellHit message fields:\n  Assistant: \"Let me use the researcher-impact agent to find all producers and consumers of CellHit.\"\n\n- Before removing a component:\n  Assistant: \"Let me use the researcher-impact agent to verify nothing depends on this component.\"\n\n- Before modifying a system's behavior:\n  Assistant: \"Let me use the researcher-impact agent to check what tests and scenarios exercise this system.\""
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: blue
 ---

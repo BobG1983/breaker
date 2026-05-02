@@ -1,7 +1,7 @@
 ---
 name: researcher-rust
 description: "Use this agent for Rust-specific research that does NOT belong to a framework: (1) decoding compiler/clippy errors and warnings into actionable fix instructions, and (2) selecting idiomatic Rust patterns before implementation (iterator chains vs loops, error handling, type-state, builder, enum dispatch vs trait objects, etc.). For framework APIs (Bevy, etc.) use researcher-bevy-api instead.\n\nExamples:\n\n- User: \"I'm getting a borrow checker error I don't understand\"\n  Assistant: \"Let me use the researcher-rust agent to decode this compiler error and produce fix suggestions.\"\n\n- After running cargo and seeing errors:\n  Assistant: \"The build produced errors. Let me use the researcher-rust agent to decode them and determine fixes.\"\n\n- When choosing between enum dispatch and trait objects:\n  Assistant: \"Let me use the researcher-rust agent to evaluate which pattern fits this use case.\"\n\n- When designing a complex type-state machine:\n  Assistant: \"Let me use the researcher-rust agent to research the idiomatic type-state pattern.\"\n\n- When designing error types for a new domain:\n  Assistant: \"Let me use the researcher-rust agent to research error handling patterns for this context.\""
-tools: Bash, Glob, Grep, Read, WebFetch, WebSearch, ToolSearch
+tools: Bash, Glob, Grep, Read, WebFetch, WebSearch, ToolSearch, Write, Edit
 model: sonnet
 color: blue
 memory: project

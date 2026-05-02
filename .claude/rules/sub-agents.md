@@ -1,5 +1,7 @@
 # Sub-Agents
 
+> **Team mode**: when a team is active (see `.claude/rules/team-mode.md`), most of these agents are spawned ONCE as persistent members rather than per-phase. The role descriptions below still apply unchanged — only the lifecycle differs.
+
 Every sub-agent, what it does, and when to use it. Agent definitions live in `.claude/agents/`.
 
 ## Pipeline Agents

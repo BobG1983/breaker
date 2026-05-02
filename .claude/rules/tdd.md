@@ -1,5 +1,7 @@
 # TDD: RED → GREEN → REFACTOR
 
+> **Team mode**: when an agent team is active (see `.claude/rules/team-mode.md`), the TDD cycle is identical but phase transitions happen peer-to-peer between persistent team members instead of one-shot launches by the orchestrator. Hard rules below apply unchanged.
+
 ## The Cycle
 
 | Phase | Agents | Hard rule |

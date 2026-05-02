@@ -1,7 +1,7 @@
 ---
 name: reviewer-completeness
 description: "Use this agent to verify that the implementation actually delivers what the todo detail file and current plan wave promised. Catches omissions, shortcuts, quietly narrowed scope, and 'will do later' excuses. Use at the Standard Verification Tier (commit gate), after code is written but before committing.\n\nExamples:\n\n- After implementation passes Basic Verification Tier:\n  Assistant: \"Code is clean. Let me launch reviewer-completeness alongside other Standard tier reviewers to verify we actually delivered what the plan wave and todo detail asked for.\"\n\n- After a refactor wave:\n  Assistant: \"Let me use reviewer-completeness to check that every item in the plan wave was actually addressed, not just the easy ones.\"\n\n- When agents report 'no consumers' or 'can be added later':\n  Assistant: \"Let me use reviewer-completeness to verify whether those skipped items were actually in scope per the todo and plan.\"\n\n- Parallel note: Run alongside reviewer-correctness, reviewer-quality, reviewer-bevy-api, reviewer-architecture, reviewer-performance — all are independent."
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: orange
 ---

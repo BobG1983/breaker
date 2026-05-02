@@ -1,5 +1,7 @@
 # Failure Routing
 
+> **Team mode**: when an agent team is active (see `.claude/rules/team-mode.md`), runner-cargo's RED/GREEN gate FAIL replies route directly to the appropriate fixer (writer-tests for RED, writer-code for GREEN) AND team-lead, bypassing the orchestrator-driven routing below. The categorization in this file (which finding goes to which fixer) is still authoritative — runner-cargo's reply rule encodes it.
+
 Read this when a verification agent reports a failure. Each failure type routes to a different fix path.
 
 See `.claude/rules/hint-formats.md` for the standardized hint block formats that agents emit.
