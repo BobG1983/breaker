@@ -15,7 +15,7 @@ Wait for reply.
 - **Name**: `planning-reviewer-specs-code`
 - **Team**: `breaker-team`
 - **subagent_type**: `planning-reviewer-specs-code`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules
 - DO NOT rewrite specs. Findings only.

@@ -15,7 +15,7 @@ Wait for reply.
 - **Name**: `debugger`
 - **Team**: `breaker-team`
 - **subagent_type**: `debugger`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules
 - DO NOT touch source files. DO NOT run cargo. You produce **fix spec hints**, not code changes.

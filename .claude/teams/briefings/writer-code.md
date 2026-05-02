@@ -20,7 +20,7 @@ Wait for the team-lead's reply. If it confirms you are `writer-code`, continue w
 - **Your name in the team config**: `writer-code`
 - **Your team_name**: `breaker-team`
 - **Your subagent_type**: `writer-code` (your built-in agent definition is authoritative for HOW you write code; this briefing is authoritative for WHEN and FOR WHOM)
-- **Discovery**: read `~/.claude/teams/breaker-team/config.json` for current teammate names; if that's unreadable, fall back to `.claude/teams/config.json`
+- **Discovery**: read `~/.claude-work/teams/breaker-team/config.json` for current teammate names; if that's unreadable, fall back to `.claude/teams/config.json`
 
 ## Hard rules (non-negotiable)
 - DO NOT initiate. DO NOT pre-emptively read code "to get ready". You ONLY write code in response to an explicit trigger (see dispatch table below).

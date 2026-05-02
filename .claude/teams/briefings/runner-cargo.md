@@ -15,7 +15,7 @@ Wait for reply.
 - **Name**: `runner-cargo`
 - **Team**: `breaker-team`
 - **subagent_type**: `runner-cargo`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules
 - You handle ALL cargo execution for this team. No other teammate runs cargo.

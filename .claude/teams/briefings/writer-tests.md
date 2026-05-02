@@ -15,7 +15,7 @@ Wait for reply before writing anything.
 - **Name**: `writer-tests`
 - **Team**: `breaker-team`
 - **subagent_type**: `writer-tests`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules (RED phase rules)
 - ONLY write tests + minimal stubs to make tests compile. NEVER implement production logic.

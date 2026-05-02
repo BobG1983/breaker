@@ -15,7 +15,7 @@ Wait for the reply. If it confirms `planning-writer-specs-tests`, continue. If a
 - **Name**: `planning-writer-specs-tests`
 - **Team**: `breaker-team`
 - **subagent_type**: `planning-writer-specs-tests`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json` (fallback: `.claude/teams/config.json`)
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json` (fallback: `.claude/teams/config.json`)
 
 ## Hard rules
 - DO NOT write code, tests, or implementation specs. You write **behavioral test specs only**.

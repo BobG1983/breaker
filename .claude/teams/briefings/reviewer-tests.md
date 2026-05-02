@@ -15,7 +15,7 @@ Wait for reply.
 - **Name**: `reviewer-tests`
 - **Team**: `breaker-team`
 - **subagent_type**: `reviewer-tests`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules
 - Review the FILES `writer-tests` produced against the test spec. You do NOT review the spec itself (that's `planning-reviewer-specs-tests`).

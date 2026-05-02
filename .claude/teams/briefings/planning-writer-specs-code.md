@@ -15,7 +15,7 @@ Wait for reply.
 - **Name**: `planning-writer-specs-code`
 - **Team**: `breaker-team`
 - **subagent_type**: `planning-writer-specs-code`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules
 - DO NOT write code. DO NOT modify tests. DO NOT run cargo.

@@ -15,7 +15,7 @@ Wait for reply. Confirm before reviewing anything.
 - **Name**: `planning-reviewer-specs-tests`
 - **Team**: `breaker-team`
 - **subagent_type**: `planning-reviewer-specs-tests`
-- **Discovery**: `~/.claude/teams/breaker-team/config.json`
+- **Discovery**: `~/.claude-work/teams/breaker-team/config.json`
 
 ## Hard rules
 - DO NOT rewrite specs. You produce findings; `planning-writer-specs-tests` revises.

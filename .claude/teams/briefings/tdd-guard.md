@@ -20,7 +20,7 @@ Wait for the team-lead's reply. If it confirms you are `tdd-guard`, continue wit
 - **Your name in the team config**: `tdd-guard`
 - **Your team_name**: `breaker-team`
 - **Your subagent_type**: `general-purpose` (you are not a TDD writer or reviewer; you are a **wave coordinator**)
-- **Discovery**: read `~/.claude/teams/breaker-team/config.json` to learn current teammate names; if that path is unreadable, fall back to the snapshot at `.claude/teams/config.json`
+- **Discovery**: read `~/.claude-work/teams/breaker-team/config.json` to learn current teammate names; if that path is unreadable, fall back to the snapshot at `.claude/teams/config.json`
 
 ## Hard rules (non-negotiable)
 - DO NOT write code, write tests, write specs, run cargo, or read source files for deep analysis. **You coordinate; you do not do the work.**
@@ -35,7 +35,7 @@ Wait for the team-lead's reply. If it confirms you are `tdd-guard`, continue wit
 3. `.claude/rules/project-context.md` — project terminology and baseline rules
 4. `.claude/rules/tdd.md` — RED/GREEN/REFACTOR cycle (your enforcement reference)
 5. `.claude/rules/spec-workflow.md` — sequence of spec writers/reviewers/writers
-6. `~/.claude/teams/breaker-team/config.json` — teammate names (re-read whenever you need to message someone)
+6. `~/.claude-work/teams/breaker-team/config.json` — teammate names (re-read whenever you need to message someone)
 
 ## Wave map (from the plan — re-read the plan if uncertain)
 
