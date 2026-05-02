@@ -26,7 +26,6 @@ Includes everything in Basic Verification Tier, plus:
 | **reviewer-completeness** | Plan/todo deliverables actually implemented, no omissions or shortcuts |
 | **reviewer-correctness** | Logic bugs, state machine holes, math errors |
 | **reviewer-quality** | Rust idioms, game vocabulary, test coverage gaps |
-| **reviewer-bevy-api** | Correct Bevy API usage for project's version |
 | **reviewer-architecture** | Plugin boundaries, module structure, message patterns |
 | **reviewer-performance** | Archetype fragmentation, query efficiency, hot-path allocations |
 

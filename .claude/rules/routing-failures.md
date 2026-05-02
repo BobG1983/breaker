@@ -49,12 +49,11 @@ When routing failures to writer-code or writer-tests, pass the runner/reviewer a
 | SCOPE_NARROWED | Orchestrator reviews — if legitimately in scope, treat as MISSING. If descoped by user, add decision revision to session-state |
 | DIVERGED | Orchestrator reviews — if undocumented, either revert to plan or add decision revision to session-state with user approval |
 
-## reviewer-quality and reviewer-bevy-api findings
+## reviewer-quality findings
 
 | Finding type | Route |
 |---|---|
-| Style/idiom issue (reviewer-quality) | Main agent fixes inline — low risk, no test needed |
-| Deprecated API (reviewer-bevy-api) | Main agent fixes inline — follow stated replacement pattern |
+| Style/idiom issue | Main agent fixes inline — low risk, no test needed |
 | Logic-adjacent issue (wrong query filter, etc.) | Treat as correctness issue — write regression spec if testable |
 
 ## guard-security findings

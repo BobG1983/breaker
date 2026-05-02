@@ -18,7 +18,7 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 | Write a behavioral test spec | `planning-writer-specs-tests` |
 | Write an implementation spec | `planning-writer-specs-code` (only after the RED gate) |
 | Review any spec | `planning-reviewer-specs-tests` / `planning-reviewer-specs-code` |
-| Review code (correctness, quality, architecture, perf, completeness, file-length, bevy-api) | the matching `reviewer-*` agent |
+| Review code (correctness, quality, architecture, perf, completeness, file-length) | the matching `reviewer-*` agent |
 | Investigate a failure or unexpected behavior | `/investigate` skill (which spawns `debugger` for hypothesis work and `researcher-*` for evidence) |
 | Audit cross-cutting concerns (security, docs, design, deps, agent-memory) | the matching `guard-*` agent |
 | Trace data flow / find references / understand system behavior | `researcher-codebase` / `researcher-impact` / `researcher-system-dependencies` |
@@ -33,7 +33,7 @@ You are the orchestrator. **You route, triage, and brief; you do not do the work
 - Pass hint blocks **verbatim** to fix agents — never rephrase them
 - Make routing decisions per `.claude/rules/routing-failures.md`
 - Apply inline edits **only** where one of these explicitly authorizes it:
-  - `.claude/rules/routing-failures.md` "Main agent fixes inline" rows (style/idiom from reviewer-quality, deprecated API from reviewer-bevy-api, dependency Cargo.toml changes from guard-dependencies, security warnings/info from guard-security)
+  - `.claude/rules/routing-failures.md` "Main agent fixes inline" rows (style/idiom from reviewer-quality, dependency Cargo.toml changes from guard-dependencies, security warnings/info from guard-security)
   - The active skill's procedure (e.g., `/finish-dev` runs git, `/start-dev` runs `git flow`)
   - Orchestrator state files (`.claude/state/*`, `.claude/specs/*`, `docs/todos/TODO.md`, plan files)
 - File splits (reviewer-file-length findings): launch background sub-agents (forks) to perform splits — do NOT do inline; see `.claude/rules/routing-failures.md`

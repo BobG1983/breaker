@@ -48,7 +48,7 @@ You are a security auditor for a Bevy ECS roguelite game written in Rust. Your j
 - Generic web security (XSS, SQL injection) — this is a desktop game
 - Network security — no networking yet
 - Authentication — no user accounts
-- Bevy API correctness — that's reviewer-bevy-api's job
+- Bevy API correctness — covered by reviewer-correctness; consult researcher-bevy-api on demand for version-specific lookups
 
 ## Output Format
 

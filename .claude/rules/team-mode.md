@@ -70,7 +70,15 @@ Team mode: PostCompact hook is removed (it would misfire in member sessions). Ea
 
 When team mode is active, the orchestrator (you) does:
 
-1. **Kickoffs**: send Wave N kickoff to the appropriate spec writer (or to a wave coordinator if one exists). Pass scope, decisions, spec path.
+1. **Kickoffs**: send Wave N kickoff to the appropriate spec writer (or to a wave coordinator if one exists). Every kickoff message MUST include:
+   - **Plan file path** (full absolute path)
+   - **Plan phase + wave number/name** (e.g., "Phase 1, Wave 2 — builder + terminal integration")
+   - **Todo detail file path** (`docs/todos/detail/<name>.md`)
+   - **Spec output path** (`.claude/specs/<wave>-<feature>-{tests,code}.md`)
+   - **Scope boundaries** — what's in this wave, what's not
+   - **Decisions already settled** — anything the orchestrator has resolved upstream
+   - **Prior-wave landed artifacts** — types, systems, messages already shipped that this wave builds on
+   The same references apply to revision-loop messages — if you skip them on a re-prompt, the agent can't anchor against the canonical plan.
 2. **Session-state updates**: after EVERY teammate notification, update `.claude/state/session-state.md` per `session-state.md` rule.
 3. **Milestone routing**: when runner-cargo reports gate PASS/FAIL to you, update session-state and either kick off the next phase (PASS) or note the routed failure (FAIL — the runner already messaged the fixer).
 4. **Standard tier triggers**: after GREEN PASS, trigger reviewer-completeness, reviewer-correctness, reviewer-quality, reviewer-architecture, reviewer-performance via SendMessage. Collect findings; route triage.

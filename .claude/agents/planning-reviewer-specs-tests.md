@@ -1,7 +1,7 @@
 ---
 name: planning-reviewer-specs-tests
 description: "Use this agent to pressure-test a behavioral test spec before it reaches writer-tests. Checks for missing behaviors, incorrect values, scope problems, and ambiguities. Use after planning-writer-specs-tests produces a spec, in parallel with planning-reviewer-specs-code. Does NOT review game design — guard-game-design handles that.\n\nExamples:\n\n- After test spec is written:\n  Assistant: \"Test spec produced. Let me launch planning-reviewer-specs-tests to pressure-test it.\"\n\n- During revision loop:\n  Assistant: \"Spec revised. Re-launching planning-reviewer-specs-tests to verify fixes.\"\n\n- Cross-domain feature:\n  Assistant: \"Let me use planning-reviewer-specs-tests to verify the test spec covers the interaction correctly.\""
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: green
 ---

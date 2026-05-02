@@ -62,7 +62,6 @@ Spawn once. Used at the commit gate (Standard) and pre-merge gate (Full). Accumu
 | `reviewer-completeness` | `reviewer-completeness` |
 | `reviewer-correctness` | `reviewer-correctness` |
 | `reviewer-quality` | `reviewer-quality` |
-| `reviewer-bevy-api` | `reviewer-bevy-api` |
 | `reviewer-architecture` | `reviewer-architecture` |
 | `reviewer-performance` | `reviewer-performance` |
 | `reviewer-file-length` | `reviewer-file-length` |

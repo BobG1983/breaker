@@ -35,7 +35,6 @@ Read-only code review. Safe to run concurrently with each other and with runners
 | **reviewer-completeness** | Verifies implementation delivers what the todo detail and plan wave promised | Standard Verification Tier (commit gate) — parallel with other reviewers |
 | **reviewer-correctness** | Logic bugs, state machine holes, math errors | Standard Verification Tier |
 | **reviewer-quality** | Rust idioms, game vocabulary, test coverage gaps | Standard Verification Tier |
-| **reviewer-bevy-api** | Correct Bevy API usage for project's version | Standard Verification Tier |
 | **reviewer-architecture** | Plugin boundaries, module structure, message patterns | Standard Verification Tier |
 | **reviewer-performance** | Archetype fragmentation, query efficiency, hot-path allocations | Standard Verification Tier |
 | **reviewer-file-length** | Finds oversized files; orchestrator launches sub-agents (background forks) to perform splits in current branch before merge (never via todo, /implement, or /quickfix); Basic Verification Tier after | Full Verification Tier |

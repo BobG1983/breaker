@@ -1,7 +1,7 @@
 ---
 name: planning-reviewer-specs-code
 description: "Use this agent to pressure-test an implementation spec before it reaches writer-code. Cross-checks the impl plan against the actual failing tests on disk (the contract), as well as the test spec, Bevy feasibility, schedule placement, and patterns. Use after planning-writer-specs-code produces a spec.\n\nExamples:\n\n- After implementation spec is written:\n  Assistant: \"Impl spec produced. Let me launch planning-reviewer-specs-code to pressure-test it against the failing tests at src/foo/tests/bar.rs.\"\n\n- During revision loop:\n  Assistant: \"Spec revised. Re-launching planning-reviewer-specs-code to verify fixes.\"\n\n- Cross-domain feature:\n  Assistant: \"Let me use planning-reviewer-specs-code to verify feasibility and that the impl plan satisfies every failing test.\""
-tools: Read, Glob, Grep
+tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 color: green
 ---
