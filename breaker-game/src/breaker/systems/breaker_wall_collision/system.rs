@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::resources::CollisionQuadtree;
 
 use crate::{
-    breaker::queries::BreakerSizeData,
+    breaker::{filters::RealBreakerFilter, queries::BreakerSizeData},
     effect_v3::{effects::SizeBoostConfig, stacking::EffectStack},
     prelude::*,
 };
@@ -26,7 +26,7 @@ type WallLookup<'w, 's> = Query<'w, 's, (&'static Position2D, &'static Aabb2D), 
 /// edge-case overlaps for effect trigger chains.
 pub(crate) fn breaker_wall_collision(
     quadtree: Res<CollisionQuadtree>,
-    breaker_query: Query<BreakerSizeData, With<Breaker>>,
+    breaker_query: Query<BreakerSizeData, RealBreakerFilter>,
     wall_lookup: WallLookup,
     mut writer: MessageWriter<BreakerImpactWall>,
 ) {

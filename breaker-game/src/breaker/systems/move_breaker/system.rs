@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::{components::DashState, queries::BreakerMovementData},
+    breaker::{components::DashState, filters::RealBreakerFilter, queries::BreakerMovementData},
     effect_v3::{effects::*, stacking::EffectStack},
     input::resources::GameAction,
     prelude::*,
@@ -19,7 +19,7 @@ pub(crate) fn move_breaker(
     actions: Res<InputActions>,
     playfield: Res<PlayfieldConfig>,
     time: Res<Time<Fixed>>,
-    mut query: Query<BreakerMovementData, With<Breaker>>,
+    mut query: Query<BreakerMovementData, RealBreakerFilter>,
 ) {
     let dt = time.delta_secs();
 

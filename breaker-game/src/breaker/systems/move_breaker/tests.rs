@@ -5,7 +5,11 @@ use rantzsoft_spatial2d::components::MaxSpeed;
 use super::system::*;
 use crate::{
     breaker::{
-        components::{BaseWidth, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing},
+        builder::core::types::BreakerPhantomParams,
+        components::{
+            BaseWidth, BreakerAcceleration, BreakerDeceleration, DashState, DecelEasing,
+            PhantomBreaker,
+        },
         definition::BreakerDefinition,
         test_utils::default_breaker_definition,
     },
@@ -377,5 +381,147 @@ fn move_breaker_reads_active_size_boosts_for_playfield_clamping() {
         "with ActiveSizeBoosts([2.0]) effective half_w=120.0, Position2D.x {:.3} should be clamped to {:.3}",
         pos.0.x,
         expected_max_x
+    );
+}
+
+// ── Wave 3 Behavior 1: MoveLeft input drives the real breaker but NOT the phantom ──
+
+#[test]
+fn move_breaker_input_moves_real_only() {
+    let def = default_breaker_definition();
+    let mut app = integration_app();
+
+    let real = {
+        let world = app.world_mut();
+        let e = Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut world.commands());
+        world.flush();
+        e
+    };
+    let phantom = {
+        let world = app.world_mut();
+        let e = Breaker::builder()
+            .definition(&def)
+            .phantom(BreakerPhantomParams {
+                lifespan:          2.5,
+                phantom_color_rgb: [0.4, 0.8, 1.0],
+                flicker_frequency: 4.0,
+                flicker_min_alpha: 0.3,
+            })
+            .headless()
+            .extra()
+            .spawn(&mut world.commands());
+        world.flush();
+        e
+    };
+
+    assert!(
+        app.world().get::<PhantomBreaker>(phantom).is_some(),
+        "phantom entity must have PhantomBreaker marker"
+    );
+
+    let phantom_pos_before = app.world().get::<Position2D>(phantom).unwrap().0;
+
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::MoveLeft);
+    tick(&mut app);
+
+    let real_vel = app.world().get::<Velocity2D>(real).unwrap();
+    assert!(
+        real_vel.0.x < -0.1,
+        "real breaker should have accelerated leftward (vx < -0.1), got {}",
+        real_vel.0.x
+    );
+
+    let phantom_vel = app.world().get::<Velocity2D>(phantom).unwrap();
+    assert!(
+        phantom_vel.0.x.abs() < f32::EPSILON,
+        "phantom velocity must remain zero when move_breaker has Without<PhantomBreaker> filter, got {}",
+        phantom_vel.0.x
+    );
+
+    let phantom_pos_after = app.world().get::<Position2D>(phantom).unwrap().0;
+    assert!(
+        (phantom_pos_after.x - phantom_pos_before.x).abs() < f32::EPSILON,
+        "phantom position must be unchanged after tick (no clamp path ran on phantom), \
+         before={}, after={}",
+        phantom_pos_before.x,
+        phantom_pos_after.x
+    );
+}
+
+// ── Wave 3 Behavior 2: MoveRight input drives the real breaker but NOT the phantom ──
+
+#[test]
+fn move_breaker_input_moves_real_only_right() {
+    let def = default_breaker_definition();
+    let mut app = integration_app();
+
+    let real = {
+        let world = app.world_mut();
+        let e = Breaker::builder()
+            .definition(&def)
+            .headless()
+            .primary()
+            .spawn(&mut world.commands());
+        world.flush();
+        e
+    };
+    let phantom = {
+        let world = app.world_mut();
+        let e = Breaker::builder()
+            .definition(&def)
+            .phantom(BreakerPhantomParams {
+                lifespan:          2.5,
+                phantom_color_rgb: [0.4, 0.8, 1.0],
+                flicker_frequency: 4.0,
+                flicker_min_alpha: 0.3,
+            })
+            .headless()
+            .extra()
+            .spawn(&mut world.commands());
+        world.flush();
+        e
+    };
+
+    assert!(
+        app.world().get::<PhantomBreaker>(phantom).is_some(),
+        "phantom entity must have PhantomBreaker marker"
+    );
+
+    let phantom_pos_before = app.world().get::<Position2D>(phantom).unwrap().0;
+
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::MoveRight);
+    tick(&mut app);
+
+    let real_vel = app.world().get::<Velocity2D>(real).unwrap();
+    assert!(
+        real_vel.0.x > 0.1,
+        "real breaker should have accelerated rightward (vx > 0.1), got {}",
+        real_vel.0.x
+    );
+
+    let phantom_vel = app.world().get::<Velocity2D>(phantom).unwrap();
+    assert!(
+        phantom_vel.0.x.abs() < f32::EPSILON,
+        "phantom velocity must remain zero when move_breaker has Without<PhantomBreaker> filter, got {}",
+        phantom_vel.0.x
+    );
+
+    let phantom_pos_after = app.world().get::<Position2D>(phantom).unwrap().0;
+    assert!(
+        (phantom_pos_after.x - phantom_pos_before.x).abs() < f32::EPSILON,
+        "phantom position must be unchanged after tick (no clamp path ran on phantom), \
+         before={}, after={}",
+        phantom_pos_before.x,
+        phantom_pos_after.x
     );
 }

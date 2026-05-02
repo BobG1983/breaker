@@ -13,6 +13,7 @@ use crate::{
             DashSpeedMultiplier, DashState, DashStateTimer, DashTilt, DashTiltEase, DecelEasing,
             SettleDuration, SettleTiltEase,
         },
+        filters::RealBreakerFilter,
         queries::BreakerDashData,
     },
     effect_v3::{
@@ -68,7 +69,7 @@ pub(crate) fn update_breaker_state(
     actions: Res<InputActions>,
     time: Res<Time<Fixed>>,
     playfield: Res<PlayfieldConfig>,
-    mut query: Query<BreakerDashData, With<Breaker>>,
+    mut query: Query<BreakerDashData, RealBreakerFilter>,
 ) {
     let dt = time.delta_secs();
 

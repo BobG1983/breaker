@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     breaker::{
-        components::{DashState, DashStateTimer, SettleDuration},
+        components::{DashState, DashStateTimer, PhantomBreaker, SettleDuration},
+        filters::RealBreakerFilter,
         messages::{BumpGrade, BumpWhiffed, NoBump},
         queries::{BreakerBumpGradingData, BreakerBumpTimingData},
         resources::ForceBumpGrade,
@@ -198,10 +199,14 @@ pub(crate) fn grade_bump(
 /// and the breaker is dashing, transitions directly to Settling.
 pub fn perfect_bump_dash_cancel(
     mut reader: MessageReader<BumpPerformed>,
-    mut query: Query<(&mut DashState, &mut DashStateTimer, &SettleDuration), With<Breaker>>,
+    mut query: Query<(&mut DashState, &mut DashStateTimer, &SettleDuration), RealBreakerFilter>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
 ) {
     for performed in reader.read() {
         if performed.grade != BumpGrade::Perfect {
+            continue;
+        }
+        if phantom_query.contains(performed.breaker) {
             continue;
         }
 

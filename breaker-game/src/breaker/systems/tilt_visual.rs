@@ -3,14 +3,14 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Rotation2D;
 
-use crate::{breaker::components::BreakerTilt, prelude::*};
+use crate::breaker::{components::BreakerTilt, filters::RealBreakerFilter};
 
 /// Copies [`BreakerTilt::angle`] into the breaker's `Rotation2D` each frame.
 ///
 /// Sign convention: `BreakerTilt` positive = tilted right (clockwise in
 /// screen space), which maps to negative rotation in Bevy's CCW-positive
 /// coordinate system.
-pub fn animate_tilt_visual(mut query: Query<(&BreakerTilt, &mut Rotation2D), With<Breaker>>) {
+pub fn animate_tilt_visual(mut query: Query<(&BreakerTilt, &mut Rotation2D), RealBreakerFilter>) {
     for (tilt, mut rotation) in &mut query {
         rotation.0 = Rot2::radians(-tilt.angle);
     }
@@ -21,6 +21,7 @@ mod tests {
     use rantzsoft_spatial2d::components::Rotation2D;
 
     use super::*;
+    use crate::prelude::*;
 
     /// Runs `animate_tilt_visual` with the given tilt angle and returns the
     /// resulting `Rotation2D` in radians.

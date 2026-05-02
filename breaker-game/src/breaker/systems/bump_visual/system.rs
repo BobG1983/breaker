@@ -3,7 +3,10 @@
 use bevy::{math::curve::Curve, prelude::*};
 
 use crate::{
-    breaker::{components::*, filters::BumpTriggerFilter},
+    breaker::{
+        components::*,
+        filters::{BumpTriggerFilter, RealBreakerFilter},
+    },
     input::resources::GameAction,
     prelude::*,
 };
@@ -45,7 +48,7 @@ pub fn animate_bump_visual(
             &BreakerBaseY,
             &BumpFeedback,
         ),
-        With<Breaker>,
+        RealBreakerFilter,
     >,
 ) {
     let dt = time.delta_secs();
