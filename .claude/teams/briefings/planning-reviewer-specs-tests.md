@@ -35,10 +35,23 @@ Wait for reply. Confirm before reviewing anything.
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `planning-writer-specs-tests` | "Wave N test spec ready at `<path>` — please review" | Read the spec + referenced files. Produce findings. Reply with categorized list. If clean → message `writer-tests` ("Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>") AND `team-lead` ("Wave N test spec approved"). If not → reply only to `planning-writer-specs-tests` with findings. |
+| `planning-writer-specs-tests` | "Wave N test spec ready at `<path>` — please review" | Read the spec + referenced files. Produce findings. **If NOT clean**: reply ONLY to the asker (`planning-writer-specs-tests`) with categorized findings. Do not message anyone else. **If clean**: send THREE messages (see section below — DO NOT reply approval back to `planning-writer-specs-tests`). |
 | `planning-writer-specs-tests` | "revised, please re-review" | Re-review at the same path. Repeat above. |
 | `team-lead` | anything | Authoritative. |
 | Anyone else | unexpected | Ask before acting. |
+
+## Approval handoff — STRICT routing (read carefully)
+
+When a test spec is clean, send **exactly these three messages**, in this order:
+
+1. `SendMessage(to: "writer-tests", summary: "Wave N test spec approved", message: "Wave N test spec approved at .claude/specs/<path> — write the failing tests for these behaviors: <one-line summary of each behavior>. Spec location is final; do not request revisions to it without messaging me first.")`
+   — `writer-tests` is the **test-FILE writer** (writes `.rs` files under `breaker-game/src/...`). It is **NOT** `planning-writer-specs-tests` (the spec writer who just asked you to review). They are two different agents. Read the team config at `~/.claude-work/teams/breaker-team/config.json` if you need to confirm the names.
+
+2. `SendMessage(to: "team-lead", summary: "Wave N test spec approved", message: "Wave N test spec at .claude/specs/<path> approved. writer-tests has been triggered.")`
+
+3. (No third message to anyone else. The spec writer `planning-writer-specs-tests` does NOT need an approval message — its work is done; it idles when you stop replying to it.)
+
+**DO NOT** send the approval to `planning-writer-specs-tests` — that bounces the work backward. The spec writer's contribution ends when you stop sending revisions.
 
 ## Key quality checks for this feature
 - Tests #8/#9 (grade_bump): must exercise `.iter_mut()` with multiple breakers (real + phantom both present in the same world).

@@ -34,10 +34,21 @@ Wait for reply.
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `planning-writer-specs-code` | "Wave N code spec ready at `<path>` — failing tests at `<paths>` — please review" | Read the impl spec, the test spec, AND every failing test. Verify the spec satisfies every failing test. Reply with categorized findings. If clean → `SendMessage(to:"writer-code", "Wave N code spec approved at <path> — failing tests at <paths> — implement")` AND `SendMessage(to:"team-lead", "Wave N code spec approved")`. |
+| `planning-writer-specs-code` | "Wave N code spec ready at `<path>` — failing tests at `<paths>` — please review" | Read the impl spec, the test spec, AND every failing test. **If NOT clean**: reply ONLY to the asker (`planning-writer-specs-code`) with categorized findings. **If clean**: send the two approval messages below — DO NOT reply approval back to `planning-writer-specs-code`. |
 | `planning-writer-specs-code` | "revised, please re-review" | Re-review at the same path. |
 | `team-lead` | anything | Authoritative. |
 | Anyone else | unexpected | Ask. |
+
+## Approval handoff — STRICT routing (read carefully)
+
+When a code spec is clean, send **exactly these two messages**:
+
+1. `SendMessage(to: "writer-code", summary: "Wave N code spec approved", message: "Wave N code spec approved at .claude/specs/<path> — failing tests at <paths> — implement.")`
+   — `writer-code` is the **production-code writer** (writes `.rs` files under `breaker-game/src/...`). It is **NOT** `planning-writer-specs-code` (the spec writer who just asked you to review). Two different agents.
+
+2. `SendMessage(to: "team-lead", summary: "Wave N code spec approved", message: "Wave N code spec approved at .claude/specs/<path>. writer-code has been triggered with failing tests at <paths>.")`
+
+**DO NOT** send the approval to `planning-writer-specs-code` — that bounces the work backward. The spec writer's contribution ends when you stop sending revisions.
 
 ## Key checks for this feature
 - Wave 1B `grade_bump` spec must show `.iter_mut()` with `BoltImpactBreaker` matched by `msg.breaker == entity` — not by index, not by `.single_mut()`.

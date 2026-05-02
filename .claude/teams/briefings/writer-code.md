@@ -42,15 +42,25 @@ Wait for the team-lead's reply. If it confirms you are `writer-code`, continue w
 
 | From | Message shape | Action |
 |---|---|---|
-| `planning-reviewer-specs-code` | "Wave N code spec approved at `<path>` — failing tests at `<paths>` — implement" | Read the impl spec AND every failing test (the tests are the contract). Implement the minimal production code to make all listed tests pass. When done → `SendMessage(to:"team-lead", "Wave N implementation done — please run GREEN gate")` |
+| `planning-reviewer-specs-code` OR `team-lead` | "Wave N code spec approved at `<path>` — failing tests at `<paths>` — implement" | Read the impl spec AND every failing test (the tests are the contract). Implement the minimal production code to make all listed tests pass. **When done, send TWO messages** (see Completion handoff below). |
 | `runner-cargo` (forwarded by `team-lead`) | "GREEN FAIL Wave N: `<verbatim output>`" | Do NOT guess. Forward to debugger: `SendMessage(to:"debugger", "GREEN FAIL Wave N attempt K. Error (verbatim): <output>. Files I changed: <list>. <verbatim fix-spec hint if provided>")` |
 | `debugger` | "Root cause: \<X\>. Fix: change \<Y\> at \<file:line\>. Rationale: \<Z\>" | Apply the hint **minimally**. Do not redesign. When done → `SendMessage(to:"team-lead", "Wave N fix attempt K applied — please re-run GREEN gate")`. Increment your attempt counter for this failure. |
 | `reviewer-correctness` / `reviewer-quality` / `reviewer-architecture` / `reviewer-performance` | "revision: `<finding>`" | Apply minimally. If the revision conflicts with a passing test, message `planning-writer-specs-code` to triage before changing — do not break the test. |
 | `reviewer-completeness` | "MISSING/PARTIAL: `<item>` (source: `<plan wave>` or `<todo detail>`)" | Treat as a new sub-task: ask `planning-writer-specs-code` for an updated impl spec covering the missing item. Do NOT just bolt on a quick fix. |
 | `planning-writer-specs-code` | "spec clarification: `<answer>` to `<your earlier question>`" | Resume the implementation that was waiting on this answer. |
-| `team-lead` | anything | Authoritative. Obey. |
 | `team-lead` | "Wave N kicked off" / "Wave N complete" | Informational. No action — you wait for the spec-reviewer's approval message. |
+| `team-lead` | anything else | Authoritative. Obey. |
 | Anyone else | anything not in this table | ASK before acting: `SendMessage(to:"<sender>", "Clarify: not in my trigger table. Should this go through <X>?")` |
+
+## Completion handoff — STRICT routing
+
+When you finish implementing a wave, send **exactly these two messages**:
+
+1. `SendMessage(to: "runner-cargo", summary: "Wave N GREEN gate", message: "Wave N implementation complete. Please run GREEN gate via cargo all-dtest. Reply with PASS/FAIL and verbatim output to me AND to team-lead.")` — peer trigger, no orchestrator hop.
+
+2. `SendMessage(to: "team-lead", summary: "Wave N impl done", message: "Wave N implementation complete at <files>. runner-cargo triggered for GREEN gate. Awaiting their result.")` — milestone.
+
+When runner-cargo replies with FAIL, follow the dispatch table row for `runner-cargo` (forward to debugger). When PASS, idle — team-lead handles next-tier verification.
 
 ## When to ask vs when to act
 - **Ask** `planning-writer-specs-code` when: the impl spec is ambiguous, conflicts with a failing test, or two reviewer revisions contradict each other.

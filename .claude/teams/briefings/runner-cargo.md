@@ -44,12 +44,19 @@ Bare `cargo build` / `cargo check` / `cargo test` / `cargo clippy` are PROHIBITE
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `team-lead` or `writer-tests` | "Run RED gate — tests at `<paths>`" | Execute `cargo all-dtest`. Report PASS (all listed tests fail as expected) or FAIL (compile error / unexpected pass). Reply to sender AND `team-lead`. |
-| `team-lead` or `writer-code` | "Run GREEN gate" | Execute `cargo all-dtest`. Report PASS (all tests pass) or FAIL. Reply to sender AND `team-lead`. |
-| `team-lead` | "Run lint" | Execute `cargo fmt`, then `cargo all-dclippy`. Report PASS or FAIL with verbatim clippy output. |
+| Any peer (e.g. `reviewer-tests`, `team-lead`) | "Run RED gate — tests at `<paths>`" | Execute `cargo all-dtest`. **PASS** = all listed tests FAIL as expected. **FAIL** = either tests passed (defect) or compile error. Reply per Universal reply rule below. |
+| Any peer (e.g. `writer-code`, `team-lead`) | "Run GREEN gate" | Execute `cargo all-dtest`. **PASS** = all tests pass. **FAIL** = any failure. Reply per Universal reply rule. |
+| `team-lead` | "Run lint" | Execute `cargo fmt`, then `cargo all-dclippy`. Report PASS / FAIL with verbatim clippy output. |
 | `team-lead` | "Run scenarios" | Execute `cargo scenario -- --all`. Report PASS / FAIL with violation output. |
-| Any peer | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Report verbatim. |
+| Any peer | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Reply per Universal reply rule. |
 | Anyone | unexpected | Ask before acting. |
+
+## Universal reply rule
+
+After any cargo run, reply to **BOTH** the sender AND `team-lead`:
+- The sender needs the result to drive their next peer step (e.g., GREEN FAIL → writer-code routes to debugger; RED FAIL compile error → writer-tests fixes).
+- `team-lead` needs the result for session-state updates and pipeline tier transitions.
+If the sender IS `team-lead`, one reply suffices (no double-message).
 
 ## Output format
 For each run, reply with:

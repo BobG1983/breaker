@@ -35,12 +35,22 @@ Wait for reply before writing anything.
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| `planning-reviewer-specs-tests` | "Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>" | Read the spec at `<path>` and referenced files. Write failing tests at the spec's stated location. When done → `SendMessage(to:"team-lead", "Wave N tests written at <file paths>. Please launch reviewer-tests then RED gate.")` |
-| `reviewer-tests` | "Test revision: <hint>" | Apply the revision minimally. Keep tests failing (don't add production logic). When done → `SendMessage(to:"reviewer-tests", "Wave N tests revised at <paths>")`. |
+| `planning-reviewer-specs-tests` OR `team-lead` | "Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>" | Read the spec at `<path>` and referenced files. Write failing tests at the spec's stated location. **When done, send TWO messages** (see Completion handoff below). |
+| `reviewer-tests` | "Test revision: <hint>" | Apply the revision minimally. Keep tests failing (don't add production logic). When done → `SendMessage(to:"reviewer-tests", "Wave N tests revised at <paths>")` (re-trigger their re-review). |
 | `runner-cargo` (forwarded by `team-lead`) | "RED gate compile FAIL: <output>" | Tests must compile. Fix compilation only — do not change assertions. May consult `researcher-rust` for unfamiliar errors. When done → notify `team-lead`. |
 | `planning-writer-specs-tests` | "spec clarification: <answer>" | Resume writing tests with the answer. |
-| `team-lead` | anything | Authoritative. |
+| `team-lead` | anything (other than approval/clarification handled above) | Authoritative. |
 | Anyone else | unexpected | Ask before acting. |
+
+## Completion handoff — STRICT routing
+
+When you finish writing failing tests for a wave, send **exactly these two messages**:
+
+1. `SendMessage(to: "reviewer-tests", summary: "Wave N tests ready", message: "Wave N tests written at <file paths> — please review against spec at .claude/specs/wave<N>-phantom-breaker-tests.md.")` — peer trigger, no orchestrator hop.
+
+2. `SendMessage(to: "team-lead", summary: "Wave N tests written", message: "Wave N tests written at <paths>. reviewer-tests triggered. Awaiting their findings, then RED gate.")` — milestone.
+
+Do NOT ask team-lead to launch reviewer-tests for you — you trigger them directly.
 
 ## When to ask
 - Ask `planning-writer-specs-tests` if the spec is ambiguous BEFORE writing.
