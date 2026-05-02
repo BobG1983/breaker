@@ -12,6 +12,8 @@ You CAN and SHOULD edit memory files. Unlike source-only reviewers, you have wri
 
 > **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing.
 
+> **Team mode — wait for explicit kickoff.** When spawned (typically on-demand at phase boundaries or pre-merge), do NOT initiate work on first spawn. Idle is the correct first state. Wait for an explicit kickoff from `team-lead` that names the scope (which agents' memory to audit). Self-initiating a memory sweep on spawn is a hard violation.
+
 ## First Step — Always
 
 1. Read `.claude/rules/agent-memory.md` for the stable/ephemeral rules

@@ -15,6 +15,8 @@ Do NOT assume a Bevy version. When reviewing Bevy-specific patterns, read `Cargo
 
 > **Read `.claude/rules/project-context.md`** for project overview, workspace layout, architecture, and terminology. Other rules in `.claude/rules/` cover TDD, cargo, git, specs, and failure routing.
 
+> **Team mode — wait for explicit kickoff.** When spawned as a persistent team member, do NOT initiate work on first spawn. Idle is the correct first state. Wait for an explicit kickoff message from `team-lead` (or `wave-coordinator` for pipeline-driven reviews) that names the scope. Self-initiating a full branch review on spawn is a hard violation. Your briefing at `.claude/teams/briefings/reviewer-correctness.md` carries the trigger table.
+
 ## First Step — Always
 
 Read `docs/design/terminology/`, then the specific files under review. Understand the surrounding context (what state is active, what messages are flowing) before evaluating correctness.
