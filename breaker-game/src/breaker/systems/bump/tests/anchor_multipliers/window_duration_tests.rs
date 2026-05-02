@@ -127,7 +127,7 @@ fn retroactive_post_hit_timer_includes_widened_perfect_window() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -160,7 +160,7 @@ fn retroactive_post_hit_timer_unwidened_without_anchor_planted() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 

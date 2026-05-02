@@ -143,7 +143,7 @@ fn unplant_before_retroactive_press_still_uses_widened_window() {
     // Step 1: Bolt hits while planted -- grade_bump sets post_hit_timer to widened value
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     app.insert_resource(TestInputActive(false));
     tick(&mut app);
@@ -188,27 +188,30 @@ fn bolt_hit_after_unplanting_uses_unwidened_timer() {
     // Same 11-frame delay grades as Late.
     let mut app = combined_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        // NO AnchorPlanted -- bolt hits after un-planting
-        AnchorActive {
-            bump_force_multiplier:     2.0,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        BumpState::default(),
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            // NO AnchorPlanted -- bolt hits after un-planting
+            AnchorActive {
+                bump_force_multiplier:     2.0,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            BumpState::default(),
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     // Bolt hits with no AnchorPlanted -- post_hit_timer = 0.30 (un-widened)
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     app.insert_resource(TestInputActive(false));
     tick(&mut app);

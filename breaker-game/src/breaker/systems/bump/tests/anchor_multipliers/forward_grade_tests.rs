@@ -23,30 +23,33 @@ fn forward_grade_uses_widened_perfect_window_when_planted() {
     // Effective perfect window = 0.15 * 2.0 = 0.30. Since 0.25 <= 0.30, grade is Perfect.
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        AnchorPlanted,
-        AnchorActive {
-            bump_force_multiplier:     2.0,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        BumpState {
-            active: true,
-            timer: 0.25,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            AnchorPlanted,
+            AnchorActive {
+                bump_force_multiplier:     2.0,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            BumpState {
+                active: true,
+                timer: 0.25,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -65,30 +68,33 @@ fn forward_grade_without_anchor_planted_does_not_widen() {
     // because raw perfect window is 0.15 and 0.25 > 0.15.
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        // NO AnchorPlanted
-        AnchorActive {
-            bump_force_multiplier:     2.0,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        BumpState {
-            active: true,
-            timer: 0.25,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            // NO AnchorPlanted
+            AnchorActive {
+                bump_force_multiplier:     2.0,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            BumpState {
+                active: true,
+                timer: 0.25,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -109,30 +115,33 @@ fn forward_grade_at_widened_boundary_is_perfect() {
     // Boundary is inclusive, so grade is Perfect.
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        AnchorPlanted,
-        AnchorActive {
-            bump_force_multiplier:     1.5,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        BumpState {
-            active: true,
-            timer: 0.30,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            AnchorPlanted,
+            AnchorActive {
+                bump_force_multiplier:     1.5,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            BumpState {
+                active: true,
+                timer: 0.30,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -150,30 +159,33 @@ fn forward_grade_just_above_widened_boundary_is_early() {
     // Edge case: timer 0.301 is just above the widened boundary 0.30. Grade is Early.
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        AnchorPlanted,
-        AnchorActive {
-            bump_force_multiplier:     1.5,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        BumpState {
-            active: true,
-            timer: 0.301,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            AnchorPlanted,
+            AnchorActive {
+                bump_force_multiplier:     1.5,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            BumpState {
+                active: true,
+                timer: 0.301,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -217,7 +229,7 @@ fn grade_bump_sets_widened_post_hit_timer_when_planted() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -257,7 +269,7 @@ fn grade_bump_sets_unwidened_post_hit_timer_without_anchor_planted() {
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -277,30 +289,33 @@ fn anchor_active_without_planted_does_not_widen_forward_grade() {
     // AnchorActive present, AnchorPlanted absent. Timer 0.20 > raw perfect 0.15. Grade: Early.
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        AnchorActive {
-            bump_force_multiplier:     2.0,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        // NO AnchorPlanted
-        BumpState {
-            active: true,
-            timer: 0.20,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            AnchorActive {
+                bump_force_multiplier:     2.0,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            // NO AnchorPlanted
+            BumpState {
+                active: true,
+                timer: 0.20,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -318,29 +333,32 @@ fn anchor_active_without_planted_within_raw_window_is_perfect() {
     // Edge case: timer 0.10 <= raw perfect 0.15. Grade: Perfect (normal behavior confirmed).
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        AnchorActive {
-            bump_force_multiplier:     2.0,
-            perfect_window_multiplier: 2.0,
-            plant_delay:               0.3,
-        },
-        BumpState {
-            active: true,
-            timer: 0.10,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            AnchorActive {
+                bump_force_multiplier:     2.0,
+                perfect_window_multiplier: 2.0,
+                plant_delay:               0.3,
+            },
+            BumpState {
+                active: true,
+                timer: 0.10,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 
@@ -360,24 +378,27 @@ fn no_anchor_components_unchanged_default_behavior() {
     // Neither AnchorActive nor AnchorPlanted. Timer 0.10 <= raw perfect 0.15. Grade: Perfect.
     let mut app = grade_bump_test_app();
 
-    app.world_mut().spawn((
-        Breaker,
-        BumpState {
-            active: true,
-            timer: 0.10,
-            ..Default::default()
-        },
-        BumpPerfectWindow(0.15),
-        BumpEarlyWindow(0.15),
-        BumpLateWindow(0.15),
-        BumpPerfectCooldown(0.0),
-        BumpWeakCooldown(0.15),
-        SettleDuration(0.25),
-    ));
+    let entity = app
+        .world_mut()
+        .spawn((
+            Breaker,
+            BumpState {
+                active: true,
+                timer: 0.10,
+                ..Default::default()
+            },
+            BumpPerfectWindow(0.15),
+            BumpEarlyWindow(0.15),
+            BumpLateWindow(0.15),
+            BumpPerfectCooldown(0.0),
+            BumpWeakCooldown(0.15),
+            SettleDuration(0.25),
+        ))
+        .id();
 
     app.insert_resource(TestHitMessage(Some(BoltImpactBreaker {
         bolt:    Entity::PLACEHOLDER,
-        breaker: Entity::PLACEHOLDER,
+        breaker: entity,
     })));
     tick(&mut app);
 

@@ -8,6 +8,7 @@ pub mod collision_layers;
 pub mod color;
 pub mod components;
 pub mod draw_layer;
+pub mod phantom;
 pub(crate) mod physics;
 pub mod playfield;
 pub mod resources;
@@ -20,6 +21,7 @@ pub use collision_layers::{BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, SALVO_LAYER, W
 pub use color::color_from_rgb;
 pub use components::{BaseHeight, BaseWidth, NodeScalingFactor};
 pub use draw_layer::GameDrawLayer;
+pub use phantom::{Lifespan, PhantomFlicker};
 pub use playfield::{PlayfieldConfig, PlayfieldDefaults};
 pub use resources::RunSeed;
 pub use rng::GameRng;

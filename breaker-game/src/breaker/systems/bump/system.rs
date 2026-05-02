@@ -156,42 +156,39 @@ pub(crate) fn grade_bump(
     force_grade: Option<Res<ForceBumpGrade>>,
 ) {
     let forced = force_grade.as_ref().and_then(|fg| fg.0);
-    let Ok((breaker_entity, mut data)) = bump_query.single_mut() else {
-        return;
-    };
+    let hits: Vec<BoltImpactBreaker> = hit_reader.read().cloned().collect();
 
-    let effective_pw = effective_perfect_window(
-        data.perfect_window.0,
-        data.anchor_planted,
-        data.anchor_active,
-    );
+    for (entity, mut data) in &mut bump_query {
+        let effective_pw = effective_perfect_window(
+            data.perfect_window.0,
+            data.anchor_planted,
+            data.anchor_active,
+        );
 
-    for hit in hit_reader.read() {
-        if data.bump.active {
-            // Forward path: grade based on timer position, with optional override
-            let natural_grade = forward_grade(data.bump.timer, effective_pw);
-            let grade = forced.unwrap_or(natural_grade);
-            writer.write(BumpPerformed {
-                grade,
-                bolt: Some(hit.bolt),
-                breaker: breaker_entity,
-            });
-            data.bump.active = false;
-            data.bump.cooldown =
-                cooldown_for_grade(grade, data.perfect_cooldown.0, data.weak_cooldown.0);
-        } else {
-            // No active bump — open retroactive window for update_bump
-            data.bump.post_hit_timer = effective_pw + data.late_window.0;
-            data.bump.last_hit_bolt = Some(hit.bolt);
+        for hit in hits.iter().filter(|h| h.breaker == entity) {
+            if data.bump.active {
+                let natural_grade = forward_grade(data.bump.timer, effective_pw);
+                let grade = forced.unwrap_or(natural_grade);
+                writer.write(BumpPerformed {
+                    grade,
+                    bolt: Some(hit.bolt),
+                    breaker: entity,
+                });
+                data.bump.active = false;
+                data.bump.cooldown =
+                    cooldown_for_grade(grade, data.perfect_cooldown.0, data.weak_cooldown.0);
+            } else {
+                data.bump.post_hit_timer = effective_pw + data.late_window.0;
+                data.bump.last_hit_bolt = Some(hit.bolt);
+            }
         }
-    }
 
-    // Forward window expired without a hit — whiff
-    if data.bump.active && data.bump.timer <= 0.0 {
-        data.bump.active = false;
-        data.bump.timer = 0.0;
-        whiff_writer.write(BumpWhiffed);
-        data.bump.cooldown = data.weak_cooldown.0;
+        if data.bump.active && data.bump.timer <= 0.0 {
+            data.bump.active = false;
+            data.bump.timer = 0.0;
+            whiff_writer.write(BumpWhiffed);
+            data.bump.cooldown = data.weak_cooldown.0;
+        }
     }
 }
 

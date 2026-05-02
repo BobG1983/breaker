@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    fx::systems::{animate_fade_out, animate_punch_scale, tick_effect_flash},
+    fx::systems::{animate_fade_out, animate_punch_scale, tick_effect_flash, tick_phantom_flicker},
     prelude::*,
 };
 
@@ -17,7 +17,12 @@ impl Plugin for FxPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            (animate_fade_out, animate_punch_scale, tick_effect_flash)
+            (
+                animate_fade_out,
+                animate_punch_scale,
+                tick_effect_flash,
+                tick_phantom_flicker,
+            )
                 .run_if(in_state(NodeState::Playing)),
         );
     }
