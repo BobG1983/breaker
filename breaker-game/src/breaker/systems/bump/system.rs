@@ -155,6 +155,7 @@ pub(crate) fn grade_bump(
     mut writer: MessageWriter<BumpPerformed>,
     mut whiff_writer: MessageWriter<BumpWhiffed>,
     force_grade: Option<Res<ForceBumpGrade>>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
 ) {
     let forced = force_grade.as_ref().and_then(|fg| fg.0);
     let hits: Vec<BoltImpactBreaker> = hit_reader.read().cloned().collect();
@@ -187,7 +188,9 @@ pub(crate) fn grade_bump(
         if data.bump.active && data.bump.timer <= 0.0 {
             data.bump.active = false;
             data.bump.timer = 0.0;
-            whiff_writer.write(BumpWhiffed);
+            if !phantom_query.contains(entity) {
+                whiff_writer.write(BumpWhiffed);
+            }
             data.bump.cooldown = data.weak_cooldown.0;
         }
     }

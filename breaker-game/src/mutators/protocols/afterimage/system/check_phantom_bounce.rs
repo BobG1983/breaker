@@ -29,7 +29,7 @@ type PhantomBounceBreakerQuery<'w, 's> = Query<
         Option<&'static AnchorPlanted>,
         Option<&'static AnchorActive>,
     ),
-    With<Breaker>,
+    (With<Breaker>, Without<PhantomBreaker>),
 >;
 
 type PhantomBounceBoltQuery<'w, 's> = Query<

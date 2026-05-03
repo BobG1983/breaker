@@ -7,7 +7,7 @@ use crate::{
         components::BoltRadius, systems::bolt_breaker_collision::system::bolt_breaker_collision,
     },
     breaker::{
-        components::{BaseHeight, BaseWidth, BreakerReflectionSpread, BreakerTilt},
+        components::{BaseHeight, BaseWidth, BreakerReflectionSpread, BreakerTilt, PhantomBreaker},
         definition::BreakerDefinition,
     },
     prelude::*,
@@ -102,6 +102,13 @@ pub(super) fn collect_breaker_hit_pairs(
     for msg in reader.read() {
         captured.0.push((msg.bolt, msg.breaker));
     }
+}
+
+/// Like `spawn_breaker_at` but also inserts `PhantomBreaker` marker.
+pub(super) fn spawn_phantom_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
+    let entity = spawn_breaker_at(app, x, y);
+    app.world_mut().entity_mut(entity).insert(PhantomBreaker);
+    entity
 }
 
 pub(super) fn spawn_scaled_breaker_at(app: &mut App, x: f32, y: f32, entity_scale: f32) {

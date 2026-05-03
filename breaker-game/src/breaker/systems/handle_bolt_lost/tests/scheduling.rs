@@ -39,6 +39,8 @@ fn breaker_plugin_app() -> App {
         .with_message::<BoltLost>()
         .with_message::<ReduceNodeTimer>()
         .with_message::<BoltImpactBreaker>()
+        // tick_phantom_breaker_lifespan (wired into BreakerPlugin) writes DespawnEntity.
+        .with_message::<DespawnEntity>()
         .build();
     app.add_plugins(BreakerPlugin);
     app

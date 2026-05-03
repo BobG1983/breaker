@@ -70,6 +70,8 @@ pub(super) fn build_afterimage_app() -> App {
         .with_message_capture::<BumpPerformed>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_asset::<Mesh>();
+    app.init_asset::<ColorMaterial>();
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.world_mut()
@@ -104,6 +106,8 @@ pub(super) fn build_afterimage_app_no_config() -> App {
         .with_message_capture::<BumpPerformed>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_asset::<Mesh>();
+    app.init_asset::<ColorMaterial>();
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
@@ -128,6 +132,8 @@ pub(super) fn build_afterimage_app_in_chip_selecting() -> App {
         .with_message_capture::<BumpPerformed>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_asset::<Mesh>();
+    app.init_asset::<ColorMaterial>();
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.world_mut()

@@ -11,7 +11,8 @@ use crate::{
             animate_bump_visual, animate_tilt_visual, breaker_cell_collision,
             breaker_wall_collision, grade_bump, handle_bolt_lost, move_breaker,
             perfect_bump_dash_cancel, spawn_bump_grade_text, spawn_whiff_text, sync_breaker_scale,
-            trigger_bump_visual, update_breaker_state, update_bump, update_previous_dash_state,
+            tick_phantom_breaker_lifespan, trigger_bump_visual, update_breaker_state, update_bump,
+            update_previous_dash_state,
         },
     },
     effect_v3::EffectV3Systems,
@@ -80,6 +81,7 @@ impl Plugin for BreakerPlugin {
                         .after(BoltSystems::BoltLost)
                         .before(NodeSystems::ReduceNodeTimer)
                         .in_set(BreakerSystems::HandleBoltLost),
+                    tick_phantom_breaker_lifespan,
                 )
                     .run_if(in_state(NodeState::Playing)),
             )

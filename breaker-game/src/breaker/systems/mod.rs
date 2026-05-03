@@ -10,6 +10,7 @@ mod handle_bolt_lost;
 mod move_breaker;
 mod spawn_breaker;
 pub(crate) mod sync_breaker_scale;
+mod tick_phantom_breaker_lifespan;
 mod tilt_visual;
 mod update_previous_dash_state;
 
@@ -23,5 +24,6 @@ pub(crate) use dash::update_breaker_state;
 pub(crate) use handle_bolt_lost::handle_bolt_lost;
 pub(crate) use move_breaker::move_breaker;
 pub(crate) use sync_breaker_scale::sync_breaker_scale;
+pub(crate) use tick_phantom_breaker_lifespan::tick_phantom_breaker_lifespan;
 pub use tilt_visual::animate_tilt_visual;
 pub(crate) use update_previous_dash_state::update_previous_dash_state;

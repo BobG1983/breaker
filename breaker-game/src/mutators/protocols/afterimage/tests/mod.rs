@@ -9,5 +9,6 @@ mod resource;
 mod ron_asset;
 mod spawn_phantom_bolt;
 mod spawn_phantom_breaker;
+mod spawn_phantom_breaker_builder;
 mod tick_phantom_breaker;
 mod wire;

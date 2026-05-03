@@ -6,7 +6,10 @@
 use bevy::prelude::*;
 
 use crate::{
-    breaker::messages::{BumpGrade, BumpPerformed, BumpWhiffed, NoBump},
+    breaker::{
+        components::PhantomBreaker,
+        messages::{BumpGrade, BumpPerformed, BumpWhiffed, NoBump},
+    },
     effect_v3::{
         storage::{BoundEffects, StagedEffects},
         types::{Trigger, TriggerContext},
@@ -23,9 +26,13 @@ use crate::{
 pub fn on_bumped(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         let context = TriggerContext::Bump {
             bolt:    msg.bolt,
             breaker: msg.breaker,
@@ -46,9 +53,13 @@ pub fn on_bumped(
 pub fn on_perfect_bumped(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         if msg.grade != BumpGrade::Perfect {
             continue;
         }
@@ -72,9 +83,13 @@ pub fn on_perfect_bumped(
 pub fn on_early_bumped(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         if msg.grade != BumpGrade::Early {
             continue;
         }
@@ -98,9 +113,13 @@ pub fn on_early_bumped(
 pub fn on_late_bumped(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(&BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         if msg.grade != BumpGrade::Late {
             continue;
         }
@@ -128,9 +147,13 @@ pub fn on_late_bumped(
 pub fn on_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         let context = TriggerContext::Bump {
             bolt:    msg.bolt,
             breaker: msg.breaker,
@@ -149,9 +172,13 @@ pub fn on_bump_occurred(
 pub fn on_perfect_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         if msg.grade != BumpGrade::Perfect {
             continue;
         }
@@ -173,9 +200,13 @@ pub fn on_perfect_bump_occurred(
 pub fn on_early_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         if msg.grade != BumpGrade::Early {
             continue;
         }
@@ -197,9 +228,13 @@ pub fn on_early_bump_occurred(
 pub fn on_late_bump_occurred(
     mut reader: MessageReader<BumpPerformed>,
     bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         if msg.grade != BumpGrade::Late {
             continue;
         }
@@ -239,9 +274,13 @@ pub fn on_bump_whiff_occurred(
 pub fn on_no_bump_occurred(
     mut reader: MessageReader<NoBump>,
     bound_query: Query<(Entity, &BoundEffects, Option<&StagedEffects>)>,
+    phantom_query: Query<(), With<PhantomBreaker>>,
     mut commands: Commands,
 ) {
     for msg in reader.read() {
+        if phantom_query.contains(msg.breaker) {
+            continue;
+        }
         let context = TriggerContext::Bump {
             bolt:    Some(msg.bolt),
             breaker: msg.breaker,

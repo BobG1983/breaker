@@ -2,7 +2,11 @@ use bevy::prelude::*;
 
 use super::{components::PhantomBreakerLifetime, config::AfterimageConfig};
 use crate::{
-    breaker::components::{BaseHeight, BaseWidth, DashState, PhantomBreaker},
+    breaker::{
+        builder::core::types::BreakerPhantomParams,
+        components::{BaseHeight, BaseWidth, DashState, PhantomBreaker},
+        definition::BreakerDefinition,
+    },
     prelude::*,
 };
 
@@ -18,6 +22,10 @@ const DEFAULT_PHANTOM_BASE_WIDTH: f32 = 100.0;
 /// Companion to [`DEFAULT_PHANTOM_BASE_WIDTH`].
 const DEFAULT_PHANTOM_BASE_HEIGHT: f32 = 20.0;
 
+const PHANTOM_COLOR_RGB: [f32; 3] = [0.4, 0.8, 1.0];
+const PHANTOM_FLICKER_FREQUENCY: f32 = 4.0;
+const PHANTOM_FLICKER_MIN_ALPHA: f32 = 0.3;
+
 type SpawnPhantomBreakerBreakerQuery<'w, 's> = Query<
     'w,
     's,
@@ -27,11 +35,12 @@ type SpawnPhantomBreakerBreakerQuery<'w, 's> = Query<
         Option<&'static BaseWidth>,
         Option<&'static BaseHeight>,
     ),
-    With<Breaker>,
+    (With<Breaker>, Without<PhantomBreaker>),
 >;
 
 /// Detects the `DashState` rising edge into `Dashing` and spawns a
-/// `PhantomBreaker` entity at the breaker's current position.
+/// `PhantomBreaker` entity at the breaker's current position via
+/// `Breaker::builder()...phantom(...).rendered(...).extra().spawn(...)`.
 ///
 /// Despawns any existing `PhantomBreaker` entity before spawning a new one
 /// so at most one phantom breaker exists globally at a time. Copies the
@@ -48,6 +57,8 @@ pub(crate) fn afterimage_spawn_phantom_breaker(
     existing_phantoms: Query<Entity, With<PhantomBreaker>>,
     mut prev_state: Local<Option<DashState>>,
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let Some(config) = config else {
         return;
@@ -66,14 +77,24 @@ pub(crate) fn afterimage_spawn_phantom_breaker(
         }
         let width = base_width.map_or(DEFAULT_PHANTOM_BASE_WIDTH, |w| w.0);
         let height = base_height.map_or(DEFAULT_PHANTOM_BASE_HEIGHT, |h| h.0);
-        commands.spawn((
-            PhantomBreaker,
-            PhantomBreakerLifetime(config.phantom_duration),
-            Position2D(position.0),
-            BaseWidth(width),
-            BaseHeight(height),
-            CleanupOnExit::<NodeState>::default(),
-        ));
+        let phantom_def = BreakerDefinition::default();
+        let entity = Breaker::builder()
+            .definition(&phantom_def)
+            .with_width(width)
+            .with_height(height)
+            .at_position(position.0)
+            .phantom(BreakerPhantomParams {
+                lifespan:          config.phantom_duration,
+                phantom_color_rgb: PHANTOM_COLOR_RGB,
+                flicker_frequency: PHANTOM_FLICKER_FREQUENCY,
+                flicker_min_alpha: PHANTOM_FLICKER_MIN_ALPHA,
+            })
+            .rendered(&mut meshes, &mut materials)
+            .extra()
+            .spawn(&mut commands);
+        commands
+            .entity(entity)
+            .insert(PhantomBreakerLifetime(config.phantom_duration));
     }
 
     *prev_state = Some(current);

@@ -3,7 +3,10 @@ use ordered_float::OrderedFloat;
 
 use super::super::system::*;
 use crate::{
-    breaker::messages::{BumpWhiffed, NoBump},
+    breaker::{
+        components::PhantomBreaker,
+        messages::{BumpWhiffed, NoBump},
+    },
     effect_v3::{
         effects::SpeedBoostConfig,
         types::{BumpTarget, EffectType, ParticipantTarget, Terminal, Tree, Trigger},
@@ -97,6 +100,12 @@ pub(super) fn bump_whiff_occurred_test_app() -> App {
 
 pub(super) fn tick(app: &mut App) {
     crate::shared::test_utils::tick(app);
+}
+
+/// Spawns a minimal entity carrying only `PhantomBreaker`. Sufficient for
+/// `phantom_query.contains(entity)` checks without a full Breaker bundle.
+pub(super) fn spawn_phantom_marker(app: &mut App) -> Entity {
+    app.world_mut().spawn(PhantomBreaker).id()
 }
 
 // -- Tree helpers --------------------------------------------------------
