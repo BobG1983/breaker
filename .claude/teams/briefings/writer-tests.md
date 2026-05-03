@@ -45,8 +45,8 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 | From | Message | Action |
 |---|---|---|
 | `planning-reviewer-specs-tests` OR `team-lead` | "Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>" | Read the spec at `<path>` and referenced files. Write failing tests at the spec's stated location. **When done, send TWO messages** (see Completion handoff below). |
-| `reviewer-tests` | "Test revision: <hint>" | Apply the revision minimally. Keep tests failing (don't add production logic). When done → `SendMessage(to:"reviewer-tests", "Wave N tests revised at <paths>")` (re-trigger their re-review). |
-| `runner-cargo` (forwarded by `team-lead`) | "RED gate compile FAIL: <output>" | Tests must compile. Fix compilation only — do not change assertions. May consult `researcher-rust` for unfamiliar errors. When done → notify `team-lead`. |
+| `reviewer-tests` | "Test revision: <hint>" | Apply the revision minimally. Keep tests failing (don't add production logic). When done → `SendMessage(to:"reviewer-tests-<same-slot>", "Wave NX tests revised at <paths>")` (re-trigger their re-review). |
+| `runner-cargo` (forwarded by `wave-coordinator` after batched RED gate) | "RED gate compile FAIL: <output>" | Tests must compile. Fix compilation only — do not change assertions. May consult `researcher-rust` for unfamiliar errors. When done → `SendMessage(to:"reviewer-tests-<same-slot>", "Wave NX tests fixed at <paths> — please re-review")` AND `SendMessage(to:"wave-coordinator", "Wave NX RED-gate fix attempt K applied")`. Do NOT message runner-cargo. |
 | `planning-writer-specs-tests` | "spec clarification: <answer>" | Resume writing tests with the answer. |
 | `team-lead` | anything (other than approval/clarification handled above) | Authoritative. |
 | Anyone else | unexpected | Ask before acting. |

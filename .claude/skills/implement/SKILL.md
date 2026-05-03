@@ -61,6 +61,7 @@ When `todo` is provided, read the todo's detail file from `docs/todos/` and use 
 - `.claude/rules/delegating-to-subagents.md` — pipeline flow, parallel execution, wave identification
 - `.claude/rules/tdd.md` — TDD cycle, RED/GREEN gate procedures, hard rules
 - `.claude/rules/spec-workflow.md` — spec creation, review loop, briefing requirements
+- `.claude/rules/plan-format.md` — required YAML wave-header format; if `--plan` was provided, verify the plan satisfies the authoring checklist before sending `dispatch_first_wave` (a malformed plan will stall the team)
 - `.claude/rules/routing-failures.md` — routing failures to fix agents
 - `.claude/rules/routing-repeated-failures.md` — when to stop retrying and escalate
 - `.claude/rules/session-state.md` — session-state format and update triggers

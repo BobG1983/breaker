@@ -62,13 +62,15 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 
 ## Completion handoff — STRICT routing
 
-When you finish implementing a wave, send **exactly these two messages**:
+When you finish implementing a sub-wave, send **exactly these two messages**:
 
-1. `SendMessage(to: "runner-cargo", summary: "Wave N GREEN gate", message: "Wave N implementation complete. Please run GREEN gate via cargo all-dtest. Reply with PASS/FAIL and verbatim output to me AND to team-lead.")` — peer trigger, no orchestrator hop.
+1. `SendMessage(to: "wave-coordinator", summary: "Wave NX impl done", message: "Wave NX (sub-wave letter, e.g., 4A) implementation complete at <files>. Ready for batched GREEN gate when sibling sub-waves finish.")` — wave-coordinator owns the batched GREEN gate dispatch and will trigger runner-cargo ONCE per parent wave, after ALL sub-waves complete.
 
-2. `SendMessage(to: "team-lead", summary: "Wave N impl done", message: "Wave N implementation complete at <files>. runner-cargo triggered for GREEN gate. Awaiting their result.")` — milestone.
+2. `SendMessage(to: "team-lead", summary: "Wave NX impl done", message: "Wave NX implementation complete at <files>. wave-coordinator notified.")` — milestone.
 
-When runner-cargo replies with FAIL, follow the dispatch table row for `runner-cargo` (forward to debugger). When PASS, idle — team-lead handles next-tier verification.
+**Do NOT message `runner-cargo`.** All cargo dispatch is owned by `wave-coordinator`. Messaging runner-cargo directly produces premature, un-batched GREEN gates that contradict the per-wave batching protocol. After your handoff, idle — wave-coordinator triggers the gate when all sub-waves are ready, and runner-cargo will reply to YOU directly with any failures attributed to your sub-wave.
+
+When runner-cargo replies with FAIL (forwarded after the batched gate), follow the dispatch table row for `runner-cargo` (forward to debugger). When PASS, idle — team-lead handles next-tier verification.
 
 ## When to ask vs when to act
 - **Ask** `planning-writer-specs-code` when: the impl spec is ambiguous, conflicts with a failing test, or two reviewer revisions contradict each other.

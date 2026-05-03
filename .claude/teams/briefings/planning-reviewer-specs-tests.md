@@ -59,16 +59,15 @@ Read your stable memory at `.claude/agent-memory/planning-reviewer-specs-tests/f
 
 ## Approval handoff — STRICT routing (read carefully)
 
-When a test spec is clean, send **exactly these three messages**, in this order:
+When a test spec is clean, send **exactly these two messages**, in this order:
 
-1. `SendMessage(to: "writer-tests", summary: "Wave N test spec approved", message: "Wave N test spec approved at .claude/specs/<path> — write the failing tests for these behaviors: <one-line summary of each behavior>. Spec location is final; do not request revisions to it without messaging me first.")`
-   — `writer-tests` is the **test-FILE writer** (writes `.rs` files under `breaker-game/src/...`). It is **NOT** `planning-writer-specs-tests` (the spec writer who just asked you to review). They are two different agents. Read the team config at `~/.claude-work/teams/breaker-team/config.json` if you need to confirm the names.
+1. `SendMessage(to: "wave-coordinator", summary: "Wave NX test spec approved", message: "Wave NX (sub-wave letter, e.g., 4A) test spec approved at .claude/specs/<path>. Behaviors: <one-line summary of each behavior>. Ready for writer-tests dispatch.")` — wave-coordinator owns the dispatch to the appropriate `writer-tests-<slot>` (the slot suffix matches the planning-writer-specs-tests slot you reviewed).
 
-2. `SendMessage(to: "team-lead", summary: "Wave N test spec approved", message: "Wave N test spec at .claude/specs/<path> approved. writer-tests has been triggered.")`
+2. `SendMessage(to: "team-lead", summary: "Wave NX test spec approved", message: "Wave NX test spec at .claude/specs/<path> approved. wave-coordinator notified for writer-tests dispatch.")` — milestone.
 
-3. (No third message to anyone else. The spec writer `planning-writer-specs-tests` does NOT need an approval message — its work is done; it idles when you stop replying to it.)
+**Do NOT** message `writer-tests` (or `writer-tests-N`) directly. Triggering the next pipeline phase is `wave-coordinator`'s job — they sequence the per-sub-wave writer dispatch and own the batched RED gate after all sub-waves' tests are written. Bypassing them produces premature/un-batched gates and lost-mail kickoffs.
 
-**DO NOT** send the approval to `planning-writer-specs-tests` — that bounces the work backward. The spec writer's contribution ends when you stop sending revisions.
+**DO NOT** send the approval to `planning-writer-specs-tests` either — that bounces the work backward. The spec writer's contribution ends when you stop sending revisions.
 
 ## Key quality checks for this feature
 - Tests #8/#9 (grade_bump): must exercise `.iter_mut()` with multiple breakers (real + phantom both present in the same world).

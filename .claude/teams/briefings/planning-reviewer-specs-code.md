@@ -63,12 +63,13 @@ Never regress from an approval. Once you send APPROVED + trigger writer-code, th
 
 When a code spec is clean, send **exactly these two messages**:
 
-1. `SendMessage(to: "writer-code", summary: "Wave N code spec approved", message: "Wave N code spec approved at .claude/specs/<path> — failing tests at <paths> — implement.")`
-   — `writer-code` is the **production-code writer** (writes `.rs` files under `breaker-game/src/...`). It is **NOT** `planning-writer-specs-code` (the spec writer who just asked you to review). Two different agents.
+1. `SendMessage(to: "wave-coordinator", summary: "Wave NX code spec approved", message: "Wave NX (sub-wave letter, e.g., 4A) code spec approved at .claude/specs/<path>. Failing tests at <paths>. Ready for writer-code dispatch.")` — wave-coordinator owns the dispatch to the appropriate `writer-code-<slot>` (the slot suffix matches the planning-writer-specs-code slot you reviewed).
 
-2. `SendMessage(to: "team-lead", summary: "Wave N code spec approved", message: "Wave N code spec approved at .claude/specs/<path>. writer-code has been triggered with failing tests at <paths>.")`
+2. `SendMessage(to: "team-lead", summary: "Wave NX code spec approved", message: "Wave NX code spec at .claude/specs/<path> approved. wave-coordinator notified for writer-code dispatch.")` — milestone.
 
-**DO NOT** send the approval to `planning-writer-specs-code` — that bounces the work backward. The spec writer's contribution ends when you stop sending revisions.
+**Do NOT** message `writer-code` (or `writer-code-N`) directly. Triggering the GREEN phase is `wave-coordinator`'s job — they sequence the per-sub-wave writer dispatch and own the batched GREEN gate after all sub-waves' impl is done. Bypassing them produces premature/un-batched gates and lost-mail kickoffs.
+
+**DO NOT** send the approval to `planning-writer-specs-code` either — that bounces the work backward. The spec writer's contribution ends when you stop sending revisions.
 
 ## Key checks for this feature
 - Wave 1B `grade_bump` spec must show `.iter_mut()` with `BoltImpactBreaker` matched by `msg.breaker == entity` — not by index, not by `.single_mut()`.

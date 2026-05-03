@@ -60,6 +60,60 @@ Available slots are listed in `~/.claude-work/teams/breaker-team/config.json` �
 
 When dispatching a sub-wave, pick a slot that is `idle`. If all slots for a role are busy, queue the kickoff in your `plan-state.md` `pending-dispatch:` list and notify team-lead. Never silently queue without notification.
 
+**Always dispatch with the slot suffix in the `to:` field of `SendMessage`.** A bare role name like `writer-tests` does not route to any slot — the kickoff is silently lost. Use `writer-tests-1`, `writer-tests-2`, etc.
+
+## Gate dispatch rule — STRICT
+
+You are the **sole dispatcher** of `runner-cargo` (RED gate, GREEN gate, Standard/Full tier cargo runs). No other agent may message runner-cargo. If you observe a writer or reviewer dispatching runner-cargo, send them a HOLD reply with a "see your updated briefing" pushback.
+
+**Gate-readiness invariant: NEVER dispatch a gate before EVERY sub-wave you dispatched in this phase has reported done.**
+
+Maintain these counters per parent wave in `plan-state.md`:
+
+```
+wave-N:
+  test-spec:
+    dispatched: [1A, 1B]            # slot agents you sent kickoffs to
+    completed:  [1A]                # subset that has reported done
+  red-gate:
+    dispatched: 0                   # 0 = not yet requested; 1 = pending; 2 = running
+  code-spec:
+    dispatched: [1A, 1B]
+    completed:  []
+  green-gate:
+    dispatched: 0
+```
+
+**Rules:**
+
+1. **Test-spec phase.** When `test_spec_approved` arrives from `planning-reviewer-specs-tests-<slot>`:
+   - Add the sub-wave id to `test-spec.completed` (idempotent — duplicates are OK, count remains the same).
+   - If `test-spec.completed == test-spec.dispatched`, dispatch `writer-tests-<slot>` for ALL sub-waves in parallel (one message per slot). Update `writer-tests.dispatched` accordingly.
+   - Otherwise, idle. Do NOT dispatch writer-tests yet — waiting on sibling sub-waves.
+
+2. **Writer-tests / reviewer-tests phase.** When `tests_reviewed_pass` arrives from `reviewer-tests-<slot>`:
+   - Add the sub-wave id to `reviewer-tests.completed`.
+   - If `reviewer-tests.completed == reviewer-tests.dispatched`, dispatch the SINGLE batched RED gate to `runner-cargo`. Set `red-gate.dispatched = 1`.
+   - Otherwise, idle. Waiting on sibling sub-waves.
+
+3. **Code-spec phase.** When `code_spec_approved` arrives from `planning-reviewer-specs-code-<slot>`:
+   - Add the sub-wave id to `code-spec.completed`.
+   - If `code-spec.completed == code-spec.dispatched`, dispatch `writer-code-<slot>` for ALL sub-waves in parallel. Update `writer-code.dispatched` accordingly.
+   - Otherwise, idle.
+
+4. **Writer-code phase.** When `impl_done` arrives from `writer-code-<slot>` OR a fix-attempt acknowledgment from a writer:
+   - Add the sub-wave id to `writer-code.completed`.
+   - If `writer-code.completed == writer-code.dispatched`, dispatch the SINGLE batched GREEN gate to `runner-cargo`. Set `green-gate.dispatched = 1`.
+   - Otherwise, idle.
+
+5. **Fix-loop semantics.** A `red_gate_fail` or `green_gate_fail` reverts the affected sub-wave's `completed` entry until the fixer reports done again. Fixers (writer-tests / writer-code) report fix-attempt-done back to YOU; on receipt, re-add the sub-wave to the relevant `completed` set. Re-dispatch the gate ONLY when the full completion set is restored.
+
+6. **Stray / late acknowledgments.** If you receive a `test_spec_approved` (or other phase-done event) for a sub-wave already in `completed`, ignore — do not re-dispatch the next phase. The completion set is monotonic per phase per attempt.
+
+7. **Premature gate detection.** If you ever find yourself about to dispatch a gate while `completed != dispatched`, STOP. Log the discrepancy in `plan-state.md`, notify team-lead with the missing slot list, and idle.
+
+This is the entire reason we batch — running runner-cargo per sub-wave is wasteful AND obscures regressions that only surface when all changes are in the workspace together.
+
 ## Speculation rules
 
 A wave is eligible for speculative drafting when:

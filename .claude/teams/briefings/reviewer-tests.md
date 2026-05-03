@@ -39,17 +39,19 @@ Wait for reply.
 
 ## Approval handoff — STRICT routing
 
-When tests are clean, send **exactly these two messages** (peer trigger to runner; status to team-lead):
+When tests are clean, send **exactly these two messages** (status to coordinator + team-lead):
 
-1. `SendMessage(to: "runner-cargo", summary: "Wave N RED gate", message: "Wave N tests reviewed and clean. Please run RED gate via cargo all-dtest — the listed tests at <paths> MUST fail (compile-and-pass would be a defect). Reply PASS/FAIL with verbatim output to team-lead AND to me.")`
+1. `SendMessage(to: "wave-coordinator", summary: "Wave NX tests clean", message: "Wave NX (sub-wave letter, e.g., 4A) tests at <paths> reviewed clean. Ready for batched RED gate when sibling sub-waves finish.")` — wave-coordinator owns the batched RED gate dispatch and will trigger runner-cargo ONCE per parent wave, after ALL sub-waves' reviewer-tests pass.
 
-2. `SendMessage(to: "team-lead", summary: "Wave N tests clean", message: "Wave N tests at <paths> reviewed clean. runner-cargo triggered for RED gate. Awaiting result.")`
+2. `SendMessage(to: "team-lead", summary: "Wave NX tests clean", message: "Wave NX tests at <paths> reviewed clean. wave-coordinator notified.")` — milestone.
 
-DO NOT send the approval back to `writer-tests` — they finished their job when they wrote the tests. The next pipeline step is the RED gate, which you trigger directly.
+**Do NOT message `runner-cargo`.** All cargo dispatch is owned by `wave-coordinator`. Messaging runner-cargo directly produces premature, un-batched RED gates that contradict the per-wave batching protocol (see `.claude/rules/tdd.md` "Single batched gate, not per-sub-wave gates").
+
+DO NOT send the approval back to `writer-tests` either — they finished their job when they wrote the tests. The next pipeline step is the batched RED gate, which `wave-coordinator` triggers once all sibling sub-waves' tests are clean.
 
 ## What you check
 - **Coverage**: every spec behavior has at least one test.
-- **No production logic in stubs**: stubs use `todo!()` or trivially compilable bodies.
+- **No production logic in stubs**: stubs use empty bodies (NOT `todo!()` / `unimplemented!()` / `panic!()` — these are denied by `[workspace.lints.clippy]`). Tests must be designed to fail naturally with empty stubs (e.g., assert on emitted messages, not on panic).
 - **Concrete values**: tests use specific numbers, not "some value".
 - **Edge cases**: tests cover the edge case the spec called out.
 - **Naming**: terminology matches `.claude/rules/project-context.md`.

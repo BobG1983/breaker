@@ -1,8 +1,23 @@
 # Plan Format
 
-The contract that `wave-coordinator` parses to drive wave-by-wave dispatch. Plans live at `.claude/plans/<name>.md` (project-local, committed) per the `plansDirectory` setting in `.claude/settings.json` and are written by humans (or by `Plan` agent in plan mode).
+> **AUTHORING REQUIREMENT — applies to every plan author.** This file is not just a parser spec; it is the **mandatory format** for any plan written for this project, whether authored by a human, in plan mode (`EnterPlanMode`/`ExitPlanMode`), by the built-in `Plan` agent, by `/start-dev` Step 2, or by any other path. A plan without YAML wave headers is broken — `wave-coordinator` cannot dispatch from it, the team stalls, and someone has to retrofit the headers before work can proceed. **Author plans with the headers from the start.** If you're in plan mode and you're about to write a `### Wave N` heading, the very next line MUST open a fenced ```yaml block per the template below — same for every sub-wave heading (`### Wave NX`).
+
+The contract that `wave-coordinator` parses to drive wave-by-wave dispatch. Plans live at `.claude/plans/<name>.md` (project-local, committed) per the `plansDirectory` setting in `.claude/settings.json`.
 
 A plan is a Markdown file. Each wave is introduced by a heading `### Wave N` (or `### Wave NX` for sub-waves like `4A`). Each wave heading is **immediately followed by a fenced YAML block** containing the wave's machine-readable header. Free-form prose follows.
+
+## Authoring checklist
+
+Before exiting plan mode (or finalizing any plan), verify:
+
+- [ ] Every `### Wave N` heading is immediately followed by a fenced ```yaml block
+- [ ] Every parent wave with parallel sub-waves declares `parallel: [NX, NY, ...]` in its YAML
+- [ ] Every sub-wave is its own `### Wave NX` heading with its own YAML block (NOT prose under the parent heading)
+- [ ] Every YAML block has the required fields: `id`, `blocks`, `scope`
+- [ ] Optional fields (`parallel`, `no_speculation`, `abandonment_triggers`, `decisions`) are present where applicable
+- [ ] Wave ids referenced in `blocks:` and `parallel:` exist as actual headings
+
+If any box is unchecked, the plan is not parseable by `wave-coordinator`. Fix before exiting plan mode.
 
 ## Required YAML fields
 
@@ -33,7 +48,7 @@ decisions:
 |-------|------|----------|---------|
 | `id` | string or int | yes | Wave identifier matching the heading. For sub-wave headings (`### Wave 4A`), the id is the full sub-wave id (`4A`). |
 | `parallel` | list of sub-wave ids | only on parent waves with sub-waves | Declares that the listed sub-waves run as a parallel batch. The parent wave header gets the `parallel:` field; each sub-wave gets its own `### Wave NX` heading + YAML block. |
-| `blocks` | list of wave ids | yes | Waves that must reach `committed` before this wave can dispatch. Empty list = no dependencies. |
+| `blocks` | list of wave ids | yes | Declarative list of waves this wave depends on — i.e., waves that must reach `committed` before this wave can dispatch. **List the actual dependencies, not the "remaining at dispatch time" set.** If predecessors are already committed when the plan is parsed, the coordinator's gate check is a no-op for them, but listing the deps keeps the plan replayable from a fresh state. Empty list = genuinely no dependencies (e.g., the first wave in a plan). |
 | `no_speculation` | bool | optional (default false) | If true, this wave may NOT be drafted speculatively even when predecessors are in `green-gate`. Use for waves with high abandonment risk or extreme cost to discard. |
 | `abandonment_triggers` | list of strings | optional | Plain-English descriptions of GREEN-gate failures that invalidate speculative drafts of this wave. Coordinator checks these against `runner-cargo`'s failure summary to decide whether to send `abandon_draft`. |
 | `scope` | list of strings | yes | High-level deliverables. Each item is a one-line description of what this wave produces. Used by the coordinator to populate kickoff messages. |

@@ -46,28 +46,29 @@ If any are missing or empty, abort with the missing file list. Do NOT spawn a te
 
 ### Step 2 — Tear down existing team (if any)
 
-If `~/.claude-work/teams/breaker-team/config.json` exists with members:
-1. Read each member name from the runtime config.
-2. Send `shutdown_request` to each in parallel via `SendMessage`.
+If `~/.claude-work/teams/breaker-team/config.json` exists, every entry blocks its canonical name from being claimed by a fresh `Agent()` call — including **declarative placeholders** (entries without a `joinedAt` timestamp, written by an earlier copy of the manifest). Both must be cleared.
+
+1. Filter the runtime config for entries with a `joinedAt` field — those are the **live** members.
+2. Send `shutdown_request` to each live member in parallel via `SendMessage`.
 3. Wait for `shutdown_response` from each. Members that don't respond within 60s get force-cleared.
-4. Delete `~/.claude-work/teams/breaker-team/config.json`.
+4. Delete `~/.claude-work/teams/breaker-team/config.json` (this clears live members AND any declarative placeholders in one shot).
 
 The local manifest at `.claude/teams/config.json` is NEVER deleted — it's the source you're spawning from.
 
-### Step 3 — Copy local manifest to global
+### Step 3 — Initialize empty global config
 
-Create the global team directory and copy the local manifest:
+Create the global team directory and write a stub config with **empty `members[]`**:
 
 ```bash
 mkdir -p ~/.claude-work/teams/breaker-team
-cp .claude/teams/config.json ~/.claude-work/teams/breaker-team/config.json
+jq '.members = []' .claude/teams/config.json > ~/.claude-work/teams/breaker-team/config.json
 ```
 
-This seeds the global config with the team's declared structure. The runtime will reconcile each member's runtime fields (`agentId`, `joinedAt`, `tmuxPaneId`, `cwd`, `backendType`, `subscriptions`) when the corresponding `Agent()` call fires in Step 5.
+**Why empty members:** copying the local manifest's `members[]` directly into the runtime registers each entry as a declarative placeholder that **reserves the canonical name**. Subsequent `Agent()` calls then can't reuse that name and get disambiguated to `<name>-2`, breaking peer addressing. The manifest stays the source of truth for *what* to spawn (Step 5 iterates it) — but only live `Agent()` calls register names in the runtime.
 
 ### Step 4 — TeamCreate (idempotent)
 
-Call `TeamCreate({ name: "breaker-team" })`. If the team already exists from Step 3's copy, this is a no-op; if the runtime needs additional bookkeeping, this triggers it.
+Call `TeamCreate({ name: "breaker-team" })`. If the orchestrator is already leading the team from a prior session, this errors with "already leading team" — that is acceptable; the empty-members config from Step 3 is sufficient and TeamCreate has nothing more to do.
 
 ### Step 5 — Spawn every member from the manifest
 
@@ -94,15 +95,22 @@ Recommended batching:
 
 After Batch C, the coordinator is alive and idle. It will read its plan-state.md memory if it has one, otherwise wait for `dispatch_first_wave` from team-lead.
 
-### Step 6 — Snapshot back (optional)
+### Step 6 — Snapshot back (preserves team-lead)
 
-After all spawns confirm, optionally copy the global config back to local to capture the runtime fields:
+After all spawns confirm, copy the global config back to local — but **prepend the `team-lead` entry**, since the orchestrator is implicit and never appears in the runtime config:
 
 ```bash
+# Capture the manifest's team-lead entry (the orchestrator is implicit at runtime)
+jq '.members[] | select(.name == "team-lead")' .claude/teams/config.json > /tmp/team-lead-entry.json
+
+# Snapshot runtime → local, then re-prepend team-lead
 cp ~/.claude-work/teams/breaker-team/config.json .claude/teams/config.json
+jq --slurpfile lead /tmp/team-lead-entry.json '.members = ($lead + .members)' .claude/teams/config.json > /tmp/manifest-fixed.json
+mv /tmp/manifest-fixed.json .claude/teams/config.json
+rm /tmp/team-lead-entry.json
 ```
 
-This commits the resulting agentIds and join timestamps for future reproducibility. Skip this step if you want to keep `.claude/teams/config.json` purely declarative.
+This commits the resulting agentIds and join timestamps for future reproducibility, while keeping the manifest's team-lead declaration intact. Skipping this step keeps `.claude/teams/config.json` purely declarative — but the next `/spawn-team` will lose any agentId continuity.
 
 ### Step 7 — Verify
 
@@ -157,37 +165,6 @@ The default breaker-team roster (declared in `.claude/teams/config.json`):
 Slot agents inherit their model + tools from `.claude/agents/<subagent_type>.md`. Slot suffix (`-1`, `-2`, `-3`) is registered as the `name`; the `subagent_type` stays the base name.
 
 NOT included by default (kept as one-shot Agent calls when needed): `reviewer-file-length`, `reviewer-scenarios`, `writer-scenarios`, `runner-release`, `guard-dependencies`, `guard-agent-memory`. These run rarely and don't benefit from persistent context.
-
-### Step 4 — TeamCreate
-
-Call `TeamCreate({ name: "breaker-team" })`. This writes the new `~/.claude-work/teams/breaker-team/config.json` skeleton.
-
-### Step 5 — Spawn each member
-
-For every member in the roster, fire one `Agent` call:
-
-```
-Agent({
-  subagent_type: <subagent_type>,
-  team_name: "breaker-team",
-  name: <name (with slot suffix if applicable)>,
-  prompt: "You are `<name>` on `breaker-team`. Re-read your briefing at `.claude/teams/briefings/<subagent_type>.md`. Your slot suffix (if any) is in your name. Then idle until messaged. Do NOT initiate work."
-})
-```
-
-Spawn in batches of 6-8 in parallel (one tool message). Wait for confirmation idle pings before the next batch — order doesn't matter, but you want to know all spawns succeeded before snapshotting.
-
-### Step 6 — Snapshot
-
-Copy `~/.claude-work/teams/breaker-team/config.json` → `.claude/teams/config.json` (project-local committed snapshot).
-
-### Step 7 — Verify
-
-`grep '"name"' .claude/teams/config.json | wc -l` should equal the roster count + 1 (for `breaker-team` itself). If short, retry the missing spawns.
-
-### Step 8 — Brief team-lead → coordinator
-
-Send a `dispatch_first_wave` message to `wave-coordinator` ONLY when an active todo / plan exists (i.e., when called from `/start-dev` or `/implement`'s precondition). When called bare (`/spawn-team` standalone), leave the team idle.
 
 ## Slot count override
 

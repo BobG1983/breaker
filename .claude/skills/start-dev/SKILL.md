@@ -64,13 +64,17 @@ Now, regardless of whether a todo was provided or not:
 
 1. **Call `EnterPlanMode`.** This switches into plan mode where you can read files and explore the codebase but cannot write code.
 
-2. **Build the plan.** Read the input context (todo detail file, or the user's inline description). Explore the codebase as needed to understand existing structure, patterns, and constraints. Write an implementation plan to the plan file. The plan must include:
+2. **Build the plan.** Read the input context (todo detail file, or the user's inline description). Explore the codebase as needed to understand existing structure, patterns, and constraints. **Read `.claude/rules/plan-format.md` BEFORE you start writing the plan** — it defines the mandatory YAML wave-header format that `wave-coordinator` parses. Plans without YAML headers stall the team and require a retrofit pass.
+
+   Write an implementation plan to the plan file. The plan must include:
    - **Scope** — what is in and out
    - **Domains** — which plugins/modules are touched
-   - **Waves** — independent groups of work that can run in parallel
-   - **Per-wave detail** — what types, systems, components, or tests each wave produces
+   - **Waves** — independent groups of work that can run in parallel. Every `### Wave N` heading **MUST** be immediately followed by a fenced ```yaml block per `.claude/rules/plan-format.md`. Sub-waves get their own `### Wave NX` headings with their own YAML blocks (not nested prose under the parent).
+   - **Per-wave detail** — what types, systems, components, or tests each wave produces (free-form prose after the YAML block)
    - **Shared prerequisites** — cross-domain types or wiring needed before waves begin
    - **Open questions** — anything that needs the user's input before starting
+
+   Run the authoring checklist at the bottom of `plan-format.md` before exiting plan mode. If any box is unchecked, fix it now.
 
 3. **Call `ExitPlanMode`.** The user sees the plan and either approves, requests changes, or rejects.
    - Approved → proceed to Step 3.
