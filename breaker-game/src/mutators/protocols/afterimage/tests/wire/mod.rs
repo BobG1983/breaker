@@ -7,6 +7,5 @@
 //! spawn_phantom_bolt → tick_phantom_lifetime` fires in order.
 
 mod gating;
-mod helpers;
 mod integration;
 mod scheduling;

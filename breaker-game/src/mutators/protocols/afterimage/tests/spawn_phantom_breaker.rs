@@ -5,10 +5,11 @@
 //! and the harness-safe early-return when `AfterimageConfig` is absent.
 
 use bevy::prelude::*;
+use rantzsoft_dmg::RantzDmgPlugin;
 use rantzsoft_stateflow::CleanupOnExit;
 
 use super::{
-    super::system::{PhantomBreaker, PhantomBreakerLifetime},
+    super::system::PhantomBreaker,
     helpers::{
         build_afterimage_app, build_afterimage_app_no_config, phantom_breaker_count,
         seed_active_protocols_with_afterimage, spawn_breaker_with_dash, spawn_phantom_breaker_at,
@@ -19,8 +20,10 @@ use crate::{
     breaker::{
         BreakerDefinition,
         components::{BaseHeight, BaseWidth, DashState},
+        systems::tick_phantom_breaker_lifespan,
     },
     prelude::*,
+    shared::phantom::Lifespan,
 };
 
 // ── C1 — Idle → Dashing spawns one PhantomBreaker at breaker's position ────
@@ -38,10 +41,11 @@ fn idle_to_dashing_spawns_one_phantom_breaker_at_breaker_position() {
     tick(&mut app);
 
     let world = app.world_mut();
-    let mut q = world
-        .query_filtered::<(Entity, &PhantomBreakerLifetime, &Position2D), With<PhantomBreaker>>();
-    let rows: Vec<(Entity, PhantomBreakerLifetime, Vec2)> =
-        q.iter(world).map(|(e, l, p)| (e, *l, p.0)).collect();
+    let mut q = world.query_filtered::<(Entity, &Lifespan, &Position2D), With<PhantomBreaker>>();
+    let rows: Vec<(Entity, f32, Vec2)> = q
+        .iter(world)
+        .map(|(e, l, p)| (e, l.remaining, p.0))
+        .collect();
     assert_eq!(
         rows.len(),
         1,
@@ -49,9 +53,9 @@ fn idle_to_dashing_spawns_one_phantom_breaker_at_breaker_position() {
         rows.len()
     );
     assert!(
-        (rows[0].1.0 - 2.0).abs() < 1e-4,
-        "PhantomBreakerLifetime expected 2.0 (phantom_duration), got {}",
-        rows[0].1.0
+        (rows[0].1 - 2.0).abs() < 1e-4,
+        "Lifespan.remaining expected ~2.0 (phantom_duration), got {}",
+        rows[0].1
     );
     assert!(
         (rows[0].2 - Vec2::new(100.0, 50.0)).length() < 1e-4,
@@ -125,17 +129,19 @@ fn redash_despawns_old_phantom_breaker_and_spawns_new_one() {
         "after re-dash there must be EXACTLY one PhantomBreaker"
     );
     let world = app.world_mut();
-    let mut q =
-        world.query_filtered::<(&PhantomBreakerLifetime, &Position2D), With<PhantomBreaker>>();
-    let (lifetime, position) = q.iter(world).map(|(l, p)| (*l, p.0)).next().unwrap();
+    let mut q = world.query_filtered::<(&Lifespan, &Position2D), With<PhantomBreaker>>();
+    let (lifespan, position) = q
+        .iter(world)
+        .map(|(l, p)| (l.remaining, p.0))
+        .next()
+        .unwrap();
     assert!(
         (position - Vec2::new(200.0, 50.0)).length() < 1e-4,
         "new PhantomBreaker must spawn at the NEW breaker position (200.0, 50.0), got {position:?}"
     );
     assert!(
-        (lifetime.0 - 2.0).abs() < 1e-4,
-        "new PhantomBreaker lifetime must be reset to phantom_duration (2.0), got {}",
-        lifetime.0
+        (lifespan - 2.0).abs() < 1e-4,
+        "new PhantomBreaker Lifespan.remaining must be reset to phantom_duration (2.0), got {lifespan}"
     );
 
     // Old phantom entity is no longer alive.
@@ -214,7 +220,7 @@ fn dashing_to_braking_does_not_spawn_new_phantom_breaker() {
 
 #[test]
 fn despawned_breaker_during_dashing_is_tolerated() {
-    let mut app = build_afterimage_app();
+    let mut app = build_afterimage_app_with_death_pipeline();
     seed_active_protocols_with_afterimage(&mut app);
     let breaker = spawn_breaker_with_dash(&mut app, DashState::Dashing, Vec2::new(0.0, 0.0));
     let _phantom = spawn_phantom_breaker_at(&mut app, Vec2::new(0.0, 0.0), 0.1);
@@ -294,13 +300,13 @@ fn phantom_breaker_inherits_base_width_and_height_from_real_breaker_when_present
     assert!(
         (rows[0].0 - 123.0).abs() < f32::EPSILON,
         "phantom BaseWidth must inherit the real breaker's 123.0 (NOT the \
-         100.0 fallback), got {}",
+         BreakerDefinition::default().width fallback), got {}",
         rows[0].0
     );
     assert!(
         (rows[0].1 - 45.0).abs() < f32::EPSILON,
         "phantom BaseHeight must inherit the real breaker's 45.0 (NOT the \
-         20.0 fallback), got {}",
+         BreakerDefinition::default().height fallback), got {}",
         rows[0].1
     );
 }
@@ -396,5 +402,106 @@ fn phantom_rendered_material_color_differs_from_real_breaker_base_color() {
         expected_srgba.blue,
         base_srgba.blue,
         raw_tint_srgba.blue,
+    );
+}
+
+// ── Behavior #11 — phantom spawned with Lifespan despawns within duration ──
+
+fn build_afterimage_app_with_death_pipeline() -> App {
+    use super::helpers::build_afterimage_app;
+    let mut app = build_afterimage_app();
+    app.add_plugins(RantzDmgPlugin);
+    app.add_systems(
+        FixedUpdate,
+        tick_phantom_breaker_lifespan.run_if(in_state(NodeState::Playing)),
+    );
+    app
+}
+
+/// Regression guard: phantom spawned via builder (Wave 4C) carries `Lifespan`
+/// and is despawned by `tick_phantom_breaker_lifespan` + `process_despawn_requests`
+/// within `phantom_duration` seconds. PASSES TODAY — guards against Wave 5
+/// deletions accidentally breaking the end-to-end spawn → tick → despawn flow.
+#[test]
+fn phantom_spawned_with_lifespan_despawns_within_phantom_duration() {
+    use super::helpers::{
+        phantom_breaker_count, seed_active_protocols_with_afterimage, spawn_breaker_with_dash,
+        tick_n,
+    };
+
+    let mut app = build_afterimage_app_with_death_pipeline();
+    seed_active_protocols_with_afterimage(&mut app);
+    let breaker = spawn_breaker_with_dash(&mut app, DashState::Idle, Vec2::new(100.0, 50.0));
+    app.world_mut()
+        .entity_mut(breaker)
+        .insert((BaseWidth(120.0), BaseHeight(20.0)));
+
+    // Idle → Dashing triggers spawn.
+    app.world_mut()
+        .entity_mut(breaker)
+        .insert(DashState::Dashing);
+    tick(&mut app);
+
+    // After the first tick: exactly one PhantomBreaker with Lifespan exists.
+    let world = app.world_mut();
+    let mut q = world.query_filtered::<(Entity, &Lifespan), With<PhantomBreaker>>();
+    let rows: Vec<(Entity, f32)> = q.iter(world).map(|(e, l)| (e, l.remaining)).collect();
+    assert_eq!(
+        rows.len(),
+        1,
+        "exactly one PhantomBreaker must exist after Idle → Dashing, got {}",
+        rows.len()
+    );
+    // The phantom is spawned via Commands during the same tick — the entity
+    // does not exist when tick_phantom_breaker_lifespan runs in that update.
+    // The first decrement happens on the NEXT tick, so remaining is still 2.0.
+    assert!(
+        (rows[0].1 - 2.0).abs() < 1e-3,
+        "Lifespan.remaining after the spawn tick must be ~2.0 (not yet decremented), got {:.4}",
+        rows[0].1
+    );
+
+    // Tick 130 times (~2.03 s at 64 Hz) — phantom must despawn via DespawnEntity.
+    tick_n(&mut app, 130);
+
+    assert_eq!(
+        phantom_breaker_count(&mut app),
+        0,
+        "phantom must be despawned after ~phantom_duration (2.0 s) via Lifespan → DespawnEntity"
+    );
+}
+
+/// Edge case: real breaker with no `BaseWidth`/`BaseHeight` — phantom still
+/// spawns and eventually despawns (no panic, no missing required component).
+#[test]
+fn phantom_spawned_without_basewidth_baseheight_uses_defaults() {
+    use super::helpers::{
+        phantom_breaker_count, seed_active_protocols_with_afterimage, spawn_breaker_with_dash,
+        tick_n,
+    };
+
+    let mut app = build_afterimage_app_with_death_pipeline();
+    seed_active_protocols_with_afterimage(&mut app);
+    // Real breaker WITHOUT BaseWidth / BaseHeight.
+    let breaker = spawn_breaker_with_dash(&mut app, DashState::Idle, Vec2::new(0.0, 0.0));
+
+    app.world_mut()
+        .entity_mut(breaker)
+        .insert(DashState::Dashing);
+    tick(&mut app);
+
+    assert_eq!(
+        phantom_breaker_count(&mut app),
+        1,
+        "phantom must spawn even when real breaker has no BaseWidth/BaseHeight"
+    );
+
+    // Tick long enough for the phantom to despawn.
+    tick_n(&mut app, 130);
+
+    assert_eq!(
+        phantom_breaker_count(&mut app),
+        0,
+        "phantom must despawn within phantom_duration even without BaseWidth/BaseHeight on spawner"
     );
 }

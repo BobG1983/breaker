@@ -73,7 +73,7 @@ A write exception is acceptable only when ALL of these hold:
 4. **A message-based design would require a new pipeline, enum variant, or consumer system that exists solely for this one path** — i.e. the indirection would not generalize.
 
 Existing exceptions (search `cross-domain` in source comments at the call sites for the live list):
-- `Velocity2D` / `Position2D` on bolts — written by `effect_v3`, `cells/magnetic`, and `mutators/protocols/afterimage` for steering and reflection.
+- `Velocity2D` / `Position2D` on bolts — written by `effect_v3` and `cells/magnetic` for steering and reflection.
 - `PiercingRemaining` on bolts — written by `cells/armored` to debit armor cost.
 - `Hp.max` on cells — lifted by `mutators/hazards/{volatility,momentum}` to enable the mechanic's required ceiling.
 - `NodeSequence` / `NodeOutcome` resources — rewritten by `mutators/protocols/tier_regression` on `OnEnter(RunState::Node)`.

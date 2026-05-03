@@ -3,7 +3,7 @@
 mod system;
 
 pub use system::perfect_bump_dash_cancel;
-pub(crate) use system::{forward_grade, grade_bump, retroactive_grade, update_bump};
+pub(crate) use system::{grade_bump, update_bump};
 
 #[cfg(test)]
 mod tests;

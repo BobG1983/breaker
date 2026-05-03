@@ -17,7 +17,7 @@ mod update_previous_dash_state;
 pub(crate) use breaker_cell_collision::breaker_cell_collision;
 pub(crate) use breaker_wall_collision::breaker_wall_collision;
 pub use bump::perfect_bump_dash_cancel;
-pub(crate) use bump::{forward_grade, grade_bump, retroactive_grade, update_bump};
+pub(crate) use bump::{grade_bump, update_bump};
 pub use bump_feedback::{spawn_bump_grade_text, spawn_whiff_text};
 pub use bump_visual::{animate_bump_visual, trigger_bump_visual};
 pub(crate) use dash::update_breaker_state;

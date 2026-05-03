@@ -18,7 +18,7 @@
 use bevy::{ecs::system::SystemState, prelude::*};
 
 use super::{
-    super::system::{AfterimageConfig, PhantomBreakerLifetime},
+    super::system::AfterimageConfig,
     helpers::{
         build_afterimage_app, build_afterimage_app_no_config, seed_active_protocols_with_afterimage,
     },
@@ -516,58 +516,6 @@ fn second_rising_edge_despawns_existing_phantom_before_spawning_new_one() {
             .count(),
         1,
         "real breaker must still be present (despawn loop must not touch non-phantoms)"
-    );
-}
-
-// ── Behavior 5 — PhantomBreakerLifetime carried for backward compat ─────────
-//
-// TODO Wave 5: delete this test along with PhantomBreakerLifetime.
-
-/// Pins that the migrated phantom still carries `PhantomBreakerLifetime` so
-/// `check_phantom_bounce` (which ticks it down) continues to work until Wave 5
-/// deletes both `check_phantom_bounce` and `PhantomBreakerLifetime`.
-///
-/// RED failure: `Lifespan { remaining: 2.5 }` is absent on the raw-spawn
-/// phantom — the raw spawn inserts `PhantomBreakerLifetime` but not `Lifespan`.
-#[test]
-fn phantom_carries_phantom_breaker_lifetime_for_check_phantom_bounce_compat() {
-    let mut app = build_afterimage_app();
-    app.init_asset::<Mesh>();
-    app.init_asset::<ColorMaterial>();
-    override_config_to_2_5(&mut app);
-    seed_active_protocols_with_afterimage(&mut app);
-
-    let real = spawn_real_breaker_via_builder(&mut app);
-    drive_rising_edge(&mut app, real);
-
-    let phantom = app
-        .world_mut()
-        .query_filtered::<Entity, With<PhantomBreaker>>()
-        .iter(app.world())
-        .next()
-        .expect("phantom must exist after rising edge");
-
-    let world = app.world();
-
-    // Regression guard: old `PhantomBreakerLifetime` still present (Wave 5 deletes it).
-    let old_lifetime = world
-        .get::<PhantomBreakerLifetime>(phantom)
-        .expect("phantom must carry PhantomBreakerLifetime for check_phantom_bounce compat");
-    assert!(
-        (old_lifetime.0 - 2.5).abs() < f32::EPSILON,
-        "PhantomBreakerLifetime must be 2.5 (phantom_duration), got {}",
-        old_lifetime.0
-    );
-
-    // Migration assertion: new builder-inserted Lifespan also present.
-    // This is the RED-failing assertion against the unmigrated system.
-    let lifespan = world.get::<Lifespan>(phantom).expect(
-        "phantom must carry Lifespan (builder-inserted) — RED fails here against raw spawn",
-    );
-    assert!(
-        (lifespan.remaining - 2.5).abs() < f32::EPSILON,
-        "Lifespan.remaining must be 2.5 (phantom_duration), got {}",
-        lifespan.remaining
     );
 }
 

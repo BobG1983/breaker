@@ -1,12 +1,9 @@
 //! Shared test fixtures for Afterimage protocol tests.
 //!
-//! App builders, canonical `AfterimageConfig`, `PhantomBreaker` /
-//! `PhantomBreakerLifetime` spawners, a real breaker with `BumpState` /
-//! `BumpPerfectWindow` / `BumpLateWindow`, real `Bolt` with full
-//! `Position2D` / `Velocity2D` / `BoltBaseDamage` / `BoltRadius`, phantom
-//! bolt entity pre-seeders using the canonical bundle, `BumpPerformed`
-//! writers, and the `tick_n` / `activate_now`
-//! helpers.
+//! App builders, canonical `AfterimageConfig`, `PhantomBreaker` spawners,
+//! real `Bolt` with full `Position2D` / `Velocity2D` / `BoltBaseDamage` /
+//! `BoltRadius`, phantom bolt entity pre-seeders using the canonical bundle,
+//! `BumpPerformed` writers, and the `tick_n` / `activate_now` helpers.
 //!
 //! Mirrors the Reckless Dash / Burnout fixture shape. Canonical config is
 //! `phantom_duration: 2.0, phantom_bolt_duration: 3.0` — the design-doc
@@ -21,15 +18,11 @@ use bevy::{
 };
 use rantzsoft_stateflow::cleanup_on_exit;
 
-use super::super::system::{
-    AfterimageConfig, PhantomBreaker, PhantomBreakerLifetime, activate, wire,
-};
+use super::super::system::{AfterimageConfig, PhantomBreaker, activate, wire};
 use crate::{
     bolt::components::BoltBaseDamage,
     breaker::{
-        components::{
-            BaseHeight, BaseWidth, BumpLateWindow, BumpPerfectWindow, BumpState, DashState,
-        },
+        components::{BaseHeight, BaseWidth, DashState},
         messages::BumpGrade,
     },
     effect_v3::{
@@ -44,7 +37,7 @@ use crate::{
         resources::ActiveProtocols,
     },
     prelude::*,
-    shared::size::BaseRadius,
+    shared::{phantom::Lifespan, size::BaseRadius},
 };
 
 // ── App builders ────────────────────────────────────────────────────────────
@@ -196,37 +189,21 @@ pub(super) fn spawn_breaker_with_dash(app: &mut App, state: DashState, position:
         .id()
 }
 
-/// Spawns `(Breaker, DashState, Position2D, BumpState, BumpPerfectWindow,
-/// BumpLateWindow)` where the bump state / windows are specified by the
-/// caller. Used by `afterimage_check_phantom_bounce` tests to force a
-/// particular grade through the emitted message.
-pub(super) fn spawn_breaker_with_bump_state(
-    app: &mut App,
-    bump: BumpState,
-    perfect_window: f32,
-    late_window: f32,
-) -> Entity {
-    app.world_mut()
-        .spawn((
-            Breaker,
-            DashState::Idle,
-            Position2D(Vec2::ZERO),
-            bump,
-            BumpPerfectWindow(perfect_window),
-            BumpLateWindow(late_window),
-        ))
-        .id()
-}
-
 /// Spawns a bare phantom-breaker entity (the production `afterimage_spawn_phantom_breaker`
-/// is what normally produces one — this helper is used by the tick/check
-/// tests that need a pre-existing phantom-breaker without exercising the
-/// spawn system).
+/// is what normally produces one — this helper is used by tests that need a
+/// pre-existing phantom-breaker without exercising the spawn system).
+///
+/// Includes `Breaker` so the entity matches `tick_phantom_breaker_lifespan`'s
+/// `(With<Breaker>, With<PhantomBreaker>)` query filter — matching what the
+/// production builder always produces.
 pub(super) fn spawn_phantom_breaker_at(app: &mut App, position: Vec2, lifetime: f32) -> Entity {
     app.world_mut()
         .spawn((
+            Breaker,
             PhantomBreaker,
-            PhantomBreakerLifetime(lifetime),
+            Lifespan {
+                remaining: lifetime,
+            },
             Position2D(position),
             BaseWidth(100.0),
             BaseHeight(20.0),
@@ -306,14 +283,6 @@ pub(super) fn write_bump_performed(
 }
 
 // ── Assertion helpers ───────────────────────────────────────────────────────
-
-/// Returns every captured `BumpPerformed` message.
-pub(super) fn captured_bump_performed(app: &App) -> Vec<BumpPerformed> {
-    app.world()
-        .resource::<MessageCollector<BumpPerformed>>()
-        .0
-        .clone()
-}
 
 /// Counts `(Bolt, PhantomBolt)` entities currently in the world.
 pub(super) fn phantom_bolt_count(app: &mut App) -> usize {

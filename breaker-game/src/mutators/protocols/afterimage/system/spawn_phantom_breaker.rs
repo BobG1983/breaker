@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{components::PhantomBreakerLifetime, config::AfterimageConfig};
+use super::config::AfterimageConfig;
 use crate::{
     breaker::{
         builder::core::types::BreakerPhantomParams,
@@ -11,16 +11,6 @@ use crate::{
 };
 
 // ── System 1 — afterimage_spawn_phantom_breaker ─────────────────────────────
-
-/// Default phantom AABB dimensions used when the real breaker does not
-/// carry `BaseWidth` / `BaseHeight`. Matches the canonical breaker
-/// footprint used by the phantom-breaker test fixtures so the AABB overlap
-/// check in `afterimage_check_phantom_bounce` remains geometrically
-/// consistent when minimal breakers (e.g. in harness tests) don't supply
-/// the size components.
-const DEFAULT_PHANTOM_BASE_WIDTH: f32 = 100.0;
-/// Companion to [`DEFAULT_PHANTOM_BASE_WIDTH`].
-const DEFAULT_PHANTOM_BASE_HEIGHT: f32 = 20.0;
 
 const PHANTOM_COLOR_RGB: [f32; 3] = [0.4, 0.8, 1.0];
 const PHANTOM_FLICKER_FREQUENCY: f32 = 4.0;
@@ -46,8 +36,12 @@ type SpawnPhantomBreakerBreakerQuery<'w, 's> = Query<
 /// so at most one phantom breaker exists globally at a time. Copies the
 /// breaker's RAW `BaseWidth` / `BaseHeight` into the phantom — no size-boost
 /// or node-scale multiplication. If the breaker does not carry those
-/// components the phantom falls back to [`DEFAULT_PHANTOM_BASE_WIDTH`] /
-/// [`DEFAULT_PHANTOM_BASE_HEIGHT`].
+/// components the phantom falls back to `BreakerDefinition::default()`'s
+/// `width` / `height` fields.
+///
+/// Lifetime tracking is delegated to the canonical `Lifespan` component
+/// (inserted by the builder's `.phantom(...)` terminal) and ticked by
+/// `tick_phantom_breaker_lifespan`.
 ///
 /// Harness-safe: early-returns without touching `prev_state` when
 /// `AfterimageConfig` is absent or when the single-breaker query fails.
@@ -75,10 +69,10 @@ pub(crate) fn afterimage_spawn_phantom_breaker(
         for existing in &existing_phantoms {
             commands.entity(existing).despawn();
         }
-        let width = base_width.map_or(DEFAULT_PHANTOM_BASE_WIDTH, |w| w.0);
-        let height = base_height.map_or(DEFAULT_PHANTOM_BASE_HEIGHT, |h| h.0);
         let phantom_def = BreakerDefinition::default();
-        let entity = Breaker::builder()
+        let width = base_width.map_or(phantom_def.width, |w| w.0);
+        let height = base_height.map_or(phantom_def.height, |h| h.0);
+        Breaker::builder()
             .definition(&phantom_def)
             .with_width(width)
             .with_height(height)
@@ -92,9 +86,6 @@ pub(crate) fn afterimage_spawn_phantom_breaker(
             .rendered(&mut meshes, &mut materials)
             .extra()
             .spawn(&mut commands);
-        commands
-            .entity(entity)
-            .insert(PhantomBreakerLifetime(config.phantom_duration));
     }
 
     *prev_state = Some(current);

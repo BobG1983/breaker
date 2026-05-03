@@ -1,7 +1,5 @@
-use crate::breaker::{
-    messages::BumpGrade,
-    systems::bump::{forward_grade, retroactive_grade},
-};
+use super::super::system::{forward_grade, retroactive_grade};
+use crate::breaker::messages::BumpGrade;
 
 // ── Pure grade helper tests ──────────────────────────────────────
 

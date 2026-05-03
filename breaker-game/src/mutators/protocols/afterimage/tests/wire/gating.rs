@@ -1,16 +1,9 @@
 use bevy::prelude::*;
 
-use super::{
-    super::{
-        super::system::PhantomBreakerLifetime,
-        helpers::{
-            build_afterimage_app, build_afterimage_app_in_chip_selecting, captured_bump_performed,
-            phantom_bolts_owned_by, phantom_breaker_count, seed_active_protocols_with_afterimage,
-            spawn_breaker_with_bump_state, spawn_breaker_with_dash, spawn_phantom_breaker_at,
-            spawn_real_bolt, tick_n, write_bump_performed,
-        },
-    },
-    helpers::perfect_bump_state,
+use super::super::helpers::{
+    build_afterimage_app, build_afterimage_app_in_chip_selecting, phantom_bolts_owned_by,
+    phantom_breaker_count, seed_active_protocols_with_afterimage, spawn_breaker_with_dash,
+    spawn_phantom_breaker_at, spawn_real_bolt, write_bump_performed,
 };
 use crate::{
     breaker::{components::DashState, messages::BumpGrade},
@@ -55,80 +48,6 @@ fn spawn_phantom_breaker_gated_off_in_chip_selecting() {
         0,
         "run_if(in_state(Playing)) must gate off afterimage_spawn_phantom_breaker"
     );
-}
-
-// ── I4 (edge case) — ChipSelecting: tick_phantom_breaker does NOT tick ────
-
-#[test]
-fn tick_phantom_breaker_does_not_tick_in_chip_selecting() {
-    let mut app = build_afterimage_app_in_chip_selecting();
-    seed_active_protocols_with_afterimage(&mut app);
-    let phantom = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 2.0);
-
-    tick_n(&mut app, 2);
-
-    let lifetime = app
-        .world()
-        .get::<PhantomBreakerLifetime>(phantom)
-        .expect("phantom must persist — tick system is gated off");
-    assert!(
-        (lifetime.0 - 2.0).abs() < f32::EPSILON,
-        "lifetime must be UNCHANGED in ChipSelecting, got {}",
-        lifetime.0
-    );
-}
-
-// ── I5 (edge case) — inactive → no reflection ─────────────────────────────
-
-#[test]
-fn check_phantom_bounce_gated_off_when_inactive() {
-    let mut app = build_afterimage_app();
-    // Do NOT seed ActiveProtocols.
-    let _phantom = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 1.5);
-    let _breaker = spawn_breaker_with_bump_state(&mut app, perfect_bump_state(), 0.2, 0.15);
-    let bolt = spawn_real_bolt(
-        &mut app,
-        Vec2::new(0.0, 14.0), // overlapping top face
-        Vec2::new(0.0, -400.0),
-        10.0,
-        6.0,
-    );
-
-    tick(&mut app);
-
-    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(
-        (velocity.0.y - (-400.0)).abs() < 1.0,
-        "inactive → no reflection, got velocity.y={}",
-        velocity.0.y
-    );
-    assert!(captured_bump_performed(&app).is_empty());
-}
-
-// ── I5 (edge case) — ChipSelecting → no reflection ────────────────────────
-
-#[test]
-fn check_phantom_bounce_gated_off_in_chip_selecting() {
-    let mut app = build_afterimage_app_in_chip_selecting();
-    seed_active_protocols_with_afterimage(&mut app);
-    let _phantom = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 1.5);
-    let _breaker = spawn_breaker_with_bump_state(&mut app, perfect_bump_state(), 0.2, 0.15);
-    let bolt = spawn_real_bolt(
-        &mut app,
-        Vec2::new(0.0, 14.0), // overlapping top face
-        Vec2::new(0.0, -400.0),
-        10.0,
-        6.0,
-    );
-
-    tick(&mut app);
-
-    let velocity = app.world().get::<Velocity2D>(bolt).unwrap();
-    assert!(
-        (velocity.0.y - (-400.0)).abs() < 1.0,
-        "ChipSelecting → no reflection"
-    );
-    assert!(captured_bump_performed(&app).is_empty());
 }
 
 // ── I6 (edge case) — inactive → no spawn ──────────────────────────────────
