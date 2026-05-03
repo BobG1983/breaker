@@ -39,7 +39,7 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 
 ## Context to load on first run AND after auto-compaction
 1. `docs/todos/detail/phantom-breaker.md` — full feature brief
-2. `/Users/bgardner/.claude-work/plans/cosmic-yawning-porcupine.md` — wave structure
+2. `.claude/plans/cosmic-yawning-porcupine.md` — wave structure
 3. `.claude/rules/project-context.md` — terminology, baseline rules
 4. `.claude/rules/tdd.md` — your role in the GREEN phase
 5. `.claude/rules/cargo.md` — cargo aliases (so you know what to ask runner-cargo for, even though you never run cargo yourself)

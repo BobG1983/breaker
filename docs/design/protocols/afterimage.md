@@ -15,21 +15,21 @@ You WANT to dash AWAY from where the bolt will be, not toward it.
 
 ## Config Resource
 ```rust
-#[derive(Resource, Debug, Clone)]
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
 pub(crate) struct AfterimageConfig {
-    /// How long the phantom breaker entity persists after a dash (seconds, default 2.0).
-    pub phantom_breaker_lifespan: f32,
-    /// How long a bolt remains in Phantom state after a phantom Perfect Bump (seconds).
-    pub phantom_bolt_lifespan: f32,
+    /// Seconds a `PhantomBreaker` entity exists before its lifetime tick despawns it.
+    pub phantom_duration: f32,
+    /// Seconds a spawned phantom-bolt entity exists before `tick_phantom_lifetime` despawns it.
+    pub phantom_bolt_duration: f32,
 }
 ```
 
 Populated from `ProtocolTuning::Afterimage`.
 
 ## Components
-Afterimage owns no per-mechanic components. It spawns the phantom breaker via `Breaker::builder().phantom(BreakerPhantomParams { lifespan: config.phantom_breaker_lifespan })` (TODO #4 shared infra), which attaches `Lifespan` + `PhantomFlicker` + `PhantomBreaker` marker from the breaker domain.
+Afterimage owns no per-mechanic components. It spawns the phantom breaker via `Breaker::builder().phantom(BreakerPhantomParams { lifespan: config.phantom_duration, .. })`, which attaches `Lifespan` + `PhantomFlicker` + `PhantomBreaker` marker from the breaker domain.
 
-For the bolt mutation, it calls `Bolt::become_phantom(PhantomParams { lifespan, end_behavior: LifetimeEndBehavior::RevertToNormalBolt })` on the real bolt (TODO #5 builder API), attaching `PhantomBolt` + `Lifespan` + `LifetimeEndBehavior::RevertToNormalBolt`. On lifespan expiry, `PhantomBolt::become_normal` reverts the bolt in place.
+For the bolt mutation, it calls `Bolt::become_phantom(PhantomParams { lifespan, end_behavior: LifetimeEndBehavior::RevertToNormalBolt })` on the real bolt (TODO #2 builder API), attaching `PhantomBolt` + `Lifespan` + `LifetimeEndBehavior::RevertToNormalBolt`. On lifespan expiry, `PhantomBolt::become_normal` reverts the bolt in place.
 
 ## Messages
 **Reads**: `BumpPerformed { grade, bolt, breaker }` (breaker domain), `DashStateChanged` (breaker domain).
@@ -40,13 +40,13 @@ For the bolt mutation, it calls `Bolt::become_phantom(PhantomParams { lifespan, 
 ### `afterimage_spawn_phantom_breaker`
 - **Schedule**: `FixedUpdate`.
 - **run_if**: `protocol_active(ProtocolKind::Afterimage)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Detects `DashState` transition to `Active`. Despawns any existing phantom breaker (`Query<Entity, With<PhantomBreaker>>`), then spawns a new one via `Breaker::builder().phantom(BreakerPhantomParams { lifespan: config.phantom_breaker_lifespan, .. }).spawn()` at the breaker's pre-dash position. The shared `tick_phantom_flicker` and `tick_lifespan` (from the breaker/phantom domain) handle flicker VFX and despawn.
+- **Behavior**: Detects `DashState` transition to `Dashing`. Despawns any existing phantom breaker (`Query<Entity, With<PhantomBreaker>>`), then spawns a new one via `Breaker::builder().phantom(BreakerPhantomParams { lifespan: config.phantom_duration, .. }).spawn()` at the breaker's current position. The shared `tick_phantom_flicker` (in `Update`) and `tick_phantom_breaker_lifespan` (in `FixedUpdate`) handle flicker VFX and despawn.
 - **Ordering**: After breaker movement systems (to read pre-dash position).
 
 ### `afterimage_promote_bolt_to_phantom`
 - **Schedule**: `FixedUpdate`.
 - **run_if**: `protocol_active(ProtocolKind::Afterimage)` + `in_state(NodeState::Playing)`.
-- **Behavior**: Reads `BumpPerformed`. On `BumpGrade::Perfect` where `breaker` is a `PhantomBreaker` entity AND the real bolt does NOT already have `PhantomBolt`: calls `Bolt::become_phantom` on the bolt entity with `PhantomParams { lifespan: config.phantom_bolt_lifespan, end_behavior: LifetimeEndBehavior::RevertToNormalBolt }`. If the bolt IS already phantom, skip — uniqueness guard, duration NOT reset.
+- **Behavior**: Reads `BumpPerformed`. On `BumpGrade::Perfect` where `breaker` is a `PhantomBreaker` entity AND the real bolt does NOT already have `PhantomBolt`: calls `Bolt::become_phantom` on the bolt entity with `PhantomParams { lifespan: config.phantom_bolt_duration, end_behavior: LifetimeEndBehavior::RevertToNormalBolt }`. If the bolt IS already phantom, skip — uniqueness guard, duration NOT reset.
 - **Ordering**: `.after(BreakerSystems::GradeBump)`.
 
 Lifespan tick-down and revert-on-expiry are owned by the shared bolt/phantom infrastructure (TODO #5 `tick_lifespan` + `handle_lifetime_end_behavior`). Afterimage itself has no tick system.
@@ -66,7 +66,7 @@ Lifespan tick-down and revert-on-expiry are owned by the shared bolt/phantom inf
 
 ## Expected Behaviors (for test specs)
 
-1. **Phantom breaker spawns at dash start position** — dash begins at breaker position (100.0, 50.0); a new entity with `PhantomBreaker` + `Lifespan(config.phantom_breaker_lifespan)` + `PhantomFlicker` spawns at (100.0, 50.0).
+1. **Phantom breaker spawns at dash start position** — dash begins at breaker position (100.0, 50.0); a new entity with `PhantomBreaker` + `Lifespan(config.phantom_duration)` + `PhantomFlicker` spawns at (100.0, 50.0).
 2. **Phantom breaker despawns after lifespan** — shared `tick_lifespan` decrements; at `remaining <= 0`, entity despawns.
 3. **Bolt bounces off phantom breaker normally** — phantom carries the same collision layer as the real breaker; bolt-breaker collision reflects the bolt with normal rebound physics.
 4. **Perfect bump on phantom mutates real bolt into Phantom** — `BumpPerformed { grade: Perfect, breaker: <phantom entity> }`; `Bolt::become_phantom` attaches `PhantomBolt` + `Lifespan` + `LifetimeEndBehavior::RevertToNormalBolt`.

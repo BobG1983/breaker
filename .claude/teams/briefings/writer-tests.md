@@ -35,7 +35,7 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 
 ## Context to load
 1. `docs/todos/detail/phantom-breaker.md`
-2. `/Users/bgardner/.claude-work/plans/cosmic-yawning-porcupine.md`
+2. `.claude/plans/cosmic-yawning-porcupine.md`
 3. `.claude/rules/tdd.md` — RED phase rules
 4. `.claude/rules/project-context.md`
 5. `breaker-game/src/breaker/builder/` — builder API patterns you'll write tests against

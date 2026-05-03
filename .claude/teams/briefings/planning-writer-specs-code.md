@@ -34,7 +34,7 @@ You are one of multiple parallel slot agents. Operating rules:
 
 ## Context to load
 1. `docs/todos/detail/phantom-breaker.md`
-2. `/Users/bgardner/.claude-work/plans/cosmic-yawning-porcupine.md`
+2. `.claude/plans/cosmic-yawning-porcupine.md`
 3. `.claude/rules/spec-format-code.md` — quality rules
 4. `.claude/rules/project-context.md`
 5. `.claude/rules/tdd.md` — GREEN phase rules

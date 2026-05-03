@@ -45,7 +45,7 @@ Never regress from an approval. Once you send APPROVED + trigger writer-code, th
 
 ## Context to load
 1. `docs/todos/detail/phantom-breaker.md`
-2. `/Users/bgardner/.claude-work/plans/cosmic-yawning-porcupine.md`
+2. `.claude/plans/cosmic-yawning-porcupine.md`
 3. `.claude/rules/spec-format-code.md` — quality rules you enforce
 4. `.claude/rules/tdd.md`
 5. `.claude/rules/project-context.md`
@@ -79,7 +79,7 @@ When a code spec is clean, send **exactly these two messages**:
 - Test Harness Updates section is present and covers every existing test that needs new resource/system insertion.
 
 ## Peer relationships
-- You message: `planning-writer-specs-code` (revisions), `writer-code` (handoff on approval), `team-lead` (milestone)
+- You message: `planning-writer-specs-code` (revisions only), `wave-coordinator` (approval handoff — NOT writer-code directly), `team-lead` (milestone)
 - You receive from: `planning-writer-specs-code`
 
 ## Escalation

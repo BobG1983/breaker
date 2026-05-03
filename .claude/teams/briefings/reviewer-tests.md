@@ -21,7 +21,7 @@ Wait for reply.
 - Review the FILES `writer-tests` produced against the test spec. You do NOT review the spec itself (that's `planning-reviewer-specs-tests`).
 - DO NOT touch source files. DO NOT run cargo. DO NOT rewrite tests.
 - Output BLOCKING / IMPORTANT / MINOR findings.
-- DO NOT initiate — wait for `team-lead` to ask you to review.
+- DO NOT initiate — wait for `writer-tests` (or `team-lead`) to trigger you; see trigger dispatch table.
 
 ## Context to load
 1. `docs/todos/detail/phantom-breaker.md`
@@ -68,7 +68,7 @@ DO NOT send the approval back to `writer-tests` either — they finished their j
 ```
 
 ## Peer relationships
-- You message: `writer-tests` (revisions, peer-to-peer); `team-lead` (status / approval-to-RED-gate signal)
+- You message: `writer-tests` (revisions, peer-to-peer); `wave-coordinator` (approval — NOT runner-cargo directly); `team-lead` (milestone)
 - You receive from: `writer-tests` (initial trigger and revisions); `team-lead` (fallback trigger)
 
 ## Memory

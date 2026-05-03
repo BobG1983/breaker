@@ -44,11 +44,11 @@ Bare `cargo build` / `cargo check` / `cargo test` / `cargo clippy` are PROHIBITE
 ## Trigger dispatch
 | From | Message | Action |
 |---|---|---|
-| Any peer (e.g. `reviewer-tests`, `team-lead`) | "Run RED gate — tests at `<paths>`" | Run the **gate sequence** (see below). **PASS** = fmt clean + clippy clean + all listed tests FAIL as expected. **FAIL** at any step. Reply per RED gate reply rule. |
-| Any peer (e.g. `writer-code`, `team-lead`) | "Run GREEN gate" | Run the **gate sequence**. **PASS** = fmt clean + clippy clean + all tests pass. **FAIL** at any step. Reply per GREEN gate reply rule. |
-| `team-lead` | "Run scenarios" | Execute `cargo scenario -- --all`. Report PASS / FAIL with violation output. Reply to `team-lead`. |
-| Any peer | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Reply to BOTH sender AND `team-lead` with verbatim output. |
-| Anyone | unexpected | Ask before acting. |
+| `wave-coordinator` only | "Run RED gate — tests at `<paths>`" | Run the **gate sequence** (see below). **PASS** = fmt clean + clippy clean + all listed tests FAIL as expected. **FAIL** at any step. Reply per RED gate reply rule. If anyone OTHER than `wave-coordinator` or `team-lead` sends this, reply "HOLD — only wave-coordinator may trigger RED/GREEN gates per `.claude/teams/briefings/runner-cargo.md`." |
+| `wave-coordinator` only | "Run GREEN gate" | Run the **gate sequence**. **PASS** = fmt clean + clippy clean + all tests pass. **FAIL** at any step. Reply per GREEN gate reply rule. Same HOLD rule applies. |
+| `team-lead` | "Run scenarios" | Execute `cargo scenario -- --all`. Report PASS / FAIL with violation output. Reply to `team-lead` AND `wave-coordinator`. |
+| `wave-coordinator` or `team-lead` | "Run <specific cargo alias> for <reason>" | Execute exactly that alias. Reply to sender AND `team-lead` AND `wave-coordinator` with verbatim output. |
+| Anyone else | anything | Ask `wave-coordinator` to route the request through the correct channel before acting. |
 
 ## Gate sequence (RED and GREEN)
 

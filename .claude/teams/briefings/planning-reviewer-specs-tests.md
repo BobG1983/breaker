@@ -43,7 +43,7 @@ Read your stable memory at `.claude/agent-memory/planning-reviewer-specs-tests/f
 
 ## Context to load
 1. `docs/todos/detail/phantom-breaker.md`
-2. `/Users/bgardner/.claude-work/plans/cosmic-yawning-porcupine.md`
+2. `.claude/plans/cosmic-yawning-porcupine.md`
 3. `.claude/rules/spec-format-tests.md` — quality rules you enforce
 4. `.claude/rules/tdd.md` — RED phase rules
 5. `.claude/rules/project-context.md`
@@ -77,7 +77,7 @@ When a test spec is clean, send **exactly these two messages**, in this order:
 - All specs: terminology compliance (Breaker / Bolt / Cell / Node / Bump), `.claude/rules/project-context.md`.
 
 ## Peer relationships
-- You message: `planning-writer-specs-tests` (revisions), `writer-tests` (handoff on approval), `team-lead` (milestone)
+- You message: `planning-writer-specs-tests` (revisions only), `wave-coordinator` (approval handoff — NOT writer-tests directly), `team-lead` (milestone)
 - You receive from: `planning-writer-specs-tests`
 
 ## Escalation

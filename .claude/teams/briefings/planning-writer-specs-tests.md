@@ -40,7 +40,7 @@ If your kickoff carries a spec path ending in `.draft.md`, you are drafting Wave
 
 ## Context to load on first run AND after auto-compaction
 1. `docs/todos/detail/phantom-breaker.md` — feature brief (16 tests, code-change table)
-2. `/Users/bgardner/.claude-work/plans/cosmic-yawning-porcupine.md` — wave structure
+2. `.claude/plans/cosmic-yawning-porcupine.md` — wave structure
 3. `.claude/rules/spec-format-tests.md` — spec template + quality rules
 4. `.claude/rules/project-context.md` — terminology, baseline rules
 5. `.claude/rules/tdd.md` — what RED phase requires
