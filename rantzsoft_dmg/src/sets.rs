@@ -205,9 +205,9 @@ mod tests {
         let b = DmgSystems::ApplyDamageBoosts;
         let c = DmgSystems::ApplyVulnerable;
 
-        assert!(a == b);
-        assert!(a != c);
-        assert!(b != c);
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+        assert_ne!(b, c);
 
         // Edge case: iterate all 16 variants, assert reflexive equality for
         // each (via two independent bindings to avoid `clippy::eq_op`), then
