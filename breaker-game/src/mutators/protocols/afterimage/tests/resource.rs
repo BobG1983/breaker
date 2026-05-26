@@ -25,18 +25,12 @@ fn afterimage_reuses_effect_v3_phantom_components() {
     let dummy = app.world_mut().spawn_empty().id();
     let _: PhantomOwner = PhantomOwner(dummy);
 
-    // (b) Afterimage's system module re-exports the canonical types —
-    //     prove it by comparing type_name strings.
-    let name = std::any::type_name::<super::super::system::PhantomBolt>();
-    assert!(
-        name.contains("effect_v3::effects::phantom_bolt"),
-        "afterimage::system::PhantomBolt must be the canonical effect_v3 type, \
-         got type_name = {name}"
-    );
+    // (b) Afterimage's system module re-exports the canonical type —
+    //     prove it by comparing TypeIds (robust against re-export chains).
     assert_eq!(
-        std::any::type_name::<PhantomBolt>(),
-        std::any::type_name::<super::super::system::PhantomBolt>(),
-        "afterimage's PhantomBolt import must be the SAME type as \
-         effect_v3::effects::phantom_bolt::components::PhantomBolt"
+        std::any::TypeId::of::<PhantomBolt>(),
+        std::any::TypeId::of::<super::super::system::PhantomBolt>(),
+        "afterimage::system::PhantomBolt must be the SAME type as \
+         the canonical PhantomBolt (bolt::components::phantom)"
     );
 }

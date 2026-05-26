@@ -2,18 +2,10 @@
 
 use bevy::prelude::*;
 
-/// Marker identifying an entity as a phantom bolt.
-///
-/// Two spawn paths exist.
-/// `effect_v3::effects::phantom_bolt::SpawnPhantomConfig::fire` (chip-effect
-/// path) omits `CELL_LAYER` from the collision mask so these phantoms do not
-/// interact with cells.
-/// `protocol/protocols/afterimage::afterimage_spawn_phantom_bolt` (protocol
-/// path) includes `CELL_LAYER` and relies on the `PhantomBolt` branch in
-/// `bolt_cell_collision` to pierce-and-damage cells.
-/// If a third spawn path appears, this divergence must be reconsidered.
-#[derive(Component, Debug, Clone)]
-pub struct PhantomBolt;
+// PhantomBolt now lives in bolt/components/phantom.rs.
+// This re-export keeps all existing `use crate::effect_v3::effects::phantom_bolt::components::PhantomBolt`
+// imports compiling without changes during the migration (Wave 1–4). Deleted in Wave 5.
+pub use crate::bolt::components::PhantomBolt;
 
 /// Remaining lifetime in seconds before the phantom bolt despawns.
 #[derive(Component, Debug, Clone)]
