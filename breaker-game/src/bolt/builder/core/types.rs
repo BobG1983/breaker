@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
-use crate::effect_v3::{storage::BoundEffects, types::Tree};
+use crate::{
+    bolt::components::{LifetimeEndBehavior, PhantomParams},
+    effect_v3::{storage::BoundEffects, types::Tree},
+};
 
 /// Default bolt radius when neither `definition()` nor `with_radius()` is called.
 pub(in crate::bolt::builder) const DEFAULT_RADIUS: f32 = 8.0;
@@ -100,6 +103,13 @@ pub(in crate::bolt::builder) struct OptionalBoltData {
     /// bolt, which also matches `BOLT_LAYER`) set them via
     /// [`BoltBuilder::with_extra_mask_bits`].
     pub(in crate::bolt::builder) extra_mask_bits:          u32,
+    /// Phantom parameters — `Some` when `.phantom(params)` was called.
+    /// Triggers `Bolt::become_phantom(...)` in terminal and (Rendered only)
+    /// `PhantomFlicker::default()` insertion.
+    pub(in crate::bolt::builder) phantom:                  Option<PhantomParams>,
+    /// Lifespan-expiry behavior — `Some` when `.with_lifetime_end_behavior(...)`
+    /// was called. Inserted verbatim by the terminal.
+    pub(in crate::bolt::builder) lifetime_end_behavior:    Option<LifetimeEndBehavior>,
 }
 
 pub(in crate::bolt::builder) struct BoltDefinitionParams {

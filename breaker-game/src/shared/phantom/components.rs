@@ -20,3 +20,12 @@ pub struct PhantomFlicker {
     /// Minimum alpha during flicker. Valid range `[0.0, 1.0]`.
     pub min_alpha: f32,
 }
+
+impl Default for PhantomFlicker {
+    fn default() -> Self {
+        Self {
+            frequency: 4.0,
+            min_alpha: 0.3,
+        }
+    }
+}

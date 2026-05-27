@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::types::*;
 use crate::{
     bolt::{
-        components::Bolt,
+        components::{Bolt, LifetimeEndBehavior, PhantomParams},
         definition::BoltDefinition,
         resources::{DEFAULT_BOLT_ANGLE_SPREAD, DEFAULT_BOLT_SPAWN_OFFSET_Y},
     },
@@ -309,6 +309,23 @@ impl<P, S, A, M, R, V> BoltBuilder<P, S, A, M, R, V> {
     #[must_use]
     pub const fn with_extra_mask_bits(mut self, bits: u32) -> Self {
         self.optional.extra_mask_bits |= bits;
+        self
+    }
+
+    /// Mark this bolt as a phantom. Stashes `PhantomParams`; the terminal calls
+    /// `Bolt::become_phantom(...)` and (for Rendered visuals) inserts
+    /// `PhantomFlicker::default()`.
+    #[must_use]
+    pub fn phantom(mut self, params: PhantomParams) -> Self {
+        self.optional.phantom = Some(params);
+        self
+    }
+
+    /// Set the behavior that runs when this bolt's `Lifespan` reaches 0.
+    /// Inserts a `LifetimeEndBehavior` component on spawn.
+    #[must_use]
+    pub const fn with_lifetime_end_behavior(mut self, behavior: LifetimeEndBehavior) -> Self {
+        self.optional.lifetime_end_behavior = Some(behavior);
         self
     }
 }

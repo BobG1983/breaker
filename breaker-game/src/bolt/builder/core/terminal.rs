@@ -13,7 +13,7 @@ use crate::{
     effect_v3::{storage::BoundEffects, types::Tree},
     prelude::*,
     shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, WALL_LAYER,
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, PhantomFlicker, WALL_LAYER,
         size::{BaseRadius, MaxRadius, MinRadius},
     },
 };
@@ -146,7 +146,17 @@ fn spawn_inner(
         ));
     }
 
-    entity.id()
+    let entity_id = {
+        if let Some(behavior) = optional.lifetime_end_behavior {
+            entity.insert(behavior);
+        }
+        entity.id()
+    };
+
+    if let Some(params) = optional.phantom {
+        Bolt::become_phantom(commands, entity_id, params.dedup_key);
+    }
+    entity_id
 }
 
 // ── Headless spawn() terminal impls ────────────────────────────────────────
@@ -236,12 +246,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Primary, Rendered> {
             vel:         Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
+        let has_phantom = self.optional.phantom.is_some();
         let entity = spawn_inner(commands, core, true, true, self.optional);
-        commands.entity(entity).insert((
-            Mesh2d(mesh),
-            MeshMaterial2d(material),
-            GameDrawLayer::Bolt,
-        ));
+        let mut entity_cmds = commands.entity(entity);
+        entity_cmds.insert((Mesh2d(mesh), MeshMaterial2d(material), GameDrawLayer::Bolt));
+        if has_phantom {
+            entity_cmds.insert(PhantomFlicker::default());
+        }
         entity
     }
 }
@@ -261,12 +272,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, Serving, Extra, Rendered> {
             vel:         Velocity2D(Vec2::ZERO),
         };
         let core = build_core(&params, &self.optional);
+        let has_phantom = self.optional.phantom.is_some();
         let entity = spawn_inner(commands, core, true, false, self.optional);
-        commands.entity(entity).insert((
-            Mesh2d(mesh),
-            MeshMaterial2d(material),
-            GameDrawLayer::Bolt,
-        ));
+        let mut entity_cmds = commands.entity(entity);
+        entity_cmds.insert((Mesh2d(mesh), MeshMaterial2d(material), GameDrawLayer::Bolt));
+        if has_phantom {
+            entity_cmds.insert(PhantomFlicker::default());
+        }
         entity
     }
 }
@@ -286,12 +298,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Primary, Rendered
             vel:         self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
+        let has_phantom = self.optional.phantom.is_some();
         let entity = spawn_inner(commands, core, false, true, self.optional);
-        commands.entity(entity).insert((
-            Mesh2d(mesh),
-            MeshMaterial2d(material),
-            GameDrawLayer::Bolt,
-        ));
+        let mut entity_cmds = commands.entity(entity);
+        entity_cmds.insert((Mesh2d(mesh), MeshMaterial2d(material), GameDrawLayer::Bolt));
+        if has_phantom {
+            entity_cmds.insert(PhantomFlicker::default());
+        }
         entity
     }
 }
@@ -311,12 +324,13 @@ impl BoltBuilder<HasPosition, HasSpeed, HasAngle, HasVelocity, Extra, Rendered> 
             vel:         self.motion.vel,
         };
         let core = build_core(&params, &self.optional);
+        let has_phantom = self.optional.phantom.is_some();
         let entity = spawn_inner(commands, core, false, false, self.optional);
-        commands.entity(entity).insert((
-            Mesh2d(mesh),
-            MeshMaterial2d(material),
-            GameDrawLayer::Bolt,
-        ));
+        let mut entity_cmds = commands.entity(entity);
+        entity_cmds.insert((Mesh2d(mesh), MeshMaterial2d(material), GameDrawLayer::Bolt));
+        if has_phantom {
+            entity_cmds.insert(PhantomFlicker::default());
+        }
         entity
     }
 }
