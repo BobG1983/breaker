@@ -9,12 +9,9 @@ use super::super::config_impl::SpawnPhantomConfig;
 use crate::{
     bolt::{
         BoltPlugin,
-        components::{Bolt, LifetimeEndBehavior, PhantomBolt, PhantomDedupKey},
+        components::{Bolt, PhantomBolt, PhantomDedupKey},
     },
-    effect_v3::{
-        commands::FireEffectCommand, effects::phantom_bolt::components::PhantomLifetime,
-        types::EffectType,
-    },
+    effect_v3::{commands::FireEffectCommand, types::EffectType},
     prelude::*,
     shared::Lifespan,
     state::run::resources::NodeOutcome,
@@ -149,53 +146,6 @@ fn phantom_with_long_duration_survives_one_tick() {
         (lifespan.remaining - (2.0 - FIXED_DT)).abs() < 1e-4,
         "remaining must be ~2.0 - FIXED_DT after one tick, got {}",
         lifespan.remaining
-    );
-}
-
-// ── T24 edge case 3b — legacy tick_phantom_lifetime is a no-op for W4B phantoms
-
-#[test]
-fn phantom_does_not_carry_phantom_lifetime_at_expiry() {
-    let mut app = fire_phantom_in_app();
-
-    let real_bolt = app
-        .world_mut()
-        .spawn((Bolt, Position2D(Vec2::ZERO), Velocity2D(Vec2::ZERO)))
-        .id();
-
-    let config = SpawnPhantomConfig {
-        duration:   OrderedFloat(0.01),
-        max_active: 3,
-    };
-    FireEffectCommand {
-        entity: real_bolt,
-        effect: EffectType::SpawnPhantom(config),
-        source: "phantom_bolt".to_string(),
-    }
-    .apply(app.world_mut());
-    app.world_mut().flush();
-
-    let phantom = app
-        .world_mut()
-        .query_filtered::<Entity, (With<PhantomBolt>, With<PhantomDedupKey>)>()
-        .iter(app.world())
-        .next()
-        .expect("phantom must be spawned");
-
-    // Before any tick: the entity must have LifetimeEndBehavior::Despawn and Lifespan
-    // but NOT PhantomLifetime (the legacy component that tick_phantom_lifetime reads).
-    assert!(
-        app.world().get::<PhantomLifetime>(phantom).is_none(),
-        "W4B phantom must NOT carry PhantomLifetime (legacy component)"
-    );
-    assert!(
-        app.world().get::<Lifespan>(phantom).is_some(),
-        "W4B phantom must carry shared Lifespan"
-    );
-    assert_eq!(
-        app.world().get::<LifetimeEndBehavior>(phantom).copied(),
-        Some(LifetimeEndBehavior::Despawn),
-        "W4B phantom must carry LifetimeEndBehavior::Despawn"
     );
 }
 

@@ -15,10 +15,7 @@ use crate::{
     bolt::components::{
         Bolt, ExtraBolt, LifetimeEndBehavior, PhantomBolt, PhantomDamagedCells, PhantomDedupKey,
     },
-    effect_v3::{
-        effects::phantom_bolt::components::{PhantomLifetime, PhantomOwner},
-        traits::Fireable,
-    },
+    effect_v3::traits::Fireable,
     prelude::*,
     shared::{BREAKER_LAYER, CELL_LAYER, GameDrawLayer, Lifespan, PhantomFlicker, WALL_LAYER},
     state::types::NodeState,
@@ -159,15 +156,6 @@ fn fire_produces_phantom_with_correct_collision_mask_and_no_legacy_components() 
         layers.mask & BREAKER_LAYER,
         0,
         "mask must include BREAKER_LAYER"
-    );
-
-    assert!(
-        world.get::<PhantomLifetime>(phantom).is_none(),
-        "PhantomLifetime must NOT be present (legacy)"
-    );
-    assert!(
-        world.get::<PhantomOwner>(phantom).is_none(),
-        "PhantomOwner must NOT be present (legacy)"
     );
 }
 

@@ -13,13 +13,13 @@ use super::{
     super::system::PhantomBreaker,
     helpers::{
         build_afterimage_app, drive_to_teardown, phantom_bolt_count, phantom_breaker_count,
-        seed_active_protocols_with_afterimage, spawn_phantom_bolt_entity, spawn_phantom_breaker_at,
-        spawn_real_bolt, tick_n,
+        seed_active_protocols_with_afterimage, spawn_phantom_breaker_at, spawn_real_bolt, tick_n,
     },
 };
 use crate::{
-    effect_v3::effects::phantom_bolt::components::{PhantomBolt, PhantomLifetime, PhantomOwner},
+    bolt::components::{LifetimeEndBehavior, PhantomBolt},
     prelude::*,
+    shared::{Lifespan, PhantomFlicker},
 };
 
 // ── J1 — OnExit(Playing) despawns PhantomBreaker spawned by the system ────
@@ -73,21 +73,35 @@ fn zero_phantoms_at_exit_stays_zero_after() {
     assert_eq!(phantom_breaker_count(&mut app), 0);
 }
 
-// ── J2 (edge case) — phantom whose owner was already despawned still exits ─
+// ── J2 (edge case) — phantom bolt on real bolt entity is despawned on exit ─
+//
+// Under the W4A mutate-real-bolt design the "phantom bolt" is the real bolt
+// entity itself carrying PhantomBolt. When the node exits, CleanupOnExit
+// must despawn it just like any other extra bolt carrying the marker.
 
 #[test]
-fn phantom_whose_owner_is_already_despawned_is_still_despawned_on_exit() {
+fn phantom_bolt_on_real_bolt_entity_is_despawned_on_exit() {
     let mut app = build_afterimage_app();
     seed_active_protocols_with_afterimage(&mut app);
-    let real_bolt = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::ZERO, 10.0, 6.0);
-    let phantom = spawn_phantom_bolt_entity(&mut app, real_bolt, Vec2::ZERO, Vec2::ZERO, 3.0);
-    app.world_mut().entity_mut(real_bolt).despawn();
+    // Manually install the phantom marker set on a real-bolt-shaped entity,
+    // replicating what afterimage_spawn_phantom_bolt does.
+    let real_bolt = app
+        .world_mut()
+        .spawn((
+            Bolt,
+            PhantomBolt,
+            Lifespan { remaining: 3.0 },
+            LifetimeEndBehavior::Despawn,
+            PhantomFlicker::default(),
+            CleanupOnExit::<NodeState>::default(),
+        ))
+        .id();
 
     drive_to_teardown(&mut app);
 
     assert!(
-        app.world().get_entity(phantom).is_err(),
-        "orphaned phantom must still be despawned on exit"
+        app.world().get_entity(real_bolt).is_err(),
+        "phantom-bolt entity must be despawned on exit via CleanupOnExit"
     );
 }
 
@@ -101,14 +115,13 @@ fn cleanup_runs_even_when_afterimage_not_active() {
         .world_mut()
         .spawn((PhantomBreaker, CleanupOnExit::<NodeState>::default()))
         .id();
-    let real_bolt = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::ZERO, 10.0, 6.0);
     let phantom_bolt = app
         .world_mut()
         .spawn((
             Bolt,
             PhantomBolt,
-            PhantomLifetime(3.0),
-            PhantomOwner(real_bolt),
+            Lifespan { remaining: 3.0 },
+            LifetimeEndBehavior::Despawn,
             CleanupOnExit::<NodeState>::default(),
         ))
         .id();
@@ -132,9 +145,15 @@ fn cleanup_runs_even_when_afterimage_not_active() {
 fn re_entry_does_not_resurrect_stale_phantom_state() {
     let mut app = build_afterimage_app();
     seed_active_protocols_with_afterimage(&mut app);
-    let _phantom_breaker = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 2.0);
+    spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 2.0);
+    // Spawn a phantom bolt using the W4A mutate-real-bolt shape.
     let real_bolt = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::ZERO, 10.0, 6.0);
-    let _phantom_bolt = spawn_phantom_bolt_entity(&mut app, real_bolt, Vec2::ZERO, Vec2::ZERO, 3.0);
+    app.world_mut().entity_mut(real_bolt).insert((
+        PhantomBolt,
+        Lifespan { remaining: 3.0 },
+        LifetimeEndBehavior::Despawn,
+        CleanupOnExit::<NodeState>::default(),
+    ));
 
     drive_to_teardown(&mut app);
     assert_eq!(
@@ -173,9 +192,14 @@ fn re_entry_does_not_resurrect_stale_phantom_state() {
 fn deferred_writes_do_not_resurrect_state_after_re_entry() {
     let mut app = build_afterimage_app();
     seed_active_protocols_with_afterimage(&mut app);
-    let _phantom_breaker = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 2.0);
+    spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 2.0);
     let real_bolt = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::ZERO, 10.0, 6.0);
-    let _phantom_bolt = spawn_phantom_bolt_entity(&mut app, real_bolt, Vec2::ZERO, Vec2::ZERO, 3.0);
+    app.world_mut().entity_mut(real_bolt).insert((
+        PhantomBolt,
+        Lifespan { remaining: 3.0 },
+        LifetimeEndBehavior::Despawn,
+        CleanupOnExit::<NodeState>::default(),
+    ));
 
     drive_to_teardown(&mut app);
     app.world_mut()

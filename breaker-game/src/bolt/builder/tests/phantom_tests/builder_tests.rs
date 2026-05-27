@@ -2,36 +2,17 @@ use bevy::prelude::*;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 use rantzsoft_spatial2d::components::Velocity2D;
 
+use super::test_bolt_definition;
 use crate::{
-    bolt::{
-        components::{
-            Bolt, BoltServing, ExtraBolt, LifetimeEndBehavior, PhantomBolt, PhantomDamagedCells,
-            PhantomDedupKey, PhantomParams, PrimaryBolt,
-        },
-        definition::BoltDefinition,
+    bolt::components::{
+        Bolt, BoltServing, ExtraBolt, LifetimeEndBehavior, PhantomBolt, PhantomDamagedCells,
+        PhantomDedupKey, PhantomParams, PrimaryBolt,
     },
     prelude::*,
     shared::{
         BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, Lifespan, PhantomFlicker, WALL_LAYER,
     },
 };
-
-fn test_bolt_definition() -> BoltDefinition {
-    BoltDefinition {
-        name:                 "Bolt".to_string(),
-        base_speed:           400.0,
-        min_speed:            200.0,
-        max_speed:            800.0,
-        radius:               8.0,
-        base_damage:          10.0,
-        effects:              vec![],
-        color_rgb:            [6.0, 5.0, 0.5],
-        min_angle_horizontal: 5.0,
-        min_angle_vertical:   5.0,
-        min_radius:           None,
-        max_radius:           None,
-    }
-}
 
 // ── Behavior 1: .phantom(...) on Rendered+Extra+HasVelocity inserts full rendered phantom set ──
 
@@ -300,37 +281,6 @@ fn phantom_headless_extra_has_default_collision_mask() {
         layers.mask,
         CELL_LAYER | WALL_LAYER | BREAKER_LAYER,
         "mask should be CELL_LAYER | WALL_LAYER | BREAKER_LAYER"
-    );
-}
-
-#[test]
-fn phantom_does_not_clobber_extra_mask_bits() {
-    let def = test_bolt_definition();
-    let mut world = World::new();
-    let entity = Bolt::builder()
-        .definition(&def)
-        .at_position(Vec2::new(0.0, 50.0))
-        .with_velocity(Velocity2D(Vec2::new(0.0, 400.0)))
-        .extra()
-        .with_extra_mask_bits(BOLT_LAYER)
-        .phantom(PhantomParams {
-            dedup_key: PhantomDedupKey::Bolt(Entity::PLACEHOLDER),
-        })
-        .headless()
-        .spawn(&mut world.commands());
-    world.flush();
-
-    let layers = world
-        .get::<CollisionLayers>(entity)
-        .expect("CollisionLayers should be present");
-    assert_eq!(
-        layers.membership, BOLT_LAYER,
-        "membership should be BOLT_LAYER"
-    );
-    assert_eq!(
-        layers.mask,
-        CELL_LAYER | WALL_LAYER | BREAKER_LAYER | BOLT_LAYER,
-        ".phantom(...) must not clobber extra_mask_bits; expected CELL|WALL|BREAKER|BOLT"
     );
 }
 

@@ -96,13 +96,6 @@ pub(in crate::bolt::builder) struct OptionalBoltData {
     /// this entity. Used to guard against double-birth in split-and-respawn
     /// paths.
     pub(in crate::bolt::builder) birthed:                  bool,
-    /// Extra bits `ORed` into the default `CollisionLayers` mask.
-    ///
-    /// The default mask is `CELL_LAYER | WALL_LAYER | BREAKER_LAYER`. Callers
-    /// that need additional mask bits (e.g. the afterimage protocol phantom
-    /// bolt, which also matches `BOLT_LAYER`) set them via
-    /// [`BoltBuilder::with_extra_mask_bits`].
-    pub(in crate::bolt::builder) extra_mask_bits:          u32,
     /// Phantom parameters — `Some` when `.phantom(params)` was called.
     /// Triggers `Bolt::become_phantom(...)` in terminal and (Rendered only)
     /// `PhantomFlicker::default()` insertion.

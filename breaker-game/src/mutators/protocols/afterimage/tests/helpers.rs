@@ -2,8 +2,8 @@
 //!
 //! App builders, canonical `AfterimageConfig`, `PhantomBreaker` spawners,
 //! real `Bolt` with full `Position2D` / `Velocity2D` / `BoltBaseDamage` /
-//! `BoltRadius`, phantom bolt entity pre-seeders using the canonical bundle,
-//! `BumpPerformed` writers, and the `tick_n` / `activate_now` helpers.
+//! `BoltRadius`, `BumpPerformed` writers, and the `tick_n` / `activate_now`
+//! helpers.
 //!
 //! Mirrors the Reckless Dash / Burnout fixture shape. Canonical config is
 //! `phantom_duration: 2.0, phantom_bolt_duration: 3.0` — the design-doc
@@ -20,17 +20,10 @@ use rantzsoft_stateflow::cleanup_on_exit;
 
 use super::super::system::{AfterimageConfig, PhantomBreaker, activate, wire};
 use crate::{
-    bolt::components::BoltBaseDamage,
+    bolt::components::{BoltBaseDamage, PhantomBolt},
     breaker::{
         components::{BaseHeight, BaseWidth, DashState},
         messages::BumpGrade,
-    },
-    effect_v3::{
-        EffectV3Systems,
-        effects::phantom_bolt::{
-            components::{PhantomBolt, PhantomLifetime, PhantomOwner},
-            systems::tick_phantom_lifetime,
-        },
     },
     mutators::protocols::{
         definition::{ProtocolDefinition, ProtocolTuning},
@@ -70,19 +63,6 @@ pub(super) fn build_afterimage_app() -> App {
     app.world_mut()
         .insert_resource(canonical_afterimage_config());
     app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
-    // Vestigial: `tick_phantom_lifetime` is the OLD phantom-only tick from the
-    // separate-bolt design. Afterimage no longer relies on it under Wave 4A —
-    // phantom-bolt lifetime now ticks via `tick_bolt_lifespan` on the mutated
-    // real bolt (see `build_afterimage_app_with_bolt_lifespan` in
-    // `spawn_phantom_bolt/uniqueness_and_lifecycle.rs`). This wiring stays
-    // active so legacy Group I tests (which still spawn separate
-    // `PhantomBolt + PhantomLifetime` entities via `spawn_phantom_bolt_entity`)
-    // continue to observe lifetime tick-down. Wave 5 deletes both
-    // `tick_phantom_lifetime` and these legacy seeders.
-    app.add_systems(
-        FixedUpdate,
-        tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
-    );
     wire(&mut app);
     app
 }
@@ -105,10 +85,6 @@ pub(super) fn build_afterimage_app_no_config() -> App {
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
-    app.add_systems(
-        FixedUpdate,
-        tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
-    );
     wire(&mut app);
     app
 }
@@ -133,10 +109,6 @@ pub(super) fn build_afterimage_app_in_chip_selecting() -> App {
     app.world_mut()
         .insert_resource(canonical_afterimage_config());
     app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
-    app.add_systems(
-        FixedUpdate,
-        tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
-    );
     wire(&mut app);
     app
 }
@@ -235,36 +207,6 @@ pub(super) fn spawn_real_bolt(
         .id()
 }
 
-/// Spawns a phantom-bolt entity matching the canonical afterimage-spawn
-/// bundle. Used by tests that need a pre-existing phantom-bolt to exercise
-/// cascade filtering (`Without<PhantomBolt>`), lifetime tick-down, or
-/// cleanup semantics without exercising the spawn system.
-pub(super) fn spawn_phantom_bolt_entity(
-    app: &mut App,
-    owner: Entity,
-    position: Vec2,
-    velocity: Vec2,
-    lifetime: f32,
-) -> Entity {
-    app.world_mut()
-        .spawn((
-            Bolt,
-            PhantomBolt,
-            PhantomLifetime(lifetime),
-            PhantomOwner(owner),
-            Position2D(position),
-            Velocity2D(velocity),
-            BoltBaseDamage(10.0),
-            BaseRadius(6.0),
-            CollisionLayers::new(
-                BOLT_LAYER,
-                BOLT_LAYER | WALL_LAYER | BREAKER_LAYER | CELL_LAYER,
-            ),
-            CleanupOnExit::<NodeState>::default(),
-        ))
-        .id()
-}
-
 // ── Message writers ─────────────────────────────────────────────────────────
 
 /// Writes a single `BumpPerformed` message.
@@ -291,16 +233,6 @@ pub(super) fn phantom_bolt_count(app: &mut App) -> usize {
         .query_filtered::<Entity, (With<Bolt>, With<PhantomBolt>)>()
         .iter(app.world())
         .count()
-}
-
-/// Returns all phantom-bolt entities owned by `owner`.
-pub(super) fn phantom_bolts_owned_by(app: &mut App, owner: Entity) -> Vec<Entity> {
-    let mut q = app
-        .world_mut()
-        .query_filtered::<(Entity, &PhantomOwner), (With<Bolt>, With<PhantomBolt>)>();
-    q.iter(app.world())
-        .filter_map(|(e, o)| (o.0 == owner).then_some(e))
-        .collect()
 }
 
 /// Counts `PhantomBreaker` entities currently in the world.

@@ -90,14 +90,4 @@ impl Fireable for SpawnPhantomConfig {
             .rendered_handles(mesh, material)
             .spawn(&mut commands);
     }
-
-    fn register(app: &mut App) {
-        use super::super::systems::tick_phantom_lifetime;
-        use crate::effect_v3::EffectV3Systems;
-
-        app.add_systems(
-            FixedUpdate,
-            tick_phantom_lifetime.in_set(EffectV3Systems::Tick),
-        );
-    }
 }

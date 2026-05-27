@@ -4,7 +4,7 @@
 //! gated by `protocol_active(Afterimage)` + `in_state(NodeState::Playing)`,
 //! and that the full in-tick chain
 //! `spawn_phantom_breaker → check_phantom_bounce → GradeBump →
-//! spawn_phantom_bolt → tick_phantom_lifetime` fires in order.
+//! spawn_phantom_bolt` fires in order.
 
 mod gating;
 mod integration;

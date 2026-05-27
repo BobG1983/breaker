@@ -1023,22 +1023,4 @@ mod tests {
     /// Phase gate resource for round-trip test — drives which closure fires.
     #[derive(Resource)]
     struct PhaseGate(u32);
-
-    // ── Behavior 15: old import path re-exports the same type ────
-
-    #[test]
-    fn old_import_path_is_same_type_as_new_import_path() {
-        use std::any::TypeId;
-
-        use crate::{
-            bolt::components::PhantomBolt as NewPath,
-            effect_v3::effects::phantom_bolt::components::PhantomBolt as OldPath,
-        };
-
-        assert_eq!(
-            TypeId::of::<OldPath>(),
-            TypeId::of::<NewPath>(),
-            "OldPath and NewPath must refer to the same PhantomBolt type (re-export, not parallel definition)"
-        );
-    }
 }

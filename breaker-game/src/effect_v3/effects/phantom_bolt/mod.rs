@@ -1,9 +1,6 @@
-//! Phantom bolt effect — spawns intangible bolt copy.
+//! Phantom bolt chip-effect spawn configuration.
 
-pub mod components;
 /// Chip-effect configuration for spawning a phantom bolt.
 pub mod config;
-pub mod systems;
 
-pub use components::*;
 pub use config::SpawnPhantomConfig;

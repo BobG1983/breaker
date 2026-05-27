@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     bolt::components::{PhantomBolt, PhantomDedupKey},
-    effect_v3::{effects::phantom_bolt::components::PhantomOwner, traits::Fireable},
+    effect_v3::traits::Fireable,
 };
 
 // ── T23 primary — at-limit suppresses spawn ──────────────────────────────────
@@ -114,34 +114,6 @@ fn max_active_different_fired_from_bypasses_filter() {
     assert!(
         new_key.is_some(),
         "new phantom must have PhantomDedupKey::Chip with fired_from=other"
-    );
-}
-
-// ── T23 edge case 2c — legacy PhantomOwner shape not counted ─────────────────
-
-#[test]
-fn max_active_ignores_legacy_phantom_owner_shape() {
-    let mut world = world_with_assets();
-    let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
-
-    // Pre-spawn a legacy-shape phantom: PhantomBolt + PhantomOwner but NO PhantomDedupKey
-    world.spawn((PhantomBolt, PhantomOwner(real_bolt)));
-
-    let config = SpawnPhantomConfig {
-        duration:   OrderedFloat(2.0),
-        max_active: 1,
-    };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
-    world.flush();
-
-    // New dedup-key-bearing phantom must be spawned (old legacy doesn't count)
-    let dedup_count = world
-        .query_filtered::<Entity, (With<PhantomBolt>, With<PhantomDedupKey>)>()
-        .iter(&world)
-        .count();
-    assert_eq!(
-        dedup_count, 1,
-        "a new dedup-key-bearing phantom must be spawned; legacy PhantomOwner shape is not counted"
     );
 }
 

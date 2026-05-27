@@ -1,6 +1,6 @@
 (
     name: "Afterimage",
-    description: "Dash to leave a phantom of yourself; Perfect-bump the phantom to split off an extra bolt.",
+    description: "Dash to leave a phantom of yourself; Perfect-bump the phantom to turn your bolt into a Phantom for a short time.",
     unlock_tier: 0,
     tuning: Afterimage(
         phantom_duration: 2.0,

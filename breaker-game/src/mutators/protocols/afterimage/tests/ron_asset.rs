@@ -4,9 +4,10 @@
 //! `ProtocolDefinition` with `ProtocolKind::Afterimage`, authored tuning
 //! `phantom_duration: 2.0, phantom_bolt_duration: 3.0`, name `"Afterimage"`,
 //! description `"Dash to leave a phantom of yourself; Perfect-bump the
-//! phantom to split off an extra bolt."`, and `unlock_tier: 0`. The
-//! earlier "piercing bolt" wording was factually wrong — the phantom
-//! bolt inherits base damage only, no piercing component is attached.
+//! phantom to turn your bolt into a Phantom for a short time."`, and
+//! `unlock_tier: 0`. The Wave 5 rewrite replaced the legacy "split off an
+//! extra bolt" wording — afterimage now mutates the real bolt in place
+//! rather than spawning a separate phantom-bolt entity.
 
 use crate::mutators::protocols::definition::{ProtocolDefinition, ProtocolKind, ProtocolTuning};
 
@@ -53,7 +54,7 @@ fn afterimage_ron_name_description_unlock_tier_pinned_exactly() {
     assert_eq!(def.name, "Afterimage", "afterimage name drift guard");
     assert_eq!(
         def.description,
-        "Dash to leave a phantom of yourself; Perfect-bump the phantom to split off an extra bolt.",
+        "Dash to leave a phantom of yourself; Perfect-bump the phantom to turn your bolt into a Phantom for a short time.",
         "afterimage description drift guard"
     );
     assert_eq!(def.unlock_tier, 0, "afterimage unlock_tier drift guard");

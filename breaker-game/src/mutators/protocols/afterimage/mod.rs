@@ -2,21 +2,20 @@
 //!
 //! Design doc: `docs/design/protocols/afterimage.md`.
 //!
-//! Owns `AfterimageConfig` (per-run tuning), `PhantomBreaker` /
-//! `PhantomBreakerLifetime` components, the four runtime systems
-//! (`afterimage_spawn_phantom_breaker`, `afterimage_tick_phantom_breaker`,
-//! `afterimage_check_phantom_bounce`, `afterimage_spawn_phantom_bolt`),
-//! and the `activate` / `wire` dispatch entry points. Re-uses
-//! `crate::effect_v3::effects::phantom_bolt::{PhantomBolt, PhantomLifetime,
-//! PhantomOwner}` for the spawned phantom-bolt entity bundle, and delegates
-//! phantom-bolt lifetime tick-down to the existing
-//! `tick_phantom_lifetime` (registered by `EffectV3Plugin` via
-//! `SpawnPhantomConfig::wire`).
+//! Owns `AfterimageConfig` (per-run tuning) and the runtime systems
+//! (`afterimage_spawn_phantom_breaker`, `afterimage_spawn_phantom_bolt`),
+//! plus the `activate` / `wire` dispatch entry points.
 //!
-//! Node-exit cleanup for afterimage-spawned phantom breakers and phantom
-//! bolts is delegated to the stateflow `CleanupOnExit::<NodeState>`
-//! handler attached at spawn time — afterimage does NOT define a custom
-//! cleanup system.
+//! Phantom-bolt semantics use the canonical `crate::bolt::components`
+//! vocabulary — `Bolt::become_phantom` mutates the real bolt in place,
+//! installing `PhantomBolt`, `PhantomDedupKey`, `PhantomDamagedCells`,
+//! `Lifespan`, and `LifetimeEndBehavior::RevertToNormalBolt`. Lifetime
+//! tick-down + expiry dispatch is delegated to `tick_bolt_lifespan` in the
+//! bolt domain.
+//!
+//! Node-exit cleanup for afterimage-spawned phantom breakers is delegated
+//! to the stateflow `CleanupOnExit::<NodeState>` handler attached at spawn
+//! time — afterimage does NOT define a custom cleanup system.
 
 pub(crate) mod system;
 

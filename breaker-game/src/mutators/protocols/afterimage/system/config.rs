@@ -12,7 +12,8 @@ pub(crate) struct AfterimageConfig {
     /// Seconds a `PhantomBreaker` entity exists before its lifetime tick
     /// despawns it.
     pub(crate) phantom_duration:      f32,
-    /// Seconds a spawned phantom-bolt entity exists before
-    /// `tick_phantom_lifetime` despawns it.
+    /// Seconds the mutated real bolt remains a phantom before `Lifespan`
+    /// expiry triggers the `LifetimeEndBehavior` dispatch (revert or despawn)
+    /// in `tick_bolt_lifespan`.
     pub(crate) phantom_bolt_duration: f32,
 }

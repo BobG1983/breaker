@@ -24,7 +24,7 @@ use crate::{
 fn build_core(params: &CoreParams, optional: &OptionalBoltData) -> impl Bundle + use<> {
     let radius = optional.radius.unwrap_or(DEFAULT_RADIUS);
 
-    let mask = (CELL_LAYER | WALL_LAYER | BREAKER_LAYER) | optional.extra_mask_bits;
+    let mask = CELL_LAYER | WALL_LAYER | BREAKER_LAYER;
     let base_components = (Bolt, params.vel, CollisionLayers::new(BOLT_LAYER, mask));
 
     let spatial_components = Spatial::builder()
@@ -110,9 +110,9 @@ fn spawn_inner(
         ));
     }
 
-    // Optional: lifespan — insert both the legacy BoltLifespan(Timer) and the
-    // shared Lifespan that tick_bolt_lifespan reads (Wave 3A). Wave 5 deletes
-    // BoltLifespan and simplifies to the shared component only.
+    // Optional: lifespan — insert both `BoltLifespan(Timer)` (legacy bolt
+    // domain) and the shared `Lifespan` that `tick_bolt_lifespan` reads.
+    // Both stay until a future migration consolidates them.
     if let Some(duration) = optional.lifespan {
         entity.insert((
             BoltLifespan(Timer::from_seconds(duration, TimerMode::Once)),
@@ -142,7 +142,7 @@ fn spawn_inner(
             x: optional.radius.unwrap_or(DEFAULT_RADIUS),
             y: optional.radius.unwrap_or(DEFAULT_RADIUS),
         };
-        let mask = (CELL_LAYER | WALL_LAYER | BREAKER_LAYER) | optional.extra_mask_bits;
+        let mask = CELL_LAYER | WALL_LAYER | BREAKER_LAYER;
         let stashed_layers = CollisionLayers::new(BOLT_LAYER, mask);
 
         entity.insert((

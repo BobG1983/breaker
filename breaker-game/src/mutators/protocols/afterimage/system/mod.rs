@@ -4,11 +4,13 @@
 //!
 //! Owns `AfterimageConfig`, the two runtime systems
 //! (`afterimage_spawn_phantom_breaker`, `afterimage_spawn_phantom_bolt`),
-//! and the `activate` / `wire` dispatch entry points. Re-uses
-//! `crate::effect_v3::effects::phantom_bolt::components::{PhantomBolt,
-//! PhantomLifetime, PhantomOwner}` and delegates phantom-bolt lifetime
-//! tick-down to the existing `tick_phantom_lifetime` registered by
-//! `EffectV3Plugin` via `SpawnPhantomConfig::wire`.
+//! and the `activate` / `wire` dispatch entry points. Uses the canonical
+//! `crate::bolt::components` vocabulary — `Bolt::become_phantom` mutates
+//! the real bolt in place, installing `PhantomBolt`, `PhantomDedupKey`,
+//! `PhantomDamagedCells`, `Lifespan`, and
+//! `LifetimeEndBehavior::RevertToNormalBolt`. Phantom-bolt lifetime
+//! tick-down + expiry dispatch is delegated to `tick_bolt_lifespan` in
+//! the bolt domain.
 //!
 //! Phantom-breaker lifetime ticking is delegated to
 //! `tick_phantom_breaker_lifespan` (acting on the canonical `Lifespan`
@@ -31,16 +33,12 @@ mod wire;
 // and `wire`. The test-only re-exports are gated with `#[cfg(test)]` so
 // clippy doesn't flag them as unused in the lib build — tests reach them via
 // `super::super::system::{PhantomBreaker, AfterimageConfig, PhantomBolt, ...}`.
-// The system-fn names and `PhantomLifetime` / `PhantomOwner` are NOT
-// re-exported because nothing consumes them by that path (wire.rs uses
-// sibling-module paths; tests import `PhantomLifetime` / `PhantomOwner`
-// directly from `crate::effect_v3::effects::phantom_bolt::components`).
 pub(crate) use activate::activate;
 #[cfg(test)]
 pub(crate) use config::AfterimageConfig;
 pub(crate) use wire::wire;
 
 #[cfg(test)]
-pub(crate) use crate::breaker::components::PhantomBreaker;
+pub(crate) use crate::bolt::components::PhantomBolt;
 #[cfg(test)]
-pub(crate) use crate::effect_v3::effects::phantom_bolt::components::PhantomBolt;
+pub(crate) use crate::breaker::components::PhantomBreaker;

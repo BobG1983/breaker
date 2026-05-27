@@ -261,6 +261,103 @@ mod tests {
         );
     }
 
+    // ── T25: bolt-side regression guard — PhantomFlicker modulates bolt alpha ──
+
+    #[test]
+    fn phantom_flicker_modulates_alpha_on_phantom_bolt_entity() {
+        use crate::bolt::components::{Bolt, PhantomBolt, PhantomDamagedCells, PhantomDedupKey};
+
+        let mut app = system_only_app();
+        let handle = add_material(&mut app, 1.0);
+        app.world_mut().spawn((
+            Bolt,
+            PhantomBolt,
+            PhantomDedupKey::Bolt(Entity::PLACEHOLDER),
+            PhantomDamagedCells::default(),
+            MeshMaterial2d(handle.clone()),
+            PhantomFlicker {
+                frequency: 4.0,
+                min_alpha: 0.3,
+            },
+        ));
+
+        // 1 prime update, 13 advance ticks (13 × 20 ms = 260 ms > 250 ms period at 4 Hz)
+        app.update(); // prime
+        let mut samples = Vec::with_capacity(13);
+        for _ in 0..13 {
+            app.update();
+            samples.push(sample_alpha(&app, &handle));
+        }
+
+        for &a in &samples {
+            assert!(
+                (0.3 - 1e-4..=1.0 + 1e-4).contains(&a),
+                "bolt alpha {a} out of bounds [0.3, 1.0]"
+            );
+        }
+        assert!(
+            samples.iter().any(|&a| a <= 0.31),
+            "no bolt-side sample near floor 0.3; samples: {samples:?}"
+        );
+        assert!(
+            samples.iter().any(|&a| a >= 0.95),
+            "no bolt-side sample near ceiling 1.0; samples: {samples:?}"
+        );
+    }
+
+    // ── T25 (edge case) — two phantom bolt entities with same params stay in phase ──
+
+    #[test]
+    fn phantom_flicker_two_phantom_bolt_entities_same_params_match_each_tick() {
+        use crate::bolt::components::{Bolt, PhantomBolt, PhantomDamagedCells, PhantomDedupKey};
+
+        let mut app = system_only_app();
+        let initial_alpha = 0.5_f32;
+        let handle_a = add_material(&mut app, initial_alpha);
+        let handle_b = add_material(&mut app, initial_alpha);
+
+        app.world_mut().spawn((
+            Bolt,
+            PhantomBolt,
+            PhantomDedupKey::Bolt(Entity::PLACEHOLDER),
+            PhantomDamagedCells::default(),
+            MeshMaterial2d(handle_a.clone()),
+            PhantomFlicker {
+                frequency: 4.0,
+                min_alpha: 0.3,
+            },
+        ));
+        app.world_mut().spawn((
+            Bolt,
+            PhantomBolt,
+            PhantomDedupKey::Bolt(Entity::PLACEHOLDER),
+            PhantomDamagedCells::default(),
+            MeshMaterial2d(handle_b.clone()),
+            PhantomFlicker {
+                frequency: 4.0,
+                min_alpha: 0.3,
+            },
+        ));
+
+        app.update(); // prime
+        let mut samples_a = Vec::with_capacity(6);
+        for tick in 0..6 {
+            app.update();
+            let alpha_a = sample_alpha(&app, &handle_a);
+            let alpha_b = sample_alpha(&app, &handle_b);
+            samples_a.push(alpha_a);
+            assert!(
+                (alpha_a - alpha_b).abs() <= 1e-4,
+                "tick {tick}: phantom bolt alpha_A={alpha_a} != alpha_B={alpha_b} (diff > 1e-4)"
+            );
+        }
+        // Guard: system must have changed alpha away from the sentinel.
+        assert!(
+            samples_a.iter().any(|&a| (a - initial_alpha).abs() > 0.01),
+            "system did not run — all bolt samples equal initial alpha {initial_alpha}; samples: {samples_a:?}"
+        );
+    }
+
     // ── Behavior 6: FxPlugin registers the system, runs in NodeState::Playing ─
 
     #[test]

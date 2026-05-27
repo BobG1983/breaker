@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::super::helpers::{
-    build_afterimage_app, build_afterimage_app_in_chip_selecting, phantom_bolts_owned_by,
+    build_afterimage_app, build_afterimage_app_in_chip_selecting, phantom_bolt_count,
     phantom_breaker_count, seed_active_protocols_with_afterimage, spawn_breaker_with_dash,
     spawn_phantom_breaker_at, spawn_real_bolt, write_bump_performed,
 };
@@ -62,7 +62,7 @@ fn spawn_phantom_bolt_gated_off_when_inactive() {
     write_bump_performed(&mut app, phantom, Some(real_bolt), BumpGrade::Perfect);
     tick(&mut app);
 
-    assert_eq!(phantom_bolts_owned_by(&mut app, real_bolt).len(), 0);
+    assert_eq!(phantom_bolt_count(&mut app), 0);
 }
 
 // ── I6 (edge case) — ChipSelecting → no spawn ─────────────────────────────
@@ -77,7 +77,7 @@ fn spawn_phantom_bolt_gated_off_in_chip_selecting() {
     write_bump_performed(&mut app, phantom, Some(real_bolt), BumpGrade::Perfect);
     tick(&mut app);
 
-    assert_eq!(phantom_bolts_owned_by(&mut app, real_bolt).len(), 0);
+    assert_eq!(phantom_bolt_count(&mut app), 0);
 }
 
 // ── I10 — all four afterimage systems gated by active AND Playing ────────-

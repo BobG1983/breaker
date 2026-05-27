@@ -44,9 +44,9 @@ use crate::{
 /// is synchronous — the components are present before any `app.update()` runs,
 /// so `bolt_cell_collision` (`FixedUpdate`) sees the marker on the first tick.
 ///
-/// `owner` parameter removed — `PhantomOwner`/`PhantomLifetime` are legacy
-/// types being deleted in Wave 5; they are not part of the Wave 1 component
-/// vocabulary and must not be inserted here.
+/// `owner` parameter removed — legacy components removed in Wave 5; they
+/// are not part of the Wave 1 component vocabulary and must not be inserted
+/// here.
 fn spawn_phantom_bolt_for_cell_collision(
     app: &mut App,
     x: f32,
