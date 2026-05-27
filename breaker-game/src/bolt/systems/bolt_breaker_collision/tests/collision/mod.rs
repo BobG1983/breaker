@@ -4,6 +4,7 @@
 mod basic_reflection;
 mod multi_bolt;
 mod overlap_resolution;
+mod phantom_bolt_audit;
 mod phantom_gating;
 mod piercing_reset;
 mod width_and_scale;

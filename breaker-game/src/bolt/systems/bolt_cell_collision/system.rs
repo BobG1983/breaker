@@ -38,7 +38,7 @@ use crate::{
         queries::{BoltCollisionData, BoltCollisionDataItem, apply_velocity_formula},
         resources::DEFAULT_BOLT_BASE_DAMAGE,
     },
-    effect_v3::{effects::phantom_bolt::components::PhantomBolt, stacking::EffectStack},
+    effect_v3::stacking::EffectStack,
     prelude::*,
 };
 
@@ -54,14 +54,11 @@ type CollisionWriters<'a> = (
     MessageWriter<'a, DamageDealt<Cell>>,
 );
 
-/// Bundled read-only queries consumed by `bolt_cell_collision`.
+/// Read-only impact-candidate query consumed by `bolt_cell_collision`.
 ///
-/// Groups the impact-candidate lookup (cell marker, HP, vulnerability stack)
-/// alongside the phantom-bolt marker query so the outer system signature
-/// stays under the clippy argument-count threshold.
-///
-/// Excludes bolts from the candidate query to avoid conflicts with the
-/// mutable `bolt_query`.
+/// Returns the cell marker, optional HP, and optional vulnerability stack for
+/// any impact target. Excludes bolts to avoid conflicts with the mutable
+/// `bolt_query`.
 type CandidateQuery<'w, 's> = Query<
     'w,
     's,
@@ -79,8 +76,7 @@ type CandidateData<'a> = (bool, Option<&'a Hp>, Option<&'a VulnerableStack>);
 
 #[derive(SystemParam)]
 pub(crate) struct CandidateLookup<'w, 's> {
-    candidates:    CandidateQuery<'w, 's>,
-    phantom_bolts: Query<'w, 's, (), With<PhantomBolt>>,
+    candidates: CandidateQuery<'w, 's>,
 }
 
 impl CandidateLookup<'_, '_> {
@@ -90,11 +86,6 @@ impl CandidateLookup<'_, '_> {
     /// `(is_cell, optional Hp, optional vulnerability stack)`.
     fn get(&self, entity: Entity) -> Result<CandidateData<'_>, bevy::ecs::query::QueryEntityError> {
         self.candidates.get(entity)
-    }
-
-    /// Returns whether `entity` carries the `PhantomBolt` marker.
-    fn is_phantom(&self, entity: Entity) -> bool {
-        self.phantom_bolts.contains(entity)
     }
 }
 
@@ -135,7 +126,7 @@ pub(crate) fn bolt_cell_collision(
     let dt = time.delta_secs();
 
     for mut bolt in &mut bolt_query {
-        let is_phantom = candidate_lookup.is_phantom(bolt.entity);
+        let is_phantom = bolt.collision.phantom_damaged_cells.is_some();
         let bolt_scale = bolt.collision.node_scale.map_or(1.0, |s| s.0);
         let r = bolt.collision.radius.0 * bolt_scale;
         let mut position = bolt.spatial.position.0;
@@ -335,6 +326,16 @@ fn apply_impact_outcome(
     let piercing_at_impact = match outcome {
         ImpactOutcome::PhantomPierce { piercing_at_impact } => {
             state.pierced_this_frame.push(impact.entity);
+            // Cross-frame dedup: suppress emission entirely when the cell is
+            // already in `PhantomDamagedCells`. Velocity / `LastImpact` /
+            // `PiercingRemaining` are never touched on this arm — the
+            // `pierced_this_frame.push` above keeps the per-tick CCD loop
+            // walking past the cell either way.
+            if let Some(ref mut damaged) = bolt.collision.phantom_damaged_cells
+                && !damaged.0.insert(impact.entity)
+            {
+                return;
+            }
             *piercing_at_impact
         }
         ImpactOutcome::Pierce { piercing_at_impact } => {

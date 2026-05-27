@@ -14,7 +14,7 @@ use crate::{
     shared::{GameDrawLayer, size::BaseRadius},
 };
 
-pub(super) fn test_app() -> App {
+pub(crate) fn test_app() -> App {
     TestAppBuilder::new()
         .with_physics()
         .with_message::<BoltImpactBreaker>()
@@ -30,11 +30,11 @@ pub(super) fn default_breaker_width() -> BaseWidth {
     BaseWidth(120.0)
 }
 
-pub(super) fn default_breaker_height() -> BaseHeight {
+pub(crate) fn default_breaker_height() -> BaseHeight {
     BaseHeight(20.0)
 }
 
-pub(super) fn default_bolt_radius() -> BoltRadius {
+pub(crate) fn default_bolt_radius() -> BoltRadius {
     BaseRadius(default_bolt_definition().radius)
 }
 
@@ -43,7 +43,7 @@ pub(super) fn default_reflection_spread() -> BreakerReflectionSpread {
 }
 
 /// Breaker entities use `Position2D` as canonical position.
-pub(super) fn spawn_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
+pub(crate) fn spawn_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
     let w = default_breaker_width();
     let h = default_breaker_height();
     let half_extents = Vec2::new(w.half_width(), h.half_height());
@@ -65,7 +65,7 @@ pub(super) fn spawn_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
         .id()
 }
 
-pub(super) use crate::{bolt::test_utils::spawn_bolt, shared::test_utils::tick};
+pub(crate) use crate::{bolt::test_utils::spawn_bolt, shared::test_utils::tick};
 
 #[derive(Resource, Default)]
 pub(super) struct HitBreakers(pub(super) u32);
@@ -93,9 +93,9 @@ pub(super) fn collect_breaker_hit_bolts(
 
 /// Captured bolt-and-breaker entity pairs from `BoltImpactBreaker` messages.
 #[derive(Resource, Default)]
-pub(super) struct CapturedHitPairs(pub(super) Vec<(Entity, Entity)>);
+pub(crate) struct CapturedHitPairs(pub(crate) Vec<(Entity, Entity)>);
 
-pub(super) fn collect_breaker_hit_pairs(
+pub(crate) fn collect_breaker_hit_pairs(
     mut reader: MessageReader<BoltImpactBreaker>,
     mut captured: ResMut<CapturedHitPairs>,
 ) {
@@ -105,7 +105,7 @@ pub(super) fn collect_breaker_hit_pairs(
 }
 
 /// Like `spawn_breaker_at` but also inserts `PhantomBreaker` marker.
-pub(super) fn spawn_phantom_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
+pub(crate) fn spawn_phantom_breaker_at(app: &mut App, x: f32, y: f32) -> Entity {
     let entity = spawn_breaker_at(app, x, y);
     app.world_mut().entity_mut(entity).insert(PhantomBreaker);
     entity

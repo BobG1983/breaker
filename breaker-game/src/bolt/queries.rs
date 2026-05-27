@@ -12,7 +12,7 @@ use rantzsoft_spatial2d::{
 use crate::{
     bolt::components::{
         Bolt, BoltAngleSpread, BoltBaseDamage, BoltRadius, BoltSpawnOffsetY, ExtraBolt, LastImpact,
-        PiercingRemaining, SpawnedByEvolution,
+        PhantomDamagedCells, PiercingRemaining, SpawnedByEvolution,
     },
     effect_v3::{
         effects::{PiercingConfig, SizeBoostConfig, SpeedBoostConfig},
@@ -41,23 +41,27 @@ pub(crate) struct BoltSpeedData {
 #[query_data(mutable)]
 pub(crate) struct BoltCollisionParams {
     /// Bolt radius in world units.
-    pub radius:               &'static BoltRadius,
+    pub radius:                &'static BoltRadius,
     /// Remaining pierce charges (decremented on cell pierce-through).
-    pub piercing_remaining:   Option<&'static mut PiercingRemaining>,
+    pub piercing_remaining:    Option<&'static mut PiercingRemaining>,
     /// Active piercing effects (sum determines max charges).
-    pub active_piercings:     Option<&'static EffectStack<PiercingConfig>>,
+    pub active_piercings:      Option<&'static EffectStack<PiercingConfig>>,
     /// Active `DamageBoostStack` (per-bolt damage multiplier source).
-    pub damage_boost_stack:   Option<&'static DamageBoostStack>,
+    pub damage_boost_stack:    Option<&'static DamageBoostStack>,
     /// Active speed boost multipliers.
-    pub active_speed_boosts:  Option<&'static EffectStack<SpeedBoostConfig>>,
+    pub active_speed_boosts:   Option<&'static EffectStack<SpeedBoostConfig>>,
     /// Node scaling factor for entity dimensions.
-    pub node_scale:           Option<&'static NodeScalingFactor>,
+    pub node_scale:            Option<&'static NodeScalingFactor>,
     /// Evolution chip that spawned this bolt (for damage attribution).
-    pub spawned_by_evolution: Option<&'static SpawnedByEvolution>,
+    pub spawned_by_evolution:  Option<&'static SpawnedByEvolution>,
     /// Last collision impact position and side.
-    pub last_impact:          Option<&'static mut LastImpact>,
+    pub last_impact:           Option<&'static mut LastImpact>,
     /// Per-bolt base damage (from definition). Falls back to `DEFAULT_BOLT_BASE_DAMAGE` if absent.
-    pub base_damage:          Option<&'static BoltBaseDamage>,
+    pub base_damage:           Option<&'static BoltBaseDamage>,
+    /// Phantom cross-frame dedup set — `Some` iff the bolt carries `PhantomBolt`
+    /// (Wave 1 invariant: `Bolt::become_phantom` and `PhantomBolt::become_normal`
+    /// always insert/remove the marker triple together).
+    pub phantom_damaged_cells: Option<&'static mut PhantomDamagedCells>,
 }
 
 /// Full collision data for bolt entities. Composes [`SpatialData`] from the
