@@ -32,8 +32,8 @@ Afterimage owns no per-mechanic components. It spawns the phantom breaker via `B
 For the bolt mutation, it calls `Bolt::become_phantom(commands: &mut Commands, bolt: Entity, dedup_key: PhantomDedupKey)` on the real bolt (Wave 1 canonical API), attaching `PhantomBolt` + `PhantomDedupKey::Bolt(real_bolt)` + empty `PhantomDamagedCells`, then tuple-inserts `Lifespan { remaining: phantom_bolt_duration - dt }` + `LifetimeEndBehavior::RevertToNormalBolt` + `PhantomFlicker::default()`. On lifespan expiry, `tick_bolt_lifespan` dispatches on `LifetimeEndBehavior` and calls `PhantomBolt::become_normal` to revert the bolt in place.
 
 ## Messages
-**Reads**: `BumpPerformed { grade, bolt, breaker }` (breaker domain), `DashStateChanged` (breaker domain).
-**Sends**: None directly. Damage through cells flows through the `PhantomBolt` collision path which emits `DamageDealt<Cell>` into `DeathPipelineSystems::EmitDamage` via the standard bolt-cell collision system.
+**Reads**: `BumpPerformed { grade, bolt, breaker }` (breaker domain). `afterimage_spawn_phantom_breaker` uses a `Local<Option<DashState>>` rising-edge detector (not a message) — no `DashStateChanged` message exists in the codebase.
+**Sends**: None directly. Damage through cells flows through the `PhantomBolt` collision path which emits `DamageDealt<Cell>` into `DmgSystems::EmitDamage` via the standard bolt-cell collision system.
 
 ## Systems
 
@@ -53,9 +53,9 @@ Lifespan tick-down and revert-on-expiry are owned by `tick_bolt_lifespan` (bolt 
 
 ## Pipeline position (dmg crate)
 
-- **Not in the death pipeline.** Afterimage owns no systems in any `DeathPipelineSystems` set.
-- **Trigger**: `DashStateChanged` (spawn phantom), `BumpPerformed` Perfect on phantom breaker (promote bolt).
-- **Damage flow**: phantom bolts pierce cells and emit `DamageDealt<Cell>` through the standard bolt-cell collision path in `DeathPipelineSystems::EmitDamage`. No amplification — base damage only.
+- **Not in the death pipeline.** Afterimage owns no systems in any `DmgSystems` set.
+- **Trigger**: `DashState` rising edge to `Dashing` (spawn phantom breaker), `BumpPerformed` Perfect on phantom breaker (promote bolt).
+- **Damage flow**: phantom bolts pierce cells and emit `DamageDealt<Cell>` through the standard bolt-cell collision path in `DmgSystems::EmitDamage`. No amplification — base damage only.
 - **No** `DamageBoostStack` / `VulnerableStack` / direct `DamageDealt` emission from Afterimage itself.
 
 ## Cross-Domain Dependencies
