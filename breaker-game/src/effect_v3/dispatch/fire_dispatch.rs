@@ -213,6 +213,8 @@ mod tests {
         app.world_mut().insert_resource(PlayfieldConfig::default());
         app.world_mut()
             .init_resource::<rantzsoft_physics2d::resources::CollisionQuadtree>();
+        app.world_mut().init_resource::<Assets<Mesh>>();
+        app.world_mut().init_resource::<Assets<ColorMaterial>>();
         // W7 emitters write their request messages from `fire()`; those
         // resources only exist after `add_message::<...>()`. The smoke test
         // doesn't install `EffectV3Plugin` (which would normally register

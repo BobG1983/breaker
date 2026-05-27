@@ -70,14 +70,15 @@ pub(super) fn build_afterimage_app() -> App {
     app.world_mut()
         .insert_resource(canonical_afterimage_config());
     app.add_systems(OnEnter(NodeState::Teardown), cleanup_on_exit::<NodeState>);
-    // Wire the REUSED `tick_phantom_lifetime` directly — afterimage
-    // delegates phantom-bolt lifetime tick-down to this system rather
-    // than re-registering it. The production wiring is
-    // `SpawnPhantomConfig::wire` (via `EffectV3Plugin`); the test
-    // harness mirrors the OBSERVABLE behaviour by adding the system
-    // straight into `FixedUpdate` — no sets, so the spec's
-    // `spawn_phantom_bolt.before(EffectV3Systems::Tick)` edge (I14)
-    // survives as `spawn_phantom_bolt.before(tick_phantom_lifetime)`.
+    // Vestigial: `tick_phantom_lifetime` is the OLD phantom-only tick from the
+    // separate-bolt design. Afterimage no longer relies on it under Wave 4A —
+    // phantom-bolt lifetime now ticks via `tick_bolt_lifespan` on the mutated
+    // real bolt (see `build_afterimage_app_with_bolt_lifespan` in
+    // `spawn_phantom_bolt/uniqueness_and_lifecycle.rs`). This wiring stays
+    // active so legacy Group I tests (which still spawn separate
+    // `PhantomBolt + PhantomLifetime` entities via `spawn_phantom_bolt_entity`)
+    // continue to observe lifetime tick-down. Wave 5 deletes both
+    // `tick_phantom_lifetime` and these legacy seeders.
     app.add_systems(
         FixedUpdate,
         tick_phantom_lifetime.in_set(EffectV3Systems::Tick),

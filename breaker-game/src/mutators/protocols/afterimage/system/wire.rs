@@ -32,10 +32,13 @@ use crate::{
 /// consumed the tick the gate opens. The system enforces the
 /// `ActiveProtocols` / `NodeState::Playing` gate in-body via an immediate
 /// early-return (`reader.clear()` when a reader is present) when inactive:
-/// - `afterimage_spawn_phantom_bolt` — `.after(BreakerSystems::GradeBump)`
-///   AND `.before(EffectV3Systems::Tick)` so the spawned phantom bolt's
-///   `PhantomLifetime` is decremented once on the same tick it was spawned
-///   (required by test I14).
+/// - `afterimage_spawn_phantom_bolt` — `.after(BreakerSystems::GradeBump)`.
+///   Mutates the real bolt into a phantom via `Bolt::become_phantom` and
+///   installs `Lifespan` + `LifetimeEndBehavior::RevertToNormalBolt`.
+///   `tick_bolt_lifespan` (bolt-domain) decrements the `Lifespan` each tick
+///   and calls `PhantomBolt::become_normal` at expiry to restore the real
+///   bolt. The installer pre-subtracts one `delta_secs()` so the
+///   same-FixedUpdate deferred-flush gap doesn't grant a free first tick.
 ///
 /// Phantom-bolt-vs-phantom-breaker bounces are now handled by the standard
 /// `bolt_breaker_collision` path; no synthetic-bounce system is registered

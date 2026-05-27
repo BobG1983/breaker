@@ -2,5 +2,7 @@
 
 pub(crate) mod core;
 
+pub(crate) use core::types::DEFAULT_BOLT_COLOR_RGB;
+
 #[cfg(test)]
 mod tests;

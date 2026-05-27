@@ -23,6 +23,16 @@ type BoltLifespanQuery<'w, 's> = Query<
 ///
 /// - `LifetimeEndBehavior::Despawn` (or absent) → emit [`DespawnEntity`]
 /// - `LifetimeEndBehavior::RevertToNormalBolt` → call [`PhantomBolt::become_normal`]
+///
+/// **Installer pattern for callers**: when installing `Lifespan` onto an
+/// already-spawned entity in the SAME `FixedUpdate` pass that this system
+/// runs in (no ordering edge between the installer and this system), the
+/// `Lifespan` insert is deferred and invisible to this system on the install
+/// tick. The installer should pre-subtract one `Time::<Fixed>::delta_secs()`
+/// from the initial `Lifespan::remaining` to compensate for the dropped
+/// tick. Callers that spawn a fresh entity carrying `Lifespan` (e.g., the
+/// `Bolt` builder's chip-effect path) do NOT need this compensation because
+/// the entity itself is invisible until the next flush.
 pub(crate) fn tick_bolt_lifespan(
     time: Res<Time<Fixed>>,
     mut commands: Commands,

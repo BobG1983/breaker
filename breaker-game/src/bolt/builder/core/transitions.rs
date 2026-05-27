@@ -173,6 +173,27 @@ impl<P, S, A, M, R> BoltBuilder<P, S, A, M, R, Unvisual> {
         }
     }
 
+    /// Configures the bolt for rendered mode with pre-built mesh + material
+    /// handles. Use when the caller already owns the handles (e.g. `effect_v3`
+    /// `Fireable::fire` impls that allocate from `&mut World` before acquiring
+    /// `Commands`).
+    #[must_use]
+    pub fn rendered_handles(
+        self,
+        mesh: Handle<Mesh>,
+        material: Handle<ColorMaterial>,
+    ) -> BoltBuilder<P, S, A, M, R, Rendered> {
+        BoltBuilder {
+            position: self.position,
+            speed:    self.speed,
+            angle:    self.angle,
+            motion:   self.motion,
+            role:     self.role,
+            visual:   Rendered { mesh, material },
+            optional: self.optional,
+        }
+    }
+
     /// Configures the bolt for headless mode (no rendering components).
     #[must_use]
     pub fn headless(self) -> BoltBuilder<P, S, A, M, R, Headless> {

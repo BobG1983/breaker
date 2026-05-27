@@ -13,7 +13,7 @@ use crate::{
     effect_v3::{storage::BoundEffects, types::Tree},
     prelude::*,
     shared::{
-        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, PhantomFlicker, WALL_LAYER,
+        BOLT_LAYER, BREAKER_LAYER, CELL_LAYER, GameDrawLayer, Lifespan, PhantomFlicker, WALL_LAYER,
         size::{BaseRadius, MaxRadius, MinRadius},
     },
 };
@@ -110,9 +110,16 @@ fn spawn_inner(
         ));
     }
 
-    // Optional: lifespan
+    // Optional: lifespan — insert both the legacy BoltLifespan(Timer) and the
+    // shared Lifespan that tick_bolt_lifespan reads (Wave 3A). Wave 5 deletes
+    // BoltLifespan and simplifies to the shared component only.
     if let Some(duration) = optional.lifespan {
-        entity.insert(BoltLifespan(Timer::from_seconds(duration, TimerMode::Once)));
+        entity.insert((
+            BoltLifespan(Timer::from_seconds(duration, TimerMode::Once)),
+            Lifespan {
+                remaining: duration,
+            },
+        ));
     }
 
     // Effect components — spawn-time only

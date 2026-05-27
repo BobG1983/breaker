@@ -4,12 +4,12 @@ use super::super::{
     super::system::AfterimageConfig,
     helpers::{
         build_afterimage_app, build_afterimage_app_no_config, phantom_bolt_count,
-        phantom_bolts_owned_by, phantom_breaker_count, seed_active_protocols_with_afterimage,
-        spawn_breaker_with_dash, spawn_phantom_breaker_at, spawn_real_bolt, tick_n,
-        write_bump_performed,
+        phantom_breaker_count, seed_active_protocols_with_afterimage, spawn_breaker_with_dash,
+        spawn_phantom_breaker_at, spawn_real_bolt, tick_n, write_bump_performed,
     },
 };
 use crate::{
+    bolt::components::PhantomBolt,
     breaker::{components::DashState, messages::BumpGrade},
     prelude::*,
 };
@@ -35,6 +35,9 @@ fn register_wires_spawn_phantom_breaker_in_fixed_update() {
 }
 
 // ── I6 — spawn_phantom_bolt wired + gated on active + Playing ─────────────
+//
+// Under the mutate-real-bolt design: a Perfect bump on a PhantomBreaker
+// mutates the REAL bolt in place — no separate entity is spawned.
 
 #[test]
 fn spawn_phantom_bolt_wired_and_gated_on_active_and_playing() {
@@ -46,40 +49,20 @@ fn spawn_phantom_bolt_wired_and_gated_on_active_and_playing() {
     write_bump_performed(&mut app, phantom, Some(real_bolt), BumpGrade::Perfect);
     tick(&mut app);
 
-    let owned = phantom_bolts_owned_by(&mut app, real_bolt);
-    assert_eq!(owned.len(), 1);
-}
-
-// ── I9 — tick_phantom_lifetime is live + despawns afterimage phantoms ─────
-
-#[test]
-fn tick_phantom_lifetime_is_live_and_despawns_afterimage_phantoms() {
-    use crate::effect_v3::effects::phantom_bolt::components::PhantomLifetime;
-
-    let mut app = build_afterimage_app();
-    seed_active_protocols_with_afterimage(&mut app);
-    let phantom = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 1.5);
-    let real_bolt = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::new(0.0, 400.0), 10.0, 6.0);
-
-    write_bump_performed(&mut app, phantom, Some(real_bolt), BumpGrade::Perfect);
-    tick(&mut app);
-    let owned = phantom_bolts_owned_by(&mut app, real_bolt);
-    assert_eq!(owned.len(), 1, "phantom bolt spawned");
-
-    // Despawn by manipulating the PhantomLifetime so tick_phantom_lifetime
-    // terminates the entity quickly — instead of waiting 3.0 seconds.
-    let phantom_entity = owned[0];
-    app.world_mut()
-        .entity_mut(phantom_entity)
-        .insert(PhantomLifetime(0.01));
-
-    tick_n(&mut app, 2);
-
     assert!(
-        app.world().get_entity(phantom_entity).is_err(),
-        "tick_phantom_lifetime must despawn the afterimage-spawned phantom"
+        app.world().get::<PhantomBolt>(real_bolt).is_some(),
+        "afterimage_spawn_phantom_bolt must be wired: real bolt gains PhantomBolt marker"
+    );
+    assert_eq!(
+        phantom_bolt_count(&mut app),
+        1,
+        "exactly one phantom-bolt entity (the real bolt itself)"
     );
 }
+
+// I9 (`tick_phantom_lifetime_is_live_and_despawns_afterimage_phantoms`) DELETED.
+// tick_phantom_lifetime is no longer in the afterimage path after the W4A
+// mutate-real-bolt rewrite. Wave 5 deletes the system entirely.
 
 // ── I11 — quiet tick safety under the full schedule ───────────────────────
 

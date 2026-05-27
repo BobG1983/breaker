@@ -73,69 +73,6 @@ fn zero_phantoms_at_exit_stays_zero_after() {
     assert_eq!(phantom_breaker_count(&mut app), 0);
 }
 
-// ── J2 — OnExit(Playing) despawns phantom bolts spawned via the system ────
-//
-// Phantom bolts spawned via `afterimage_spawn_phantom_bolt` MUST carry
-// `CleanupOnExit::<NodeState>::default()` so the stateflow handler
-// despawns them on node exit. Driven through the real spawn system via a
-// direct Perfect BumpPerformed. Real bolts (no CleanupOnExit) remain
-// alive.
-
-#[test]
-fn on_exit_playing_despawns_phantom_bolts_spawned_via_production_system() {
-    use super::helpers::{phantom_bolts_owned_by, write_bump_performed};
-    use crate::breaker::messages::BumpGrade;
-
-    let mut app = build_afterimage_app();
-    seed_active_protocols_with_afterimage(&mut app);
-    let phantom_breaker = spawn_phantom_breaker_at(&mut app, Vec2::ZERO, 2.0);
-    let real_bolt_a = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::ZERO, 10.0, 6.0);
-    let real_bolt_b = spawn_real_bolt(&mut app, Vec2::ZERO, Vec2::ZERO, 10.0, 6.0);
-
-    write_bump_performed(
-        &mut app,
-        phantom_breaker,
-        Some(real_bolt_a),
-        BumpGrade::Perfect,
-    );
-    tick(&mut app);
-    write_bump_performed(
-        &mut app,
-        phantom_breaker,
-        Some(real_bolt_b),
-        BumpGrade::Perfect,
-    );
-    tick(&mut app);
-    assert_eq!(
-        phantom_bolts_owned_by(&mut app, real_bolt_a).len(),
-        1,
-        "precondition: production spawn must have produced phantom for real_bolt_a"
-    );
-    assert_eq!(
-        phantom_bolts_owned_by(&mut app, real_bolt_b).len(),
-        1,
-        "precondition: production spawn must have produced phantom for real_bolt_b"
-    );
-
-    drive_to_teardown(&mut app);
-
-    assert_eq!(
-        phantom_bolt_count(&mut app),
-        0,
-        "all production-spawned phantom bolts must be despawned by stateflow cleanup — \
-         which requires production spawn to attach CleanupOnExit::<NodeState>"
-    );
-    // Owners remain alive and carry no PhantomBolt.
-    assert!(
-        app.world().get_entity(real_bolt_a).is_ok(),
-        "real_bolt_a must remain alive (no CleanupOnExit on real bolts)"
-    );
-    assert!(
-        app.world().get::<PhantomBolt>(real_bolt_a).is_none(),
-        "real_bolt_a must NOT gain a PhantomBolt marker"
-    );
-}
-
 // ── J2 (edge case) — phantom whose owner was already despawned still exits ─
 
 #[test]

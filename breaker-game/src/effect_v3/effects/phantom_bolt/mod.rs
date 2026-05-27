@@ -1,6 +1,7 @@
 //! Phantom bolt effect — spawns intangible bolt copy.
 
 pub mod components;
+/// Chip-effect configuration for spawning a phantom bolt.
 pub mod config;
 pub mod systems;
 
