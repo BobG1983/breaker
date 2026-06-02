@@ -11,6 +11,7 @@ use crate::{
         resources::DEFAULT_BOLT_ANGLE_SPREAD,
     },
     prelude::*,
+    shared::rng::BoltRng,
     state::run::NodeOutcome,
 };
 
@@ -29,7 +30,7 @@ use crate::{
 pub(crate) fn reset_bolt(
     mut commands: Commands,
     run_state: Res<NodeOutcome>,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<BoltRng>,
     breaker_query: Query<&Position2D, (With<Breaker>, Without<Bolt>)>,
     mut bolt_query: Query<ResetBoltData, (With<Bolt>, Without<ExtraBolt>)>,
     mut bolt_spawned: MessageWriter<BoltSpawned>,

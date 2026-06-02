@@ -1,5 +1,6 @@
 mod helpers;
 
+mod bolt_rng_tests;
 mod bolt_spawn_tests;
 mod breaker_spawn_tests;
 mod edge_case_tests;

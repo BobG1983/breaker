@@ -13,6 +13,7 @@ use crate::{
         resources::{ActiveHazards, HazardOffers, HazardRegistry},
     },
     prelude::*,
+    shared::rng::HazardRng,
     state::run::hazard_select::{
         resources::HazardSelectSelection, sets::HazardSelectSystems,
         systems::handle_hazard_input::handle_hazard_input,
@@ -277,7 +278,7 @@ fn dispatch_after_tick_timer_consumes_expiry_message() {
         .insert_resource(seeded_registry())
         .insert_resource(HazardSelectTimer { remaining: 0.0 })
         .insert_resource(offers)
-        .with_resource::<GameRng>()
+        .with_resource::<HazardRng>()
         .with_message::<HazardSelected>()
         .with_message::<ChangeState<HazardSelectState>>()
         .with_system(

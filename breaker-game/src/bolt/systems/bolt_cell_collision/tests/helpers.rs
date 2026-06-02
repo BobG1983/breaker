@@ -247,6 +247,7 @@ pub(super) fn test_app_with_full_pipeline() -> App {
     // BoltPlugin owns `bolt_cell_collision`'s production scheduling. Install
     // it UNMODIFIED — no DmgSystems::EmitDamage tag is added here.
     app.add_plugins(BoltPlugin);
+    app.init_resource::<crate::shared::rng::BoltRng>();
 
     app.insert_resource(DamageDealtCellMessages::default());
     app.insert_resource(WallHitMessages::default());

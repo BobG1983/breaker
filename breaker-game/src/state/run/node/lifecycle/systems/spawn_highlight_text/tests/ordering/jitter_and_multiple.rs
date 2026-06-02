@@ -1,4 +1,4 @@
-//! Tests for x-jitter from `GameRng`, deterministic seeding, and
+//! Tests for x-jitter from `FxRng`, deterministic seeding, and
 //! distinct positions/stagger for multiple popups.
 
 use bevy::prelude::*;
@@ -6,21 +6,49 @@ use bevy::prelude::*;
 use crate::{
     fx::FadeOut,
     prelude::*,
+    shared::rng::FxRng,
     state::run::{
-        components::HighlightPopup, messages::HighlightTriggered,
+        components::HighlightPopup, definition::HighlightConfig, messages::HighlightTriggered,
         node::lifecycle::systems::spawn_highlight_text::tests::helpers::*,
     },
 };
 
 // ---------------------------------------------------------------
-// Behavior 8: Jitter x-position from GameRng
+// B1: spawn_highlight_text runs with FxRng, GameRng absent
+// ---------------------------------------------------------------
+
+#[test]
+fn spawn_highlight_text_runs_with_fx_rng_and_no_game_rng() {
+    let mut app = test_app();
+    app.insert_resource(FxRng::from_seed(42));
+    app.insert_resource(TestHighlightMsg(vec![HighlightTriggered {
+        kind: HighlightKind::ClutchClear,
+    }]));
+
+    assert!(
+        !app.world().contains_resource::<GameRng>(),
+        "test world must not contain GameRng — system must not need it"
+    );
+
+    app.update();
+
+    let count = app
+        .world_mut()
+        .query_filtered::<Entity, With<HighlightPopup>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(count, 1, "exactly one HighlightPopup must be spawned");
+}
+
+// ---------------------------------------------------------------
+// B3: Jitter x-position within configured range (FxRng)
 // ---------------------------------------------------------------
 
 #[test]
 fn popup_x_jitter_within_configured_range() {
     // Default: popup_jitter_min_x = -10.0, popup_jitter_max_x = 10.0
     let mut app = test_app();
-    app.insert_resource(GameRng::from_seed(42));
+    app.insert_resource(FxRng::from_seed(42));
     app.insert_resource(TestHighlightMsg(vec![HighlightTriggered {
         kind: HighlightKind::ClutchClear,
     }]));
@@ -42,11 +70,43 @@ fn popup_x_jitter_within_configured_range() {
 }
 
 #[test]
+fn popup_x_jitter_within_custom_range() {
+    let mut app = test_app();
+    app.insert_resource(FxRng::from_seed(42));
+    app.insert_resource(HighlightConfig {
+        popup_jitter_min_x: 100.0,
+        popup_jitter_max_x: 200.0,
+        ..default()
+    });
+    app.insert_resource(TestHighlightMsg(vec![HighlightTriggered {
+        kind: HighlightKind::ClutchClear,
+    }]));
+    app.update();
+
+    let x = app
+        .world_mut()
+        .query_filtered::<&Transform, With<HighlightPopup>>()
+        .iter(app.world())
+        .next()
+        .expect("popup should exist")
+        .translation
+        .x;
+
+    assert!(
+        (100.0..=200.0).contains(&x),
+        "popup x should be within [100.0, 200.0] for custom config, got {x}"
+    );
+}
+
+// ---------------------------------------------------------------
+// B2: x-jitter deterministic for fixed FxRng seed
+// ---------------------------------------------------------------
+
+#[test]
 fn popup_x_jitter_is_deterministic_for_same_seed() {
-    // Same seed should produce same jitter
     let run_with_seed = |seed: u64| -> f32 {
         let mut app = test_app();
-        app.insert_resource(GameRng::from_seed(seed));
+        app.insert_resource(FxRng::from_seed(seed));
         app.insert_resource(TestHighlightMsg(vec![HighlightTriggered {
             kind: HighlightKind::ClutchClear,
         }]));
@@ -65,7 +125,13 @@ fn popup_x_jitter_is_deterministic_for_same_seed() {
     let x2 = run_with_seed(42);
     assert!(
         (x1 - x2).abs() < f32::EPSILON,
-        "same seed should produce same jitter: {x1} vs {x2}"
+        "same FxRng seed must produce same x-jitter: {x1} vs {x2}"
+    );
+
+    let x_alt = run_with_seed(99);
+    assert!(
+        (x1 - x_alt).abs() > f32::EPSILON,
+        "different FxRng seeds must produce different x-jitter: seed=42 got {x1}, seed=99 got {x_alt}"
     );
 }
 

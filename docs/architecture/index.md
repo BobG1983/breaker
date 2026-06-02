@@ -18,6 +18,7 @@ Technical decisions for how the game is built. See `../design/` for *why* (game 
 | [messages.md](messages.md) | Inter-domain communication: when to use a message vs component vs resource |
 | [ordering.md](ordering.md) | System ordering principles, SystemSet conventions, schedule placement |
 | [state.md](state.md) | GameState, PlayingState, sub-states, run_if gating |
+| [rng.md](rng.md) | RNG architecture — hierarchical seed derivation, per-domain RNG resources, what the run seed covers, scenario-runner contract |
 | [physics.md](physics.md) | FixedUpdate physics, CCD collision, bolt reflection model |
 | [content.md](content.md) | Content identity (enum behaviors + RON instances), upgrade application, RON validation |
 | [data.md](data.md) | Data model — components vs resources, config pipeline, ownership rules, dimension conventions |

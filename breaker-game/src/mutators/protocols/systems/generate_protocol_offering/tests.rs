@@ -10,6 +10,7 @@ use crate::{
         resources::{ActiveProtocols, ProtocolOffer, ProtocolRegistry, UnlockedProtocols},
     },
     prelude::*,
+    shared::rng::ProtocolRng,
 };
 
 /// Local helper — builds a `ProtocolDefinition` for a given kind with a
@@ -107,7 +108,7 @@ fn active_except(omit: ProtocolKind) -> ActiveProtocols {
 }
 
 /// Convenience: build a test app at Update with the system wired and
-/// all required resources pre-seeded. The caller inserts `GameRng`,
+/// all required resources pre-seeded. The caller inserts `ProtocolRng`,
 /// `UnlockedProtocols`, `ActiveProtocols`, `ProtocolRegistry`, and
 /// `ProtocolOffer` before calling this — this helper simply assembles the
 /// result and registers the system.
@@ -115,7 +116,7 @@ fn build_app(
     unlocked: UnlockedProtocols,
     active: ActiveProtocols,
     registry: ProtocolRegistry,
-    rng: GameRng,
+    rng: ProtocolRng,
     offer: ProtocolOffer,
 ) -> App {
     TestAppBuilder::new()
@@ -136,7 +137,7 @@ fn offer_populates_when_every_unlocked_kind_is_eligible() {
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -156,13 +157,13 @@ fn offer_populates_when_every_unlocked_kind_is_eligible() {
 
 #[test]
 fn offer_is_deterministic_across_two_runs_with_same_seed() {
-    // Edge case of Behavior 1: re-running with a fresh GameRng::from_seed(42)
+    // Edge case of Behavior 1: re-running with a fresh ProtocolRng::from_seed(42)
     // produces the same kind.
     let mut app = build_app(
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
     app.update();
@@ -175,7 +176,7 @@ fn offer_is_deterministic_across_two_runs_with_same_seed() {
         .kind();
 
     // Reseed RNG and clear the offer, then run again.
-    app.world_mut().insert_resource(GameRng::from_seed(42));
+    app.world_mut().insert_resource(ProtocolRng::from_seed(42));
     app.world_mut().insert_resource(ProtocolOffer::default());
     app.update();
     let second_kind = app
@@ -200,7 +201,7 @@ fn offer_is_none_when_all_unlocked_kinds_are_already_active() {
         UnlockedProtocols::default(),
         fully_active_protocols(),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -222,7 +223,7 @@ fn offer_overwrites_stale_prior_offer_with_none_when_pool_is_empty() {
         UnlockedProtocols::default(),
         fully_active_protocols(),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         stale,
     );
 
@@ -243,7 +244,7 @@ fn offer_selects_the_single_eligible_kind_when_14_are_active_anchor() {
         UnlockedProtocols::default(),
         active_except(ProtocolKind::Anchor),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -266,7 +267,7 @@ fn offer_selects_the_single_eligible_kind_when_14_are_active_tier_regression() {
         UnlockedProtocols::default(),
         active_except(ProtocolKind::TierRegression),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -311,7 +312,7 @@ fn offer_skips_locked_kinds_five_unlocked() {
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         registry_with(&allowed),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -338,7 +339,7 @@ fn offer_skips_locked_kinds_one_unlocked_burnout() {
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         registry_with(&allowed),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -377,7 +378,7 @@ fn offer_is_none_when_sole_eligible_kind_missing_from_registry() {
         UnlockedProtocols::default(),
         active,
         registry,
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -408,7 +409,7 @@ fn offer_returns_present_kind_even_when_other_eligible_kinds_missing_from_regist
         UnlockedProtocols::default(),
         active,
         registry,
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -432,14 +433,14 @@ fn offer_is_deterministic_across_two_independent_apps_with_same_seed_7() {
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(7),
+        ProtocolRng::from_seed(7),
         ProtocolOffer::default(),
     );
     let mut app_b = build_app(
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(7),
+        ProtocolRng::from_seed(7),
         ProtocolOffer::default(),
     );
 
@@ -473,14 +474,14 @@ fn offer_is_deterministic_across_two_independent_apps_with_same_seed_8() {
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(8),
+        ProtocolRng::from_seed(8),
         ProtocolOffer::default(),
     );
     let mut app_b = build_app(
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(8),
+        ProtocolRng::from_seed(8),
         ProtocolOffer::default(),
     );
 
@@ -513,7 +514,7 @@ fn offer_is_none_when_protocol_registry_is_empty() {
         UnlockedProtocols::default(),
         ActiveProtocols::default(),
         ProtocolRegistry::default(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -534,7 +535,7 @@ fn offer_is_none_when_unlocked_protocols_is_empty() {
         UnlockedProtocols::empty(),
         ActiveProtocols::default(),
         fully_seeded_registry(),
-        GameRng::from_seed(42),
+        ProtocolRng::from_seed(42),
         ProtocolOffer::default(),
     );
 
@@ -544,5 +545,211 @@ fn offer_is_none_when_unlocked_protocols_is_empty() {
     assert!(
         offer.0.is_none(),
         "UnlockedProtocols::empty() must produce ProtocolOffer(None)"
+    );
+}
+
+// ── Group C: generate_protocol_offering migration ────────────────────────
+
+const SENTINEL: u64 = 0xDEAD_BEEF_CAFE_1234;
+
+// ── Behavior 10: reads ProtocolRng (NOT GameRng) ─────────────────────────
+
+#[test]
+fn generate_protocol_offering_reads_protocol_rng_not_game_rng() {
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
+
+    use crate::prelude::GameRng;
+
+    let mut app = build_app(
+        UnlockedProtocols::default(),
+        ActiveProtocols::default(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(42),
+        ProtocolOffer::default(),
+    );
+    // Also insert GameRng seeded at SENTINEL — must remain untouched.
+    app.world_mut()
+        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(SENTINEL)));
+
+    app.update();
+
+    // System runs without panic and produces a valid offer.
+    let offer = app.world().resource::<ProtocolOffer>();
+    assert!(
+        offer.0.is_some(),
+        "generate_protocol_offering must resolve ProtocolRng and produce an offer"
+    );
+    let kind = offer.0.as_ref().unwrap().kind();
+    assert!(
+        ProtocolKind::ALL.contains(&kind),
+        "offered kind must be in ProtocolKind::ALL, got {kind:?}"
+    );
+
+    // GameRng stream must be unchanged — draw from the world resource and from
+    // a fresh ChaCha8Rng seeded at SENTINEL; both must produce the same u64.
+    let world_draw: u64 = {
+        use rand::Rng;
+        app.world_mut().resource_mut::<GameRng>().0.random()
+    };
+    let sentinel_draw: u64 = {
+        use rand::Rng;
+        ChaCha8Rng::seed_from_u64(SENTINEL).random()
+    };
+    assert_eq!(
+        world_draw, sentinel_draw,
+        "generate_protocol_offering must NOT advance GameRng (stream was touched)"
+    );
+}
+
+// ── Behavior 11: determinism across independent apps with the same seed ───
+
+#[test]
+fn generate_protocol_offering_is_deterministic_for_same_protocol_rng_seed() {
+    let mut app_a = build_app(
+        UnlockedProtocols::default(),
+        ActiveProtocols::default(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(7),
+        ProtocolOffer::default(),
+    );
+    let mut app_b = build_app(
+        UnlockedProtocols::default(),
+        ActiveProtocols::default(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(7),
+        ProtocolOffer::default(),
+    );
+
+    app_a.update();
+    app_b.update();
+
+    let kind_a = app_a
+        .world()
+        .resource::<ProtocolOffer>()
+        .0
+        .as_ref()
+        .unwrap()
+        .kind();
+    let kind_b = app_b
+        .world()
+        .resource::<ProtocolOffer>()
+        .0
+        .as_ref()
+        .unwrap()
+        .kind();
+
+    assert_eq!(
+        kind_a, kind_b,
+        "same ProtocolRng seed must produce the same offered kind across independent apps"
+    );
+}
+
+#[test]
+fn generate_protocol_offering_seed_0_and_seed_8_produce_different_kinds() {
+    let mut app_0 = build_app(
+        UnlockedProtocols::default(),
+        ActiveProtocols::default(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(0),
+        ProtocolOffer::default(),
+    );
+    let mut app_8 = build_app(
+        UnlockedProtocols::default(),
+        ActiveProtocols::default(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(8),
+        ProtocolOffer::default(),
+    );
+
+    app_0.update();
+    app_8.update();
+
+    let kind_0 = app_0
+        .world()
+        .resource::<ProtocolOffer>()
+        .0
+        .as_ref()
+        .unwrap()
+        .kind();
+    let kind_8 = app_8
+        .world()
+        .resource::<ProtocolOffer>()
+        .0
+        .as_ref()
+        .unwrap()
+        .kind();
+
+    assert_ne!(
+        kind_0, kind_8,
+        "ProtocolRng seed 0 and seed 8 must produce different offered kinds for a full registry"
+    );
+}
+
+// ── Behavior 12: no ProtocolRng advance when eligible pool is empty ────────
+
+#[test]
+fn generate_protocol_offering_does_not_advance_protocol_rng_when_pool_is_empty() {
+    use rand::Rng;
+
+    let mut app = build_app(
+        UnlockedProtocols::default(),
+        fully_active_protocols(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(42),
+        ProtocolOffer::default(),
+    );
+
+    app.update();
+
+    // Pool is empty — offer must be None.
+    let offer = app.world().resource::<ProtocolOffer>();
+    assert!(
+        offer.0.is_none(),
+        "empty eligible pool must produce ProtocolOffer(None)"
+    );
+
+    // ProtocolRng must NOT have advanced — draw from the world resource and
+    // from a fresh seed; both must agree.
+    let world_draw: u64 = app.world_mut().resource_mut::<ProtocolRng>().0.random();
+    let fresh_draw: u64 = ProtocolRng::from_seed(42).0.random();
+    assert_eq!(
+        world_draw, fresh_draw,
+        "generate_protocol_offering must NOT advance ProtocolRng on early-return (empty pool)"
+    );
+}
+
+#[test]
+fn generate_protocol_offering_overwrites_stale_offer_with_none_and_does_not_advance_rng() {
+    use rand::Rng;
+
+    // Pre-insert a stale Some offer.
+    let stale_kind = ProtocolKind::ALL[0];
+    let stale_def = def_for(stale_kind, "stale");
+    let stale_offer = ProtocolOffer(Some(stale_def));
+
+    let mut app = build_app(
+        UnlockedProtocols::default(),
+        fully_active_protocols(),
+        fully_seeded_registry(),
+        ProtocolRng::from_seed(42),
+        stale_offer,
+    );
+
+    app.update();
+
+    // Stale offer must be overwritten with None.
+    let offer = app.world().resource::<ProtocolOffer>();
+    assert!(
+        offer.0.is_none(),
+        "stale ProtocolOffer(Some(_)) must be overwritten with None when pool is empty"
+    );
+
+    // RNG stream must remain untouched even though a prior offer existed.
+    let world_draw: u64 = app.world_mut().resource_mut::<ProtocolRng>().0.random();
+    let fresh_draw: u64 = ProtocolRng::from_seed(42).0.random();
+    assert_eq!(
+        world_draw, fresh_draw,
+        "ProtocolRng must NOT advance when early-return fires (stale-offer overwrite path)"
     );
 }

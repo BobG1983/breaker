@@ -1,5 +1,7 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 
 use super::system::*;
 use crate::effect_v3::{
@@ -74,7 +76,8 @@ fn reverse_effect_queues_reverse_command() {
     };
 
     // Fire first to create the stack.
-    config.fire(entity, "ext_test", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(entity, "ext_test", &mut world, &mut rng);
     assert_eq!(
         world
             .get::<EffectStack<SpeedBoostConfig>>(entity)

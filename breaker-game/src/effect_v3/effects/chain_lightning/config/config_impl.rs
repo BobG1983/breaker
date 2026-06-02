@@ -30,7 +30,13 @@ pub struct ChainLightningConfig {
 }
 
 impl Fireable for ChainLightningConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
         let base_damage = world
             .get::<BoltBaseDamage>(entity)
@@ -50,6 +56,7 @@ impl Fireable for ChainLightningConfig {
                 range:           self.range.0,
                 arc_speed:       self.arc_speed.0,
                 source_pos:      pos,
+                tick:            0,
             },
             chip,
             CleanupOnExit::<NodeState>::default(),

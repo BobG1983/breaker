@@ -30,7 +30,13 @@ pub struct ShockwaveConfig {
 }
 
 impl Fireable for ShockwaveConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         // Snapshot position from the source entity
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
@@ -89,6 +95,8 @@ impl Fireable for ShockwaveConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
     use rantzsoft_spatial2d::components::Position2D;
 
     use super::*;
@@ -115,8 +123,9 @@ mod tests {
         let source = world
             .spawn((BoltBaseDamage(25.0), Position2D(Vec2::new(100.0, 200.0))))
             .id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(source, "test_chip", &mut world);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let base_dmg: Vec<f32> = world
@@ -138,8 +147,9 @@ mod tests {
         let source = world
             .spawn((BoltBaseDamage(0.0), Position2D(Vec2::new(100.0, 200.0))))
             .id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(source, "test_chip", &mut world);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let base_dmg: Vec<f32> = world
@@ -159,8 +169,9 @@ mod tests {
     fn shockwave_falls_back_to_default_when_bolt_base_damage_absent() {
         let mut world = World::new();
         let source = world.spawn(Position2D(Vec2::new(100.0, 200.0))).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(source, "test_chip", &mut world);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let base_dmg: Vec<f32> = world
@@ -181,8 +192,9 @@ mod tests {
         let mut world = World::new();
         let source = world.spawn_empty().id();
         world.despawn(source);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(source, "test_chip", &mut world);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let base_dmg: Vec<f32> = world
@@ -214,7 +226,8 @@ mod tests {
             stacks:          1,
             speed:           OrderedFloat(200.0),
         };
-        config.fire(source, "test_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let max_radii: Vec<f32> = world
@@ -244,7 +257,8 @@ mod tests {
             stacks:          3,
             speed:           OrderedFloat(200.0),
         };
-        config.fire(source, "test_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let max_radii: Vec<f32> = world
@@ -275,7 +289,8 @@ mod tests {
             stacks:          0,
             speed:           OrderedFloat(200.0),
         };
-        config.fire(source, "test_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let max_radii: Vec<f32> = world
@@ -302,12 +317,13 @@ mod tests {
             .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
             .id();
 
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(source, "amp", &mut world);
+        .fire(source, "amp", &mut world, &mut rng);
 
-        make_config().fire(source, "test_chip", &mut world);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let mults: Vec<f32> = world
@@ -337,16 +353,17 @@ mod tests {
             .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
             .id();
 
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(source, "amp_a", &mut world);
+        .fire(source, "amp_a", &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(source, "amp_b", &mut world);
+        .fire(source, "amp_b", &mut world, &mut rng);
 
-        make_config().fire(source, "test_chip", &mut world);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let mults: Vec<f32> = world
@@ -379,7 +396,8 @@ mod tests {
             .id();
 
         // No DamageBoostConfig.fire(...) on the source — no stack component.
-        make_config().fire(source, "test_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        make_config().fire(source, "test_chip", &mut world, &mut rng);
         world.flush();
 
         let mults: Vec<f32> = world

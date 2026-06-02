@@ -49,7 +49,7 @@ Post-TODO #1, Tether lives in `mutators/hazards/tether/` and participates in `De
   1. Build the eligible-pair set by iterating cells and calling `Quadtree::query_circle(cell_pos, pair_radius)` — each unordered pair within `pair_radius` is eligible.
   2. Dedupe pairs (A-B == B-A).
   3. Compute `coverage_percent = base + per_level * (stack - 1)`, clamped to 100%.
-  4. Using seeded `GameRng` (from run seed + node index), randomly select `coverage_percent` of eligible pairs.
+  4. Using seeded `HazardRng`, randomly select `coverage_percent` of eligible pairs.
   5. Insert `TetherLink { partner }` on both cells in each selected pair.
 
 ### `tether_emit_partner`
@@ -127,7 +127,7 @@ Coverage caps at 100% (all eligible pairs linked). Damage percent is uncapped �
 - **Tether + Cascade**: Tether spreads non-lethal damage; when a partner eventually dies, Cascade heals its neighbors. Feedback loop — Tether feeds Cascade.
 - **Tether + Diffusion**: Diffusion runs first in `MutateDamage` (deterministic order via `wire_damage_chain`). Diffusion-reduced damage feeds Tether; Tether's redirected amount is based on the reduced original.
 - **Bidirectional damage same frame**: A linked to B, both take damage same tick: two independent redirects fire. No infinite loop (source check).
-- **Coverage randomness**: seeded `GameRng` derived from run seed + node index. Deterministic replay.
+- **Coverage randomness**: seeded `HazardRng`. Deterministic replay.
 - **Mid-run stack increase**: new links established at next node's `OnEnter(NodeState::Playing)` — links are per-node. No mid-node additions (hazards don't activate mid-node anyway).
 - **Radius tuning**: `pair_radius` picked so grid spacing yields orthogonal eligibility. Boss clusters use the same radius — tune via RON if needed.
 - **Cleanup**: `TetherLink` components on cell entities — cleaned up at node end via cell despawn. `TetherConfig` removed at run end.

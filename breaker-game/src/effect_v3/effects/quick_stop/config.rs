@@ -20,7 +20,13 @@ pub struct QuickStopConfig {
 }
 
 impl Fireable for QuickStopConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let has_stack = world.get::<EffectStack<Self>>(entity).is_some();
         if !has_stack {
             world
@@ -63,6 +69,8 @@ impl PassiveEffect for QuickStopConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -94,8 +102,9 @@ mod tests {
         let config = QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -110,9 +119,10 @@ mod tests {
         let config = QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let quickstop = SourceId::chip("QuickStop").rarity(Rarity::Common).build();
-        config.fire(entity, quickstop.0.as_ref(), &mut world);
+        config.fire(entity, quickstop.0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         let entries: Vec<_> = stack.iter().collect();
@@ -127,9 +137,10 @@ mod tests {
         let config = QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2);
@@ -143,8 +154,9 @@ mod tests {
         let config = QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
         config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<QuickStopConfig>>(entity).unwrap();
@@ -168,19 +180,30 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         QuickStopConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, chrono_passive_source().0.as_ref(), &mut world);
+        .fire(
+            entity,
+            chrono_passive_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
         QuickStopConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "other_chip", &mut world);
+        .fire(entity, "other_chip", &mut world, &mut rng);
         QuickStopConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity, chrono_passive_source().0.as_ref(), &mut world);
+        .fire(
+            entity,
+            chrono_passive_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         QuickStopConfig {
             multiplier: OrderedFloat(2.0),

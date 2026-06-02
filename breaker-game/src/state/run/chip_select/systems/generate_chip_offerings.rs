@@ -13,6 +13,7 @@ use crate::{
     },
     mutators::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
     prelude::*,
+    shared::rng::ChipRng,
     state::run::{
         chip_select::{
             ChipSelectConfig,
@@ -29,7 +30,7 @@ pub(crate) struct ChipOfferingParams<'w, 's> {
     registry:      Res<'w, ChipCatalog>,
     inventory:     Res<'w, ChipInventory>,
     config:        Res<'w, ChipSelectConfig>,
-    rng:           ResMut<'w, GameRng>,
+    rng:           Res<'w, ChipRng>,
     active_layout: Option<Res<'w, ActiveNodeLayout>>,
     greed_config:  Option<Res<'w, GreedConfig>>,
     greed_stacks:  Option<Res<'w, GreedStacks>>,
@@ -79,11 +80,18 @@ pub(crate) fn generate_chip_offerings(mut params: ChipOfferingParams) {
         rarity_weights,
         offers_per_node: remaining_slots,
     };
+    // ChipRng is intentionally NOT advanced by this system. `reseed_chip_rng` runs
+    // in `ChipSelectSystems::ReseedRng` immediately before this system and installs
+    // a fresh seeded state derived from (run_seed, "chip", ChipSelectCount); cloning
+    // for the draw means any later observer reads the same canonical state, which
+    // keeps `ChipRng` an idempotent function of (run_seed, ChipSelectCount) instead
+    // of a stateful stream that drifts across systems within one selection cycle.
+    let mut rng_clone = params.rng.0.clone();
     let normal_offers = generate_offerings(
         &params.registry,
         &params.inventory,
         &offering_config,
-        &mut params.rng.0,
+        &mut rng_clone,
     );
 
     // Combine: evolutions first, then normal

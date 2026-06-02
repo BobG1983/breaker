@@ -32,6 +32,7 @@ fn fire_phantom_in_app() -> App {
         .with_resource::<NodeOutcome>()
         .with_effects_pipeline()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.add_plugins(BoltPlugin);
     attach_message_capture::<DespawnEntity>(&mut app);
     app

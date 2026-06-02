@@ -3,6 +3,7 @@
 //! `PiercingBeamEmissionRequested` is still written.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 
 use super::{super::super::messages::PiercingBeamEmissionRequested, helpers::*};
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -13,7 +14,12 @@ fn no_cells_no_panic_zero_damage_one_request() {
     let source = spawn_beam_source(&mut app);
     // No cells spawned.
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     let req_buf = app
         .world()
@@ -45,7 +51,12 @@ fn dead_only_cells_yield_zero_damage_no_panic() {
     app.world_mut()
         .spawn((Cell, Position2D(Vec2::new(0.0, 150.0)), Dead));
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

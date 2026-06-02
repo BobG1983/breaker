@@ -11,6 +11,7 @@ use crate::{
     },
     breaker::{BreakerRegistry, SelectedBreaker, messages::BreakerSpawned},
     prelude::*,
+    shared::rng::BoltRng,
     state::run::NodeOutcome,
 };
 
@@ -47,7 +48,7 @@ pub(crate) struct SetupRunContext<'w> {
 pub(crate) fn setup_run(
     mut commands: Commands,
     ctx: SetupRunContext,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<BoltRng>,
     mut render_assets: (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
     existing_breakers: Query<(), With<Breaker>>,
     mut breaker_spawned: MessageWriter<BreakerSpawned>,

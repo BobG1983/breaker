@@ -17,7 +17,7 @@ use crate::{
 
 #[test]
 fn max_active_at_limit_suppresses_new_spawn() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
 
     // Pre-spawn 2 phantoms keyed for (chip="phantom_bolt", fired_from=real_bolt)
@@ -28,7 +28,7 @@ fn max_active_at_limit_suppresses_new_spawn() {
         duration:   OrderedFloat(2.0),
         max_active: 2,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let count = world
@@ -45,7 +45,7 @@ fn max_active_at_limit_suppresses_new_spawn() {
 
 #[test]
 fn max_active_different_chip_bypasses_filter() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(10.0, 10.0), Vec2::new(0.0, 200.0));
 
     // Pre-spawn 2 phantoms keyed for "phantom_bolt"
@@ -56,7 +56,7 @@ fn max_active_different_chip_bypasses_filter() {
         duration:   OrderedFloat(2.0),
         max_active: 2,
     };
-    config.fire(real_bolt, "different_chip", &mut world);
+    config.fire(real_bolt, "different_chip", &mut world, &mut rng);
     world.flush();
 
     let count = world
@@ -83,7 +83,7 @@ fn max_active_different_chip_bypasses_filter() {
 
 #[test]
 fn max_active_different_fired_from_bypasses_filter() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
     let other = spawn_source(&mut world, Vec2::new(5.0, 5.0), Vec2::new(1.0, 1.0));
 
@@ -95,7 +95,7 @@ fn max_active_different_fired_from_bypasses_filter() {
         duration:   OrderedFloat(2.0),
         max_active: 2,
     };
-    config.fire(other, "phantom_bolt", &mut world);
+    config.fire(other, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let count = world
@@ -121,7 +121,7 @@ fn max_active_different_fired_from_bypasses_filter() {
 
 #[test]
 fn max_active_below_limit_allows_spawn() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
 
     // Pre-spawn 1 phantom keyed for (real_bolt, "phantom_bolt"), max_active: 2
@@ -131,7 +131,7 @@ fn max_active_below_limit_allows_spawn() {
         duration:   OrderedFloat(2.0),
         max_active: 2,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let count = world
@@ -148,14 +148,14 @@ fn max_active_below_limit_allows_spawn() {
 
 #[test]
 fn max_active_zero_always_skips() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 0,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let count = world

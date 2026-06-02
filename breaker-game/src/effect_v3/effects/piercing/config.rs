@@ -19,7 +19,13 @@ pub struct PiercingConfig {
 }
 
 impl Fireable for PiercingConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let has_stack = world.get::<EffectStack<Self>>(entity).is_some();
         if !has_stack {
             world
@@ -58,6 +64,8 @@ impl PassiveEffect for PiercingConfig {
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -93,8 +101,9 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -105,9 +114,10 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2);
@@ -119,8 +129,9 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         let config = PiercingConfig { charges: 3 };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
         config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
@@ -142,10 +153,26 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
-        PiercingConfig { charges: 3 }.fire(entity, splinter_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 2 }.fire(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
+        PiercingConfig { charges: 5 }.fire(
+            entity,
+            piercing_bolt_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
+        PiercingConfig { charges: 3 }.fire(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         PiercingConfig { charges: 2 }.reverse_all_by_source(
             entity,
@@ -177,12 +204,23 @@ mod tests {
     fn fire_on_entity_with_existing_stack_appends_without_replacing() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         // Pre-populate with 1 entry from "splinter".
-        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 2 }.fire(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         // Fire from a different source.
-        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 5 }.fire(
+            entity,
+            piercing_bolt_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2, "stack should have 2 entries, not replace");
@@ -193,10 +231,26 @@ mod tests {
     fn fire_same_source_again_appends_third_entry() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, piercing_bolt_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 2 }.fire(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
+        PiercingConfig { charges: 5 }.fire(
+            entity,
+            piercing_bolt_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
+        PiercingConfig { charges: 5 }.fire(
+            entity,
+            piercing_bolt_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 3, "stack should have 3 entries (2+5+5)");
@@ -209,10 +263,11 @@ mod tests {
     fn aggregate_sums_charges_from_mixed_sources() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        PiercingConfig { charges: 1 }.fire(entity, "chip_a", &mut world);
-        PiercingConfig { charges: 4 }.fire(entity, "chip_b", &mut world);
-        PiercingConfig { charges: 2 }.fire(entity, "chip_a", &mut world);
+        PiercingConfig { charges: 1 }.fire(entity, "chip_a", &mut world, &mut rng);
+        PiercingConfig { charges: 4 }.fire(entity, "chip_b", &mut world, &mut rng);
+        PiercingConfig { charges: 2 }.fire(entity, "chip_a", &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<PiercingConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 3);
@@ -223,10 +278,11 @@ mod tests {
     fn reverse_one_entry_from_mixed_sources_updates_aggregate() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        PiercingConfig { charges: 1 }.fire(entity, "chip_a", &mut world);
-        PiercingConfig { charges: 4 }.fire(entity, "chip_b", &mut world);
-        PiercingConfig { charges: 2 }.fire(entity, "chip_a", &mut world);
+        PiercingConfig { charges: 1 }.fire(entity, "chip_a", &mut world, &mut rng);
+        PiercingConfig { charges: 4 }.fire(entity, "chip_b", &mut world, &mut rng);
+        PiercingConfig { charges: 2 }.fire(entity, "chip_a", &mut world, &mut rng);
 
         // Reverse the first chip_a entry (charges: 1).
         PiercingConfig { charges: 1 }.reverse(entity, "chip_a", &mut world);
@@ -242,10 +298,11 @@ mod tests {
     fn reverse_preserves_remaining_entries_in_stack() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, "b", &mut world);
-        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world, &mut rng);
+        PiercingConfig { charges: 5 }.fire(entity, "b", &mut world, &mut rng);
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world, &mut rng);
 
         PiercingConfig { charges: 3 }.reverse(entity, "a", &mut world);
 
@@ -258,10 +315,11 @@ mod tests {
     fn reverse_twice_leaves_single_entry() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
-        PiercingConfig { charges: 5 }.fire(entity, "b", &mut world);
-        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world);
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world, &mut rng);
+        PiercingConfig { charges: 5 }.fire(entity, "b", &mut world, &mut rng);
+        PiercingConfig { charges: 3 }.fire(entity, "a", &mut world, &mut rng);
 
         PiercingConfig { charges: 3 }.reverse(entity, "a", &mut world);
         PiercingConfig { charges: 3 }.reverse(entity, "a", &mut world);

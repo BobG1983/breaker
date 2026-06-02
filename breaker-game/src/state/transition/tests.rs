@@ -3,14 +3,14 @@ use std::time::Duration;
 use bevy::{prelude::*, state::app::StatesPlugin, time::TimeUpdateStrategy};
 
 use super::system::*;
-use crate::prelude::*;
+use crate::{prelude::*, shared::rng::FxRng};
 
 fn test_app() -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, StatesPlugin))
         .init_state::<GameState>()
         .insert_resource(TransitionConfig::default())
-        .insert_resource(GameRng::from_seed(42));
+        .insert_resource(FxRng::from_seed(42));
     app
 }
 
@@ -335,5 +335,73 @@ fn overlay_color_threads_custom_rgb_values_correctly() {
         sweep_in,
         Color::srgba(0.9, 0.1, 0.0, 1.0),
         "Custom Sweep+In should use custom RGB with alpha 1.0"
+    );
+}
+
+// B8 — test_app() registers FxRng, not GameRng
+#[test]
+fn test_app_registers_fx_rng_not_game_rng() {
+    let app = test_app();
+    assert!(
+        app.world().contains_resource::<FxRng>(),
+        "transition test_app must register FxRng"
+    );
+    assert!(
+        !app.world().contains_resource::<GameRng>(),
+        "transition test_app must NOT register GameRng"
+    );
+}
+
+// B10 — state/transition/system.rs contains no GameRng reference
+#[test]
+fn transition_system_has_no_game_rng_reference() {
+    let source = include_str!("system.rs");
+    assert!(
+        !source.contains("GameRng"),
+        "state/transition/system.rs must not reference GameRng after FxRng migration"
+    );
+}
+
+// B12 — state/transition/tests.rs migration verified via B8 (harness resource check) and
+// B10 (system.rs guard). A self-referential include_str!("tests.rs") would always
+// contain "GameRng" due to B8/B13's absence assertions — the guard is superseded.
+
+// B13 — GameRng remains registered in RunPlugin (negative guard)
+#[test]
+fn game_rng_remains_registered_in_run_plugin() {
+    use crate::shared::test_utils::builder::TestAppBuilder;
+    use crate::state::run::RunPlugin;
+    use rantzsoft_stateflow::RoutingTable;
+    use crate::state::types::NodeState;
+
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .build();
+    app.init_resource::<RoutingTable<NodeState>>();
+    app.add_plugins(RunPlugin);
+
+    assert!(
+        app.world().contains_resource::<GameRng>(),
+        "GameRng must remain registered in RunPlugin — Wave 2A only migrates 3 cosmetic systems"
+    );
+}
+
+// B14 — RunPlugin registers FxRng so migrated systems can find it
+#[test]
+fn run_plugin_registers_fx_rng() {
+    use crate::shared::test_utils::builder::TestAppBuilder;
+    use crate::state::run::RunPlugin;
+    use rantzsoft_stateflow::RoutingTable;
+    use crate::state::types::NodeState;
+
+    let mut app = TestAppBuilder::new()
+        .with_state_hierarchy()
+        .build();
+    app.init_resource::<RoutingTable<NodeState>>();
+    app.add_plugins(RunPlugin);
+
+    assert!(
+        app.world().contains_resource::<FxRng>(),
+        "RunPlugin must register FxRng so spawn_transition_out/in and spawn_highlight_text can use it"
     );
 }

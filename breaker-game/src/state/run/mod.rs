@@ -14,7 +14,7 @@ pub(crate) mod systems;
 
 pub use definition::HighlightConfig;
 pub use node::{NodeLayout, NodeLayoutRegistry};
-pub use plugin::RunPlugin;
+pub use plugin::{RunPlugin, RunStartSystems};
 pub use resources::{
     HighlightCategory, HighlightKind, HighlightTracker, NodeOutcome, NodeResult, RunHighlight,
     RunStats,

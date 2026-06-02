@@ -1,11 +1,10 @@
 //! `reverse_dispatch` — match `ReversibleEffectType` variant to `config.reverse()` call.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 
-use crate::effect_v3::{
-    traits::{Fireable, Reversible},
-    types::ReversibleEffectType,
-};
+use crate::effect_v3::{traits::Reversible, types::ReversibleEffectType};
 
 /// Dispatch a `ReversibleEffectType` to the appropriate config's `reverse()` method.
 ///
@@ -44,23 +43,27 @@ pub fn fire_reversible_dispatch(
     source: &str,
     world: &mut World,
 ) {
+    use crate::effect_v3::traits::Fireable;
+    let mut rng = ChaCha8Rng::seed_from_u64(0);
     match effect {
-        ReversibleEffectType::SpeedBoost(config) => config.fire(entity, source, world),
-        ReversibleEffectType::SizeBoost(config) => config.fire(entity, source, world),
-        ReversibleEffectType::DamageBoost(config) => config.fire(entity, source, world),
-        ReversibleEffectType::BumpForce(config) => config.fire(entity, source, world),
-        ReversibleEffectType::QuickStop(config) => config.fire(entity, source, world),
-        ReversibleEffectType::FlashStep(config) => config.fire(entity, source, world),
-        ReversibleEffectType::Piercing(config) => config.fire(entity, source, world),
-        ReversibleEffectType::Vulnerable(config) => config.fire(entity, source, world),
-        ReversibleEffectType::RampingDamage(config) => config.fire(entity, source, world),
-        ReversibleEffectType::Attraction(config) => config.fire(entity, source, world),
-        ReversibleEffectType::Anchor(config) => config.fire(entity, source, world),
-        ReversibleEffectType::Pulse(config) => config.fire(entity, source, world),
-        ReversibleEffectType::Shield(config) => config.fire(entity, source, world),
-        ReversibleEffectType::SecondWind(config) => config.fire(entity, source, world),
-        ReversibleEffectType::CircuitBreaker(config) => config.fire(entity, source, world),
-        ReversibleEffectType::EntropyEngine(config) => config.fire(entity, source, world),
+        ReversibleEffectType::SpeedBoost(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::SizeBoost(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::DamageBoost(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::BumpForce(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::QuickStop(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::FlashStep(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::Piercing(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::Vulnerable(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::RampingDamage(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::Attraction(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::Anchor(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::Pulse(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::Shield(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::SecondWind(config) => config.fire(entity, source, world, &mut rng),
+        ReversibleEffectType::CircuitBreaker(config) => {
+            config.fire(entity, source, world, &mut rng);
+        }
+        ReversibleEffectType::EntropyEngine(config) => config.fire(entity, source, world, &mut rng),
     }
 }
 

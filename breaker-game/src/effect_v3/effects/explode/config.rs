@@ -17,7 +17,13 @@ pub struct ExplodeConfig {
 }
 
 impl Fireable for ExplodeConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let center = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
         let source_id = (!source.is_empty()).then(|| SourceId::from(source.to_owned()));
 

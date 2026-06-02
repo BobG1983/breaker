@@ -18,7 +18,13 @@ use crate::{
 pub struct SecondWindConfig {}
 
 impl Fireable for SecondWindConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let chip = EffectSourceChip::from_source_str(source);
         let playfield = world.resource::<PlayfieldConfig>().clone();
 

@@ -1,10 +1,12 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use rand::Rng;
 
 use super::system::*;
 use crate::{
     bolt::{components::*, definition::BoltDefinition, resources::DEFAULT_BOLT_ANGLE_SPREAD},
     input::resources::GameAction,
     prelude::*,
+    shared::rng::{BoltRng, GameRng},
 };
 
 fn make_default_bolt_definition() -> BoltDefinition {
@@ -27,7 +29,7 @@ fn make_default_bolt_definition() -> BoltDefinition {
 fn test_app() -> App {
     TestAppBuilder::new()
         .with_resource::<InputActions>()
-        .with_resource::<GameRng>()
+        .with_resource::<BoltRng>()
         .with_system(FixedUpdate, launch_bolt)
         .build()
 }
@@ -464,5 +466,204 @@ fn launch_bolt_velocity_with_speed_boost() {
         (vel.speed() - 1080.0).abs() < 2.0,
         "velocity magnitude should be ~1080.0 (720.0 * 1.5), got {}",
         vel.speed()
+    );
+}
+
+// ── Wave 2B: Group A — launch_bolt uses BoltRng ──────────────────────────────
+
+const SENTINEL: u64 = 0xDEAD_BEEF_CAFE_1234;
+
+// Behavior 1: launch_bolt reads ResMut<BoltRng> — proven by harness with only BoltRng
+#[test]
+fn launch_bolt_uses_bolt_rng_not_game_rng() {
+    // Harness has BoltRng but NOT GameRng — if system still names GameRng it panics.
+    let mut app = test_app();
+    let bolt_id = spawn_serving_bolt(&mut app);
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::Bump);
+    tick(&mut app);
+
+    assert!(
+        app.world().get::<BoltServing>(bolt_id).is_none(),
+        "BoltServing should be removed after launch — system ran with BoltRng only"
+    );
+    let vel = app.world().get::<Velocity2D>(bolt_id).unwrap();
+    assert!(vel.0.y > 0.0, "bolt should launch upward");
+}
+
+// Behavior 1 edge case: BoltRng AND GameRng present — system must NOT advance GameRng
+#[test]
+fn launch_bolt_does_not_advance_game_rng_when_both_resources_present() {
+    let mut app = TestAppBuilder::new()
+        .with_resource::<InputActions>()
+        .with_resource::<BoltRng>()
+        .with_system(FixedUpdate, launch_bolt)
+        .build();
+    app.insert_resource(GameRng::from_seed(SENTINEL));
+
+    let bolt_id = spawn_serving_bolt(&mut app);
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::Bump);
+    tick(&mut app);
+
+    assert!(
+        app.world().get::<BoltServing>(bolt_id).is_none(),
+        "bolt should be launched — sentinel: system executed"
+    );
+
+    // GameRng must be un-advanced: first draw equals fresh from_seed(SENTINEL)
+    let actual: u64 = app.world_mut().resource_mut::<GameRng>().0.random();
+    let expected: u64 = GameRng::from_seed(SENTINEL).0.random();
+    assert_eq!(
+        actual, expected,
+        "launch_bolt must NOT advance GameRng when BoltRng is the param"
+    );
+}
+
+// Behavior 2: same BoltRng seed yields same launch angle in two independent apps
+#[test]
+fn launch_bolt_same_seed_produces_identical_velocity() {
+    let seed = 123_456_789_u64;
+
+    let vel_a = {
+        let mut app = TestAppBuilder::new()
+            .with_resource::<InputActions>()
+            .with_system(FixedUpdate, launch_bolt)
+            .build();
+        app.insert_resource(BoltRng::from_seed(seed));
+        let bolt_id = spawn_serving_bolt(&mut app);
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert(BoltAngleSpread(0.524));
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+        *app.world().get::<Velocity2D>(bolt_id).unwrap()
+    };
+
+    let vel_b = {
+        let mut app = TestAppBuilder::new()
+            .with_resource::<InputActions>()
+            .with_system(FixedUpdate, launch_bolt)
+            .build();
+        app.insert_resource(BoltRng::from_seed(seed));
+        let bolt_id = spawn_serving_bolt(&mut app);
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert(BoltAngleSpread(0.524));
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+        *app.world().get::<Velocity2D>(bolt_id).unwrap()
+    };
+
+    assert!(
+        (vel_a.0.x - vel_b.0.x).abs() < f32::EPSILON,
+        "launch vx must be identical for same seed: a={}, b={}",
+        vel_a.0.x,
+        vel_b.0.x
+    );
+    assert!(
+        (vel_a.0.y - vel_b.0.y).abs() < f32::EPSILON,
+        "launch vy must be identical for same seed: a={}, b={}",
+        vel_a.0.y,
+        vel_b.0.y
+    );
+}
+
+// Behavior 2 edge case: seed 0 vs seed 1 must produce different angles
+#[test]
+fn launch_bolt_different_seeds_produce_different_velocity() {
+    let launch_vel = |seed: u64| -> Velocity2D {
+        let mut app = TestAppBuilder::new()
+            .with_resource::<InputActions>()
+            .with_system(FixedUpdate, launch_bolt)
+            .build();
+        app.insert_resource(BoltRng::from_seed(seed));
+        let bolt_id = spawn_serving_bolt(&mut app);
+        app.world_mut()
+            .entity_mut(bolt_id)
+            .insert(BoltAngleSpread(0.524));
+        app.world_mut()
+            .resource_mut::<InputActions>()
+            .0
+            .push(GameAction::Bump);
+        tick(&mut app);
+        *app.world().get::<Velocity2D>(bolt_id).unwrap()
+    };
+
+    let vel_0 = launch_vel(0);
+    let vel_1 = launch_vel(1);
+    let diff_x = (vel_0.0.x - vel_1.0.x).abs();
+    let diff_y = (vel_0.0.y - vel_1.0.y).abs();
+    assert!(
+        diff_x > 0.01 || diff_y > 0.01,
+        "seeds 0 and 1 must produce different velocities (diff_x={diff_x:.4}, diff_y={diff_y:.4})"
+    );
+}
+
+// Behavior 3: BoltRng advances exactly once per launched bolt
+#[test]
+fn launch_bolt_advances_bolt_rng_once_per_launched_bolt() {
+    let mut app = test_app();
+    app.insert_resource(BoltRng::from_seed(42));
+    spawn_serving_bolt(&mut app);
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::Bump);
+    tick(&mut app);
+
+    // After launch the stream advanced at least once; first draw must differ from fresh seed
+    let actual: u64 = app.world_mut().resource_mut::<BoltRng>().0.random();
+    let fresh_first: u64 = BoltRng::from_seed(42).0.random();
+    assert_ne!(
+        actual, fresh_first,
+        "BoltRng stream must have advanced after launch"
+    );
+}
+
+// Behavior 3 edge case A: Bump present but no serving bolts — RNG must not advance
+#[test]
+fn launch_bolt_does_not_advance_bolt_rng_when_bump_but_no_serving_bolt() {
+    let mut app = test_app();
+    app.insert_resource(BoltRng::from_seed(42));
+    // No serving bolt spawned
+    app.world_mut()
+        .resource_mut::<InputActions>()
+        .0
+        .push(GameAction::Bump);
+    tick(&mut app);
+
+    let actual: u64 = app.world_mut().resource_mut::<BoltRng>().0.random();
+    let fresh_first: u64 = BoltRng::from_seed(42).0.random();
+    assert_eq!(
+        actual, fresh_first,
+        "BoltRng must NOT advance when Bump is present but zero serving bolts exist"
+    );
+}
+
+// Behavior 3 edge case B: serving bolt exists but no Bump — early-return before RNG access
+#[test]
+fn launch_bolt_does_not_advance_bolt_rng_without_bump_input() {
+    let mut app = test_app();
+    app.insert_resource(BoltRng::from_seed(42));
+    spawn_serving_bolt(&mut app);
+    // No Bump pushed — InputActions stays empty
+    tick(&mut app);
+
+    let actual: u64 = app.world_mut().resource_mut::<BoltRng>().0.random();
+    let fresh_first: u64 = BoltRng::from_seed(42).0.random();
+    assert_eq!(
+        actual, fresh_first,
+        "BoltRng must NOT advance when no Bump input (early-return branch)"
     );
 }

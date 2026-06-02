@@ -38,6 +38,7 @@ pub(super) fn build_burnout_app() -> App {
         .with_message::<BoltImpactCell>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     app.world_mut().insert_resource(canonical_burnout_config());
@@ -57,6 +58,7 @@ pub(super) fn build_burnout_app_no_config() -> App {
         .with_message::<BoltImpactCell>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.world_mut()
         .insert_resource(TimeUpdateStrategy::ManualDuration(Duration::ZERO));
     wire(&mut app);

@@ -5,14 +5,6 @@
 //! tests that add `EffectV3Plugin` but not those full domain plugins hit
 //! Bevy 0.18's system parameter validation ("Message not initialized")
 //! unless the message types are initialized directly.
-//!
-//! In addition, `tick_chain_lightning` and `tick_entropy_engine` take
-//! `ResMut<GameRng>` but `GameRng` is inserted by the game setup pipeline,
-//! not `EffectV3Plugin`. Bevy 0.18 also validates parameter existence and
-//! panics with "Resource does not exist" unless the resource is inserted.
-//! A deterministic seed (`42`) is used to match the pattern in existing
-//! effect tests (see `chain_lightning/systems.rs`, `spawn_bolts/config.rs`,
-//! etc.).
 
 use bevy::prelude::*;
 
@@ -20,7 +12,6 @@ use crate::{
     bolt::messages::{BoltImpactBreaker, BoltImpactCell, BoltImpactWall, BoltLost},
     breaker::messages::{BreakerImpactCell, BreakerImpactWall, BumpPerformed, BumpWhiffed, NoBump},
     cells::messages::{CellImpactWall, SalvoImpactBreaker},
-    shared::rng::GameRng,
 };
 
 /// Registers every cross-domain message and resource that `EffectV3Plugin`'s
@@ -44,8 +35,28 @@ pub(crate) fn register_effect_v3_test_infrastructure(app: &mut App) {
 
     // Bolt-lost bridge (`bolt_lost/bridges.rs`)
     app.add_message::<BoltLost>();
+}
 
-    // `tick_chain_lightning` + `tick_entropy_engine` require `ResMut<GameRng>`.
-    // Deterministic seed `42` matches existing effect tests.
-    app.insert_resource(GameRng::from_seed(42));
+#[cfg(test)]
+mod tests {
+    // Behavior 5 (FAILS at RED): effect_v3_infra.rs must not reference the old
+    // monolithic RNG type after Wave 2D migrated tick_chain_lightning +
+    // tick_entropy_engine to EffectBaseSeed / EffectEventCounter. The file currently
+    // contains five occurrences (doc comments, import, insert_resource call).
+    // Writer-code removes all five at GREEN.
+    //
+    // Self-referential guard: built at compile time to avoid false-positive here.
+    const OLD_INFRA_RNG: &str = concat!("Game", "Rng");
+
+    #[test]
+    fn effect_v3_infra_rs_has_no_game_rng_reference_after_wave2d_cleanup() {
+        let source = include_str!("effect_v3_infra.rs");
+        assert!(
+            !source.contains(OLD_INFRA_RNG),
+            "shared/test_utils/effect_v3_infra.rs must not reference the old monolithic RNG type; \
+             remove the import, insert_resource call, and stale doc comments — \
+             tick_chain_lightning and tick_entropy_engine no longer need it \
+             after Wave 2D migration to EffectBaseSeed/EffectEventCounter"
+        );
+    }
 }

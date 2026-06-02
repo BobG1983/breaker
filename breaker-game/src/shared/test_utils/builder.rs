@@ -419,8 +419,8 @@ impl<S: StateStatus> TestAppBuilder<S, NoDmg> {
     }
 
     /// Full effects pipeline: `RantzDmgPlugin`, per-`T` registrations
-    /// (`Bolt`, `Wall`, `Breaker`, `Salvo`, `Cell`), cross-domain
-    /// `GameRng`, and `EffectV3Plugin`. Transitions typestate to `WithDmg`.
+    /// (`Bolt`, `Wall`, `Breaker`, `Salvo`, `Cell`), and `EffectV3Plugin`.
+    /// Transitions typestate to `WithDmg`.
     #[must_use]
     pub(crate) fn with_effects_pipeline(mut self) -> TestAppBuilder<S, WithDmg> {
         self.app.add_plugins(RantzDmgPlugin);
@@ -493,4 +493,26 @@ pub(crate) fn add_breaker_transition_systems(app: &mut App) {
             handle_bolt_lost.in_set(BreakerSystems::HandleBoltLost),
         ),
     );
+}
+
+#[cfg(test)]
+mod tests {
+    // Behavior 7 (FAILS at RED): builder.rs doc-comment for `with_effects_pipeline`
+    // must not claim it registers the old monolithic RNG type — after Wave 2D cleanup
+    // of effect_v3_infra.rs, the builder no longer inserts it, making the docstring
+    // stale. Writer-code removes the stale phrase from the comment at GREEN.
+    //
+    // Self-referential guard: concat! split to avoid detecting this comment.
+    const FORBIDDEN_DOC: &str = concat!("cross-domain `Game", "Rng`");
+
+    #[test]
+    fn builder_rs_with_effects_pipeline_doc_does_not_claim_game_rng_registration() {
+        let source = include_str!("builder.rs");
+        assert!(
+            !source.contains(FORBIDDEN_DOC),
+            "shared/test_utils/builder.rs: the `with_effects_pipeline` docstring must not \
+             claim the old monolithic RNG type is registered — after Wave 2D cleanup of \
+             effect_v3_infra.rs, `register_effect_v3_test_infrastructure` no longer inserts it"
+        );
+    }
 }

@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{super::super::config::ExplodeConfig, helpers::*};
 use crate::{bolt::test_utils::damage_stack, effect_v3::traits::Fireable, prelude::*};
@@ -25,7 +26,12 @@ fn boost_aggregate_two_produces_final_delta_twenty_not_forty() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     // Final HP delta proof:
@@ -59,7 +65,12 @@ fn boost_aggregate_two_with_single_cell_pins_exactly_eighty_hp() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let hp = app.world().get::<Hp>(cell).expect("Hp present").current;

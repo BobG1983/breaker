@@ -6,6 +6,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::super::super::{config::ExplodeConfig, messages::ExplodeEmissionRequested};
@@ -47,7 +48,12 @@ fn fire_writes_one_explode_emission_requested_with_correct_geometry() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     // Snapshot immediately — NO `app.update()` between fire and assertions.
     let req_buf = app.world().resource::<Messages<ExplodeEmissionRequested>>();
@@ -96,7 +102,12 @@ fn fire_with_zero_range_writes_request_with_zero_radius_and_no_damage_messages()
         range:  OrderedFloat(0.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     let req_buf = app.world().resource::<Messages<ExplodeEmissionRequested>>();
     let collected: Vec<ExplodeEmissionRequested> =

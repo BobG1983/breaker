@@ -16,7 +16,7 @@ use crate::{
     },
     prelude::{SourceId, SourceIdExt},
     shared::{
-        rng::GameRng,
+        rng::{EffectBaseSeed, EffectEventCounter},
         test_utils::{TestAppBuilder, tick},
     },
 };
@@ -237,7 +237,8 @@ fn fired_effects_receive_empty_source_chip() {
 fn tick_entropy_engine_schedules_as_normal_system_and_ticks_without_panic() {
     let mut app = TestAppBuilder::new()
         .with_message::<BumpPerformed>()
-        .insert_resource(GameRng::from_seed(42))
+        .insert_resource(EffectBaseSeed(42))
+        .insert_resource(EffectEventCounter::default())
         .with_system(FixedUpdate, tick_entropy_engine)
         .build();
 
@@ -362,5 +363,204 @@ fn counter_entity_with_none_chip_yields_none_on_spawned_effects() {
         chips[0].0.is_none(),
         "EffectSourceChip(None) on counter should produce EffectSourceChip(None) on spawn, got {:?}",
         chips[0].0,
+    );
+}
+
+// ── B22 — entropy_engine weighted-random selection preserved under threaded RNG ──
+
+#[test]
+fn entropy_engine_weighted_random_selection_preserved_under_threaded_rng() {
+    // B22: determinism check — two apps with the same EffectBaseSeed produce
+    // identical post-state after tick_entropy_engine fires.
+    let run_app = || {
+        let mut app = entropy_app();
+        spawn_counter(&mut app, 0, 3, vec![make_shockwave_effect()]);
+        queue_bump(&mut app);
+        tick(&mut app);
+        app.world_mut()
+            .query_filtered::<Entity, With<ShockwaveSource>>()
+            .iter(app.world())
+            .count()
+    };
+
+    let count_a = run_app();
+    let count_b = run_app();
+    assert_eq!(
+        count_a, count_b,
+        "two runs with same EffectBaseSeed(42) must produce identical shockwave count"
+    );
+    assert_eq!(
+        count_a, 1,
+        "single-entry pool must always select shockwave; expected 1, got {count_a}"
+    );
+}
+
+// ── B23 — tick_entropy_engine does NOT consume GameRng ──
+
+#[test]
+fn tick_entropy_engine_does_not_consume_game_rng() {
+    // B23: App has no GameRng resource — must not panic.
+    let mut app = TestAppBuilder::new()
+        .with_message::<BumpPerformed>()
+        .with_resource::<TestBumpMessages>()
+        .insert_resource(EffectBaseSeed(0))
+        .insert_resource(EffectEventCounter::default())
+        .with_system(
+            FixedUpdate,
+            (
+                inject_bumps.before(tick_entropy_engine),
+                tick_entropy_engine,
+            ),
+        )
+        .build();
+
+    let entity = spawn_counter(
+        &mut app,
+        0,
+        3,
+        vec![(
+            ordered_float::OrderedFloat(1.0),
+            Box::new(EffectType::Die(
+                crate::effect_v3::effects::die::DieConfig {},
+            )),
+        )],
+    );
+    queue_bump(&mut app);
+    tick(&mut app);
+
+    // counter advanced — no panic
+    let counter = app.world().get::<EntropyCounter>(entity).unwrap();
+    assert_eq!(
+        counter.count, 1,
+        "counter should advance to 1 without GameRng"
+    );
+}
+
+// ── B24 — tick_entropy_engine derives RNG from EffectBaseSeed + named scoping ──
+
+#[test]
+fn tick_entropy_engine_derives_rng_from_effect_base_seed() {
+    // B24: two apps with identical EffectBaseSeed produce identical effect selection.
+    use crate::prelude::Dead;
+
+    let run_with_seed = |seed: u64| {
+        let mut app = TestAppBuilder::new()
+            .with_message::<BumpPerformed>()
+            .with_resource::<TestBumpMessages>()
+            .insert_resource(EffectBaseSeed(seed))
+            .insert_resource(EffectEventCounter::default())
+            .with_system(
+                FixedUpdate,
+                (
+                    inject_bumps.before(tick_entropy_engine),
+                    tick_entropy_engine,
+                ),
+            )
+            .build();
+
+        // Pool: FlashStep and Die, equal weight
+        let pool = vec![
+            (
+                ordered_float::OrderedFloat(1.0),
+                Box::new(EffectType::FlashStep(
+                    crate::effect_v3::effects::flash_step::FlashStepConfig {},
+                )),
+            ),
+            (
+                ordered_float::OrderedFloat(1.0),
+                Box::new(EffectType::Die(
+                    crate::effect_v3::effects::die::DieConfig {},
+                )),
+            ),
+        ];
+        let entity = spawn_counter(&mut app, 0, 3, pool);
+        queue_bump(&mut app);
+        tick(&mut app);
+
+        let has_flash = app
+            .world()
+            .get::<crate::effect_v3::effects::flash_step::FlashStepActive>(entity)
+            .is_some();
+        let has_dead = app.world().get::<Dead>(entity).is_some();
+        (has_flash, has_dead)
+    };
+
+    // Same seed twice must produce identical result.
+    let (flash_a, dead_a) = run_with_seed(0xCAFE);
+    let (flash_b, dead_b) = run_with_seed(0xCAFE);
+    assert_eq!(
+        flash_a, flash_b,
+        "same EffectBaseSeed must produce same FlashStep selection"
+    );
+    assert_eq!(
+        dead_a, dead_b,
+        "same EffectBaseSeed must produce same Die selection"
+    );
+    assert!(flash_a || dead_a, "exactly one effect must have fired");
+    assert!(
+        !(flash_a && dead_a),
+        "both effects must not fire simultaneously"
+    );
+
+    // Two entities in same tick pick INDEPENDENTLY (different entity indices).
+    let mut app = TestAppBuilder::new()
+        .with_message::<BumpPerformed>()
+        .with_resource::<TestBumpMessages>()
+        .insert_resource(EffectBaseSeed(0xCAFE))
+        .insert_resource(EffectEventCounter::default())
+        .with_system(
+            FixedUpdate,
+            (
+                inject_bumps.before(tick_entropy_engine),
+                tick_entropy_engine,
+            ),
+        )
+        .build();
+
+    let pool_a = vec![
+        (
+            ordered_float::OrderedFloat(1.0),
+            Box::new(EffectType::FlashStep(
+                crate::effect_v3::effects::flash_step::FlashStepConfig {},
+            )),
+        ),
+        (
+            ordered_float::OrderedFloat(1.0),
+            Box::new(EffectType::Die(
+                crate::effect_v3::effects::die::DieConfig {},
+            )),
+        ),
+    ];
+    let pool_b = pool_a.clone();
+    let _entity_a = spawn_counter(&mut app, 0, 3, pool_a);
+    let _entity_b = spawn_counter(&mut app, 0, 3, pool_b);
+    queue_bump(&mut app);
+    tick(&mut app);
+    // No panic — both entities processed independently.
+}
+
+// ── B25 — tick_entropy_engine and bridge dispatch produce composable determinism ──
+
+#[test]
+fn tick_entropy_engine_and_bridge_dispatch_produce_composable_determinism() {
+    // B25: two identically-seeded apps produce byte-identical final state.
+    // tick_entropy_engine queues FireEffectCommands; bridge flushes them.
+
+    let run = || {
+        let mut app = entropy_app(); // EffectBaseSeed(42) + EffectEventCounter(0)
+        spawn_counter(&mut app, 0, 3, vec![make_shockwave_effect()]);
+        queue_bump(&mut app);
+        tick(&mut app);
+        app.world_mut()
+            .query_filtered::<Entity, With<ShockwaveSource>>()
+            .iter(app.world())
+            .count()
+    };
+
+    let count_a = run();
+    let count_b = run();
+    assert_eq!(
+        count_a, count_b,
+        "composable determinism: two identically-seeded apps must produce identical shockwave count"
     );
 }

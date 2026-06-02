@@ -8,7 +8,10 @@ use crate::{
         effects::{ShockwaveConfig, SpeedBoostConfig, entropy_engine::components::EntropyCounter},
         types::EffectType,
     },
-    shared::{rng::GameRng, test_utils::TestAppBuilder},
+    shared::{
+        rng::{EffectBaseSeed, EffectEventCounter},
+        test_utils::TestAppBuilder,
+    },
 };
 
 // -- Helpers ----------------------------------------------------------
@@ -31,7 +34,8 @@ pub(super) fn entropy_app() -> App {
     TestAppBuilder::new()
         .with_message::<BumpPerformed>()
         .with_resource::<TestBumpMessages>()
-        .insert_resource(GameRng::from_seed(42))
+        .insert_resource(EffectBaseSeed(42))
+        .insert_resource(EffectEventCounter::default())
         .with_system(
             FixedUpdate,
             (

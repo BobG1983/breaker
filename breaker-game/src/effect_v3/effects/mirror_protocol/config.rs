@@ -19,7 +19,13 @@ pub struct MirrorConfig {
 }
 
 impl Fireable for MirrorConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         // Read source state
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
         let vel = world.get::<Velocity2D>(entity).map_or(Vec2::ZERO, |v| v.0);
@@ -55,6 +61,8 @@ impl Fireable for MirrorConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
     use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Velocity2D};
 
     use super::*;
@@ -79,9 +87,10 @@ mod tests {
     fn fire_spawns_one_extra_bolt() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(150.0, 350.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let extra_count = world
@@ -95,9 +104,10 @@ mod tests {
     fn spawned_bolt_is_at_source_position() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(55.0, 120.0), Vec2::new(150.0, 350.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let positions: Vec<Vec2> = world
@@ -117,9 +127,10 @@ mod tests {
     fn spawned_bolt_has_negated_x_same_y_velocity() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(150.0, 350.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let velocities: Vec<Vec2> = world
@@ -145,8 +156,9 @@ mod tests {
             Vec2::new(-200.0, 300.0),
         );
 
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let velocities: Vec<Vec2> = world
@@ -167,9 +179,10 @@ mod tests {
     fn zero_x_velocity_produces_same_velocity() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let velocities: Vec<Vec2> = world
@@ -194,8 +207,9 @@ mod tests {
             .spawn((Bolt, Position2D(Vec2::new(100.0, 200.0)), BaseSpeed(400.0)))
             .id();
 
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         // Per the correction: ALWAYS spawn (don't skip). Mirror gets Vec2::ZERO.
@@ -238,8 +252,9 @@ mod tests {
             ))
             .id();
 
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         let config = MirrorConfig { inherit: true };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let inherited: Vec<&BoundEffects> = world
@@ -270,8 +285,9 @@ mod tests {
             ))
             .id();
 
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let inherited_count = world
@@ -288,9 +304,10 @@ mod tests {
     fn spawned_bolt_has_bolt_and_extra_bolt_markers() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(150.0, 350.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let both_count = world
@@ -307,9 +324,10 @@ mod tests {
     fn spawned_bolt_has_birthing_component() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(150.0, 350.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = MirrorConfig { inherit: false };
-        config.fire(source, "mirror_protocol", &mut world);
+        config.fire(source, "mirror_protocol", &mut world, &mut rng);
         world.flush();
 
         let birthing_count = world

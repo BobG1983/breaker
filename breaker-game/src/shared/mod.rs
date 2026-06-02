@@ -33,4 +33,7 @@ pub use crate::state::types::GameState;
 mod asset_ron_parsing;
 
 #[cfg(test)]
+mod rng_migration_audit;
+
+#[cfg(test)]
 pub(crate) mod test_utils;

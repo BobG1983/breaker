@@ -3,6 +3,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 use rantzsoft_physics2d::collision_layers::CollisionLayers;
 
 use super::{
@@ -19,14 +20,14 @@ use crate::{
 
 #[test]
 fn spawned_phantom_collision_mask_includes_cell_layer() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -61,14 +62,14 @@ fn spawned_phantom_collision_mask_includes_cell_layer() {
 
 #[test]
 fn spawned_phantom_collision_membership_is_bolt_layer() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -91,14 +92,14 @@ fn spawned_phantom_collision_membership_is_bolt_layer() {
 
 #[test]
 fn spawned_phantom_carries_rendered_terminal_components() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -134,7 +135,7 @@ fn spawned_phantom_carries_rendered_terminal_components() {
 
 #[test]
 fn fire_adds_exactly_one_mesh_and_one_material() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let mesh_count_before = world.resource::<Assets<Mesh>>().iter().count();
@@ -144,7 +145,7 @@ fn fire_adds_exactly_one_mesh_and_one_material() {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let mesh_count_after = world.resource::<Assets<Mesh>>().iter().count();
@@ -166,14 +167,14 @@ fn fire_adds_exactly_one_mesh_and_one_material() {
 
 #[test]
 fn source_string_pascalcase_preserved_verbatim() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "PhantomBolt", &mut world);
+    config.fire(real_bolt, "PhantomBolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -197,14 +198,14 @@ fn source_string_pascalcase_preserved_verbatim() {
 
 #[test]
 fn source_string_unicode_and_whitespace_preserved_verbatim() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom bolt 漢", &mut world);
+    config.fire(real_bolt, "phantom bolt 漢", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -228,7 +229,7 @@ fn source_string_unicode_and_whitespace_preserved_verbatim() {
 
 #[test]
 fn fire_effect_command_routes_to_spawn_phantom_config() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
 
     FireEffectCommand {
@@ -263,7 +264,7 @@ fn fire_effect_command_routes_to_spawn_phantom_config() {
 
 #[test]
 fn fire_effect_command_source_string_is_the_dedup_chip_not_variant_name() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::ZERO, Vec2::ZERO);
 
     FireEffectCommand {

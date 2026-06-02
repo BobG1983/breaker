@@ -25,14 +25,14 @@ use crate::{
 
 #[test]
 fn fire_produces_phantom_with_chip_dedup_key() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -127,14 +127,14 @@ fn fire_produces_phantom_with_chip_dedup_key() {
 
 #[test]
 fn fire_produces_phantom_with_correct_collision_mask_and_no_legacy_components() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_bolt", &mut world);
+    config.fire(real_bolt, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -163,14 +163,14 @@ fn fire_produces_phantom_with_correct_collision_mask_and_no_legacy_components() 
 
 #[test]
 fn fire_different_source_string_stored_in_dedup_key_verbatim() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "phantom_chip_42", &mut world);
+    config.fire(real_bolt, "phantom_chip_42", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -193,7 +193,7 @@ fn fire_different_source_string_stored_in_dedup_key_verbatim() {
 
 #[test]
 fn fire_different_entity_stored_as_fired_from() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let _real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
     let other = spawn_source(&mut world, Vec2::new(50.0, 50.0), Vec2::ZERO);
 
@@ -201,7 +201,7 @@ fn fire_different_entity_stored_as_fired_from() {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(other, "phantom_bolt", &mut world);
+    config.fire(other, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -238,14 +238,14 @@ fn fire_different_entity_stored_as_fired_from() {
 
 #[test]
 fn fire_empty_source_string_preserved_in_dedup_key() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let real_bolt = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(real_bolt, "", &mut world);
+    config.fire(real_bolt, "", &mut world, &mut rng);
     world.flush();
 
     let phantom = world
@@ -268,14 +268,14 @@ fn fire_empty_source_string_preserved_in_dedup_key() {
 
 #[test]
 fn fire_source_missing_spatial_components_falls_back_to_zero() {
-    let mut world = world_with_assets();
+    let (mut world, mut rng) = world_with_assets();
     let bare = world.spawn(Bolt).id();
 
     let config = SpawnPhantomConfig {
         duration:   OrderedFloat(2.0),
         max_active: 3,
     };
-    config.fire(bare, "phantom_bolt", &mut world);
+    config.fire(bare, "phantom_bolt", &mut world, &mut rng);
     world.flush();
 
     let phantom = world

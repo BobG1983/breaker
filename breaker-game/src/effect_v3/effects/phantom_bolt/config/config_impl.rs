@@ -34,7 +34,13 @@ pub struct SpawnPhantomConfig {
 }
 
 impl Fireable for SpawnPhantomConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         // Phase 1 — max_active dedup count by (chip, fired_from).
         let existing_count = world
             .query_filtered::<&PhantomDedupKey, With<PhantomBolt>>()

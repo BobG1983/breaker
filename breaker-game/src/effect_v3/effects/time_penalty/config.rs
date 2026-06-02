@@ -14,7 +14,13 @@ pub struct TimePenaltyConfig {
 }
 
 impl Fireable for TimePenaltyConfig {
-    fn fire(&self, _entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        _entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         world
             .resource_mut::<Messages<ReduceNodeTimer>>()
             .write(ReduceNodeTimer {
@@ -27,6 +33,8 @@ impl Fireable for TimePenaltyConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -56,7 +64,8 @@ mod tests {
         let config = TimePenaltyConfig {
             seconds: OrderedFloat(5.0),
         };
-        config.fire(entity, "test_source", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(entity, "test_source", &mut world, &mut rng);
 
         let messages = collect_reduce_messages(&world);
         assert_eq!(
@@ -98,7 +107,8 @@ mod tests {
         let config = TimePenaltyConfig {
             seconds: OrderedFloat(7.0),
         };
-        config.fire(entity, "test_source", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(entity, "test_source", &mut world, &mut rng);
 
         let messages = collect_reduce_messages(&world);
         assert_eq!(
@@ -128,7 +138,8 @@ mod tests {
         let config = TimePenaltyConfig {
             seconds: OrderedFloat(0.0),
         };
-        config.fire(entity, "test_source", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(entity, "test_source", &mut world, &mut rng);
 
         let messages = collect_reduce_messages(&world);
         assert_eq!(

@@ -12,6 +12,7 @@ use crate::{
         effects::PiercingConfig,
         types::{EffectType, RootNode, StampTarget, Tree},
     },
+    shared::rng::ChipRng,
     state::run::node::{ActiveNodeLayout, definition::NodePool},
 };
 
@@ -58,6 +59,7 @@ fn test_app_with_registry(registry: ChipCatalog) -> App {
         .with_resource::<ChipInventory>()
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(GameRng::from_seed(42))
+        .insert_resource(ChipRng::from_seed(42))
         .with_system(Update, generate_chip_offerings)
         .build()
 }
@@ -142,6 +144,7 @@ fn generate_excludes_maxed_chips() {
         .insert_resource(inventory)
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(GameRng::from_seed(42))
+        .insert_resource(ChipRng::from_seed(42))
         .add_systems(Update, generate_chip_offerings);
     app.update();
 
@@ -239,6 +242,7 @@ fn test_app_for_evolution(pool: NodePool, evolution_eligible: bool) -> App {
         .insert_resource(inventory)
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(GameRng::from_seed(42))
+        .insert_resource(ChipRng::from_seed(42))
         .insert_resource(make_test_layout(pool))
         .with_system(Update, generate_chip_offerings)
         .build()
@@ -465,6 +469,7 @@ fn app_with_3_eligible_evolutions() -> App {
         .insert_resource(inventory)
         .insert_resource(ChipSelectConfig::default())
         .insert_resource(GameRng::from_seed(42))
+        .insert_resource(ChipRng::from_seed(42))
         .insert_resource(make_test_layout(NodePool::Boss))
         .add_systems(Update, generate_chip_offerings);
     app
@@ -527,6 +532,274 @@ fn boss_node_3_eligible_evolutions_has_correct_names() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// Wave 2C Group C — ChipRng migration tests (Behaviors 12b, 13, 14)
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Behavior 12b: `generate_chip_offerings` reads `ChipRng`, NOT `GameRng`.
+///
+/// At RED: `generate_chip_offerings` reads `GameRng`. App1's `GameRng::from_seed(99)`
+/// vs App2's `GameRng::from_seed(42)` produce different sequences → names differ →
+/// "names are IDENTICAL" assertion FAILS. After GREEN migration to `ChipRng`, both
+/// apps draw from `ChipRng::from_seed(42)` → names match.
+#[test]
+fn generate_chip_offerings_reads_chip_rng_not_game_rng() {
+    use rand::Rng;
+
+    // App1: ChipRng=42, GameRng=99 (mismatched)
+    let names1: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GameRng::from_seed(99))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    // App2: ChipRng=42, GameRng=42 (GameRng matches ChipRng seed)
+    let names2: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GameRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    assert_eq!(
+        names1, names2,
+        "generate_chip_offerings must draw from ChipRng (same seed=42) in both apps, \
+         not from GameRng (different seeds 99 vs 42); offerings must match"
+    );
+}
+
+/// Behavior 13 primary: same `ChipRng` seed produces identical offerings (determinism).
+/// At RED: both apps use `GameRng::from_seed(42)` → names match trivially (passes at RED).
+/// Edge-case assertion (App3 differs) fails at RED because `ChipRng::from_seed(43)` is ignored
+/// and `GameRng::from_seed(42)` is used for all three apps.
+#[test]
+fn generate_chip_offerings_same_chip_rng_seed_produces_identical_offerings() {
+    let names_seed42_a: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GameRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    let names_seed42_b: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GameRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    assert_eq!(
+        names_seed42_a, names_seed42_b,
+        "same ChipRng seed must produce identical offerings across independent apps"
+    );
+}
+
+/// Behavior 13 edge case: different `ChipRng` seed must produce different offerings.
+/// At RED: App3 uses `ChipRng::from_seed(43)` which is ignored — `GameRng::from_seed(42)`
+/// drives all three → names match baseline → this assertion FAILS (primary RED trigger
+/// for Behavior 13).
+#[test]
+fn generate_chip_offerings_different_chip_rng_seed_produces_different_offerings() {
+    let names_seed42: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GameRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    let names_seed43: Vec<String> = {
+        // App3: ChipRng=43 (different seed), GameRng=42 (same as baseline)
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(ChipRng::from_seed(43))
+            .insert_resource(GameRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    assert_ne!(
+        names_seed42, names_seed43,
+        "different ChipRng seeds (42 vs 43) must produce different offerings; \
+         at least one offering name must change"
+    );
+}
+
+/// Behavior 14: Greed boost still applied after migration to `ChipRng`.
+///
+/// Note: existing `greed_changes_offer_sequence_end_to_end` covers this with
+/// `GameRng`. This test mirrors it with `ChipRng` inserted alongside `GameRng`
+/// (required at RED so the unmigrated signature resolves). After GREEN migration,
+/// the system draws from `ChipRng`, and the Greed boost still shifts rarity
+/// weights → offerings differ from baseline.
+#[test]
+fn generate_chip_offerings_greed_boost_still_applied_after_chip_rng_migration() {
+    use crate::mutators::protocols::greed::{GreedConfig, GreedStacks};
+
+    let baseline_names: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(GameRng::from_seed(42))
+            .insert_resource(ChipRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    let greed_names: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(GameRng::from_seed(42))
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GreedStacks { skips: 10 })
+            .insert_resource(GreedConfig {
+                rarity_boost_per_skip: 5.0,
+            })
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    assert_ne!(
+        greed_names, baseline_names,
+        "Greed boost (10 skips × 5.0) must shift rarity weights enough to change \
+         the chip offering sequence even after ChipRng migration"
+    );
+}
+
+/// Behavior 14 edge case: `GreedStacks { skips: 0 }` with `GreedConfig` present
+/// must yield identical offerings to the no-Greed baseline.
+#[test]
+fn generate_chip_offerings_zero_greed_stacks_with_chip_rng_matches_baseline() {
+    use crate::mutators::protocols::greed::{GreedConfig, GreedStacks};
+
+    let baseline_names: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(GameRng::from_seed(42))
+            .insert_resource(ChipRng::from_seed(42))
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    let zero_greed_names: Vec<String> = {
+        let mut app = TestAppBuilder::new()
+            .insert_resource(make_mixed_registry())
+            .with_resource::<ChipInventory>()
+            .insert_resource(ChipSelectConfig::default())
+            .insert_resource(GameRng::from_seed(42))
+            .insert_resource(ChipRng::from_seed(42))
+            .insert_resource(GreedStacks { skips: 0 })
+            .insert_resource(GreedConfig {
+                rarity_boost_per_skip: 5.0,
+            })
+            .with_system(Update, generate_chip_offerings)
+            .build();
+        app.update();
+        app.world()
+            .resource::<ChipOffers>()
+            .0
+            .iter()
+            .map(|o| o.name().to_owned())
+            .collect()
+    };
+
+    assert_eq!(
+        zero_greed_names, baseline_names,
+        "GreedStacks {{ skips: 0 }} with GreedConfig must produce identical offerings \
+         to the no-Greed baseline (same seed)"
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // Group D — Greed rarity-boost integration (Behaviors 19–26)
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -542,6 +815,7 @@ mod greed_rarity_boost {
         chips::{ChipCatalog, definition::Rarity, inventory::ChipInventory},
         mutators::protocols::greed::{GreedConfig, GreedStacks, apply_greed_boost},
         prelude::*,
+        shared::rng::ChipRng,
         state::run::chip_select::{ChipOffers, ChipSelectConfig},
     };
 
@@ -573,7 +847,7 @@ mod greed_rarity_boost {
     }
 
     /// Builds a test app with Greed resources installed (plus the baseline
-    /// `ChipCatalog`, `ChipInventory`, `ChipSelectConfig`, `GameRng`).
+    /// `ChipCatalog`, `ChipInventory`, `ChipSelectConfig`, `GameRng`, `ChipRng`).
     fn test_app_with_greed(
         registry: ChipCatalog,
         stacks: GreedStacks,
@@ -584,6 +858,7 @@ mod greed_rarity_boost {
             .with_resource::<ChipInventory>()
             .insert_resource(ChipSelectConfig::default())
             .insert_resource(GameRng::from_seed(42))
+            .insert_resource(ChipRng::from_seed(42))
             .insert_resource(stacks)
             .with_system(Update, generate_chip_offerings);
         if let Some(cfg) = config {

@@ -45,7 +45,7 @@ let mut app = TestAppBuilder::new()            // MinimalPlugins registered
     .with_state_hierarchy()                    // registers full state hierarchy → returns TestAppBuilder<WithStates>
     .in_state_node_playing()                   // drives into NodeState::Playing
     .with_playfield()                          // PlayfieldConfig, CellConfig, Assets<Mesh/ColorMaterial>
-    .with_resource::<GameRng>()                // init_resource with Default
+    .with_resource::<BoltRng>()                // init_resource with Default
     .with_message::<BoltLost>()               // registers message type
     .with_message_capture::<BoltImpactCell>()   // registers + collector resource + collect system
     .with_system(FixedUpdate, bolt_lost)

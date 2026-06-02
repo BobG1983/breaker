@@ -10,7 +10,13 @@ use crate::{effect_v3::traits::Fireable, prelude::*};
 pub struct LoseLifeConfig {}
 
 impl Fireable for LoseLifeConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if let Some(mut hp) = world.get_mut::<Hp>(entity) {
             hp.current = (hp.current - 1.0).max(0.0);
         }
@@ -20,6 +26,8 @@ impl Fireable for LoseLifeConfig {
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::effect_v3::traits::Fireable;
@@ -28,8 +36,9 @@ mod tests {
     fn fire_decrements_hp_by_one() {
         let mut world = World::new();
         let entity = world.spawn(Hp::new(5.0)).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             (world.get::<Hp>(entity).unwrap().current - 4.0).abs() < f32::EPSILON,
@@ -41,8 +50,9 @@ mod tests {
     fn fire_works_for_arbitrary_starting_values() {
         let mut world = World::new();
         let entity = world.spawn(Hp::new(3.0)).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             (world.get::<Hp>(entity).unwrap().current - 2.0).abs() < f32::EPSILON,
@@ -54,8 +64,9 @@ mod tests {
     fn fire_leaves_zero_hp_when_hp_is_one() {
         let mut world = World::new();
         let entity = world.spawn(Hp::new(1.0)).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             (world.get::<Hp>(entity).unwrap().current).abs() < f32::EPSILON,
@@ -73,8 +84,9 @@ mod tests {
                 max:      None,
             })
             .id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             (world.get::<Hp>(entity).unwrap().current).abs() < f32::EPSILON,
@@ -86,9 +98,10 @@ mod tests {
     fn fire_on_entity_without_hp_is_noop() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         // Should not panic.
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             world.get::<Hp>(entity).is_none(),
@@ -100,10 +113,11 @@ mod tests {
     fn multiple_fires_decrement_cumulatively() {
         let mut world = World::new();
         let entity = world.spawn(Hp::new(5.0)).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             (world.get::<Hp>(entity).unwrap().current - 2.0).abs() < f32::EPSILON,
@@ -115,8 +129,9 @@ mod tests {
     fn fire_does_not_modify_starting_hp() {
         let mut world = World::new();
         let entity = world.spawn(Hp::new(5.0)).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        LoseLifeConfig {}.fire(entity, "test_source", &mut world);
+        LoseLifeConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             (world.get::<Hp>(entity).unwrap().starting - 5.0).abs() < f32::EPSILON,

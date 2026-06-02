@@ -14,8 +14,9 @@ use bevy::prelude::*;
 use rantzsoft_spatial2d::components::Velocity2D;
 
 use super::helpers::{
-    add_gravity_surge_stacks, canonical_config, insert_seeded_rng, install_gravity_surge_config,
-    spawn_bolt, spawn_well, test_app_playing, tick_with_dt, wire_with_force_consumer,
+    add_gravity_surge_stacks, canonical_config, insert_seeded_hazard_rng,
+    install_gravity_surge_config, spawn_bolt, spawn_well, test_app_playing, tick_with_dt,
+    wire_with_force_consumer,
 };
 use crate::mutators::hazards::{
     definition::HazardKind,
@@ -47,8 +48,8 @@ fn gravity_surge_and_drift_forces_sum_on_same_tick() {
     });
     install_gravity_surge_config(&mut app, canonical_config());
 
-    // Seed RNG for Drift's wind tick (it reads GameRng).
-    insert_seeded_rng(&mut app, 42);
+    // Seed RNG for Drift's wind tick (it reads HazardRng).
+    insert_seeded_hazard_rng(&mut app, 42);
 
     // Activate both hazards (stacks > 0 opens the run_if gates).
     app.world_mut()
@@ -98,7 +99,7 @@ fn gravity_and_drift_both_positive_x_when_bolt_at_minus_hundred() {
         timer:     8.0,
     });
     install_gravity_surge_config(&mut app, canonical_config());
-    insert_seeded_rng(&mut app, 42);
+    insert_seeded_hazard_rng(&mut app, 42);
 
     app.world_mut()
         .resource_mut::<ActiveHazards>()

@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 
 use super::helpers::*;
 use crate::{bolt::components::BoltBaseDamage, effect_v3::traits::Fireable, prelude::*};
@@ -31,8 +32,18 @@ fn two_independent_fires_produce_two_emission_sets_no_request_dropped() {
     let cell_a = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
     let cell_b = spawn_cell_with_hp(&mut app, Vec2::new(200.0, 50.0), 100.0);
 
-    make_config().fire(source_a, "chip-a", app.world_mut());
-    make_config().fire(source_b, "chip-b", app.world_mut());
+    make_config().fire(
+        source_a,
+        "chip-a",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
+    make_config().fire(
+        source_b,
+        "chip-b",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app
@@ -88,8 +99,18 @@ fn cell_inside_both_beams_receives_one_message_per_source() {
         .id();
     let cell = spawn_cell_with_hp(&mut app, Vec2::new(5.0, 100.0), 100.0);
 
-    make_config().fire(source_a, "chip-a", app.world_mut());
-    make_config().fire(source_b, "chip-b", app.world_mut());
+    make_config().fire(
+        source_a,
+        "chip-a",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
+    make_config().fire(
+        source_b,
+        "chip-b",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

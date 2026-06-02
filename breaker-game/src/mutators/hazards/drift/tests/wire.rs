@@ -24,8 +24,8 @@ use rantzsoft_spatial2d::components::Velocity2D;
 use super::{
     super::system::{DriftConfig, DriftWind, wire},
     helpers::{
-        add_drift_stacks, canonical_config, insert_rng, install_drift_config, install_drift_wind,
-        spawn_bolt, test_app_not_playing, test_app_playing, tick_with_dt,
+        add_drift_stacks, canonical_config, insert_hazard_rng, install_drift_config,
+        install_drift_wind, spawn_bolt, test_app_not_playing, test_app_playing, tick_with_dt,
     },
 };
 use crate::{
@@ -51,7 +51,7 @@ fn full_chain_updates_wind_and_applies_force_single_tick() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -90,7 +90,7 @@ fn full_chain_accumulates_across_two_ticks() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -133,7 +133,7 @@ fn first_tick_with_expired_timer_rolls_and_applies_new_direction() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -182,7 +182,7 @@ fn first_tick_rolled_direction_rules_out_reversed_ordering() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -211,7 +211,7 @@ fn multi_tick_direction_holds_while_timer_positive() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -254,7 +254,7 @@ fn fifth_tick_crosses_threshold_and_rolls_new_direction() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -293,7 +293,7 @@ fn hazard_inactive_gate_suppresses_both_systems() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -328,7 +328,7 @@ fn hazard_gate_reopens_cleanly_after_adding_stack() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -411,7 +411,7 @@ fn state_gate_not_playing_suppresses_both_systems() {
     let mut app = test_app_not_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -447,7 +447,7 @@ fn playing_state_with_same_setup_does_run_both_systems() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -506,7 +506,7 @@ fn chain_ordering_update_runs_before_apply() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -555,7 +555,7 @@ fn chain_ordering_rules_out_reversed_ordering_via_direction_mismatch() {
     let mut app = test_app_playing();
     attach_message_capture::<ApplyBoltForce>(&mut app);
     wire(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -671,7 +671,7 @@ fn drift_apply_force_uses_direction_rolled_by_update_wind_this_tick() {
     );
 
     // Seeded RNG — seed 42 produces a known non-X direction on the first roll
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {

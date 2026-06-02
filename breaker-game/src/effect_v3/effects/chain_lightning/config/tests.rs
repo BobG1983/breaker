@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_spatial2d::components::Position2D;
 use rantzsoft_stateflow::CleanupOnExit;
 
@@ -58,7 +60,13 @@ fn chain_lightning_uses_bolt_base_damage_from_source_entity() {
         .spawn((BoltBaseDamage(20.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -79,7 +87,13 @@ fn chain_lightning_zero_bolt_base_damage() {
         .spawn((BoltBaseDamage(0.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -97,7 +111,13 @@ fn chain_lightning_falls_back_to_default_when_bolt_base_damage_absent() {
     let mut world = World::new();
     let source = world.spawn(Position2D(Vec2::new(50.0, 50.0))).id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -122,7 +142,13 @@ fn chain_lightning_zero_damage_mult_produces_zero_damage() {
         damage_mult: OrderedFloat(0.0),
         arc_speed:   OrderedFloat(500.0),
     };
-    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -144,7 +170,13 @@ fn chain_lightning_spawns_entity_with_cleanup_on_exit_node_state() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let cleanup_count = world
@@ -164,7 +196,13 @@ fn chain_lightning_spawns_with_idle_state() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -184,7 +222,13 @@ fn chain_lightning_spawns_with_empty_hit_set() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -211,7 +255,13 @@ fn chain_lightning_remaining_jumps_equals_config_arcs() {
         damage_mult: OrderedFloat(1.5),
         arc_speed:   OrderedFloat(500.0),
     };
-    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -236,7 +286,13 @@ fn chain_lightning_zero_arcs_produces_zero_remaining_jumps() {
         damage_mult: OrderedFloat(1.5),
         arc_speed:   OrderedFloat(500.0),
     };
-    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -263,7 +319,13 @@ fn chain_lightning_copies_range_and_arc_speed_from_config() {
         damage_mult: OrderedFloat(1.5),
         arc_speed:   OrderedFloat(750.0),
     };
-    config.fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -290,7 +352,13 @@ fn chain_lightning_snapshots_position_from_source_entity() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(123.0, 456.0))))
         .id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -308,7 +376,13 @@ fn chain_lightning_source_pos_falls_back_to_zero_without_position() {
     let mut world = World::new();
     let source = world.spawn(BoltBaseDamage(10.0)).id();
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -331,7 +405,8 @@ fn chain_lightning_stamps_effect_source_chip_from_source_name() {
         .id();
 
     let lightning = chain_lightning_source();
-    make_config().fire(source, lightning.0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(source, lightning.0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let chips: Vec<&EffectSourceChip> = world.query::<&EffectSourceChip>().iter(&world).collect();
@@ -351,7 +426,8 @@ fn chain_lightning_empty_source_produces_none_effect_source_chip() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::new(50.0, 50.0))))
         .id();
 
-    make_config().fire(source, "", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(source, "", &mut world, &mut rng);
     world.flush();
 
     let chips: Vec<&EffectSourceChip> = world.query::<&EffectSourceChip>().iter(&world).collect();
@@ -370,7 +446,13 @@ fn chain_lightning_fire_on_despawned_entity_spawns_with_fallbacks() {
     let source = world.spawn_empty().id();
     world.despawn(source);
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -403,12 +485,18 @@ fn chain_lightning_includes_single_damage_boost_in_damage() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(source, amp_source().0.as_ref(), &mut world);
+    .fire(source, amp_source().0.as_ref(), &mut world, &mut rng);
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -430,16 +518,22 @@ fn chain_lightning_includes_two_damage_boosts_as_product() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(source, amp_source_a().0.as_ref(), &mut world);
+    .fire(source, amp_source_a().0.as_ref(), &mut world, &mut rng);
     DamageBoostConfig {
         multiplier: OrderedFloat(3.0),
     }
-    .fire(source, amp_source_b().0.as_ref(), &mut world);
+    .fire(source, amp_source_b().0.as_ref(), &mut world, &mut rng);
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =
@@ -461,12 +555,18 @@ fn chain_lightning_damage_boost_snapshot_frozen_at_fire_time() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(source, amp_source().0.as_ref(), &mut world);
+    .fire(source, amp_source().0.as_ref(), &mut world, &mut rng);
 
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     // Reverse the DamageBoost after chain lightning has already fired
@@ -508,7 +608,13 @@ fn chain_lightning_no_damage_boost_stack_defaults_multiplier_to_one() {
         .id();
 
     // No DamageBoostConfig fired — no EffectStack<DamageBoostConfig> component
-    make_config().fire(source, chain_lightning_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(
+        source,
+        chain_lightning_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     let chains: Vec<&ChainLightningChain> =

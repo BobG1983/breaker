@@ -1,6 +1,7 @@
 //! W7 Behavior 3 (PiercingBeam): end-to-end damage parity with no boosts.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 
 use super::helpers::*;
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -12,7 +13,12 @@ fn two_cells_in_beam_each_take_ten_damage() {
     let c1 = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
     let c2 = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 150.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let hp1 = app.world().get::<Hp>(c1).expect("c1 Hp").current;
@@ -29,7 +35,12 @@ fn three_cells_in_beam_each_take_ten_damage_no_double_application() {
     let c2 = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 150.0), 100.0);
     let c3 = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 300.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     for (entity, label) in [(c1, "c1"), (c2, "c2"), (c3, "c3")] {

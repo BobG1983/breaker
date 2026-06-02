@@ -14,6 +14,7 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
+    shared::rng::HazardRng,
 };
 
 /// Per-run tuning extracted from [`HazardTuning::Drift`] at activation.
@@ -68,7 +69,7 @@ impl Default for DriftWind {
 /// from `hazards::activate`; last write wins (overwrites any prior
 /// `DriftConfig` and resets `DriftWind` to `{ direction: Vec2::X,
 /// timer: 0.0 }` so the first `FixedUpdate` tick re-rolls a fresh
-/// direction via the seeded `GameRng` — deterministic initial wind for
+/// direction via the seeded `HazardRng` — deterministic initial wind for
 /// replay and scenario reproducibility). Warns and no-ops on a non-Drift
 /// tuning variant, leaving any existing resources intact.
 pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
@@ -98,7 +99,7 @@ pub(crate) fn activate(tuning: &HazardTuning, commands: &mut Commands) {
 /// `drift_apply_force`, gated on `hazard_active(HazardKind::Drift)` AND
 /// `in_state(NodeState::Playing)`. `drift_update_wind` ticks the
 /// `DriftWind.timer` down; on expiry rolls a new unit-vector direction via
-/// `GameRng` and resets the timer to `period_secs`. `drift_apply_force`
+/// `HazardRng` and resets the timer to `period_secs`. `drift_apply_force`
 /// emits one `ApplyBoltForce { bolt, force }` per active Bolt each tick;
 /// the bolt domain's `apply_bolt_forces` consumer (running in
 /// `BoltSystems::ApplyForces`) drains the messages and writes
@@ -117,15 +118,15 @@ pub(crate) fn wire(app: &mut App) {
 }
 
 /// Ticks the wind timer; when it expires, rolls a new random unit vector
-/// via `GameRng` (seeded for deterministic replay) and resets the timer
+/// via `HazardRng` (seeded for deterministic replay) and resets the timer
 /// to `period_secs`. Early-returns (no-op) when any of `DriftConfig`,
-/// `DriftWind`, or `GameRng` is absent from the world — the gate in
+/// `DriftWind`, or `HazardRng` is absent from the world — the gate in
 /// `wire` ensures they are present during normal play.
 pub(crate) fn drift_update_wind(
     time: Res<Time<Fixed>>,
     config: Option<Res<DriftConfig>>,
     wind: Option<ResMut<DriftWind>>,
-    rng: Option<ResMut<GameRng>>,
+    rng: Option<ResMut<HazardRng>>,
 ) {
     let (Some(config), Some(mut wind), Some(mut rng)) = (config, wind, rng) else {
         return;

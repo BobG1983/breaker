@@ -15,6 +15,7 @@ use crate::{
     },
     breaker::filters::CollisionFilterBreaker,
     prelude::*,
+    shared::rng::BoltRng,
 };
 
 /// Bundled message writers for `bolt_lost` to satisfy clippy's
@@ -46,7 +47,7 @@ pub(crate) struct LostBoltEntry {
 pub(crate) fn bolt_lost(
     mut commands: Commands,
     playfield: Res<PlayfieldConfig>,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<BoltRng>,
     mut bolt_query: Query<LostBoltData, ActiveFilter>,
     mut breaker_query: Query<(Entity, &Position2D), CollisionFilterBreaker>,
     mut writers: BoltLostWriters,

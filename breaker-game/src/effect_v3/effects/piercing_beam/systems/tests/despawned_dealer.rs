@@ -3,6 +3,7 @@
 //! verbatim on every emitted `DamageDealt<Cell>`.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 
 use super::helpers::*;
 use crate::{bolt::components::BoltBaseDamage, effect_v3::traits::Fireable, prelude::*};
@@ -14,7 +15,12 @@ fn dealer_despawned_after_fire_before_consumer_tick_no_panic() {
     let cell = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
 
     let dealer_entity = source;
-    make_config().fire(source, "chip-source", app.world_mut());
+    make_config().fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     app.world_mut().despawn(source);
     tick(&mut app);
 
@@ -52,7 +58,12 @@ fn dealer_despawned_before_fire_falls_back_no_panic() {
     app.world_mut().despawn(source);
     let cell = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

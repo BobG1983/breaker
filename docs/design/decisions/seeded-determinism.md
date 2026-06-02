@@ -6,7 +6,7 @@
 
 - User-selectable seed on the RunSetup screen (or random if not specified)
 - Same seed = same node sequence, same chip offerings, same cell layouts
-- `GameRng` (ChaCha8Rng) seeded per-run, used for all gameplay randomness
+- `GameRng` (ChaCha8Rng) seeded per-run; serves as root entropy for deriving per-domain sub-seeds. Gameplay systems draw from domain-specific resources (`NodeSequenceRng`, `BoltRng`, `ChipRng`, `ProtocolRng`, `HazardRng`, `EffectBaseSeed`) — not from `GameRng` directly. See `docs/architecture/rng.md`.
 - FixedUpdate physics ensures deterministic simulation across hardware
 
 ## Rationale
@@ -17,4 +17,4 @@ Deterministic runs enable: seed sharing ("try my seed"), competitive play, bug r
 
 ## Retrofit Cost
 
-Accepted. Existing systems (node selection, chip offerings) need to be plumbed through `GameRng` rather than using ad-hoc randomness. This is a known cost, traded against the premature complexity of seeding a system with nothing to seed.
+Accepted. Systems were plumbed through `GameRng` initially; Wave 0 of the node-sequencing refactor migrated all call sites to domain-specific RNG resources. The original cost was traded against the premature complexity of seeding a system with nothing to seed.

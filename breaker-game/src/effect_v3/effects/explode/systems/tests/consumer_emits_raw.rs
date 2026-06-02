@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{super::super::config::ExplodeConfig, helpers::*};
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -19,7 +20,12 @@ fn consumer_emits_one_damage_dealt_with_raw_base_damage() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app
@@ -52,7 +58,12 @@ fn consumer_emits_raw_for_each_of_two_cells_inside_range() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

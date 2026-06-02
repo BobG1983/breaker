@@ -6,6 +6,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{super::super::config::ExplodeConfig, helpers::*};
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -21,7 +22,12 @@ fn two_cells_inside_range_each_take_ten_damage() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let hp1 = app.world().get::<Hp>(c1).expect("c1 has Hp").current;
@@ -48,7 +54,12 @@ fn three_cells_with_boundary_each_take_ten_damage_no_double_application() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     for (entity, label) in [(c1, "c1"), (c2, "c2"), (c3, "c3")] {

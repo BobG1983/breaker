@@ -26,7 +26,6 @@ pub(super) fn circuit_breaker_app() -> App {
     TestAppBuilder::new()
         .with_message::<BumpPerformed>()
         .with_resource::<TestBumpMessages>()
-        .with_resource::<GameRng>()
         .with_system(
             FixedUpdate,
             (

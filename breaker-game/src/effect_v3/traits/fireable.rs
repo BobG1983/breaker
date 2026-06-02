@@ -1,6 +1,7 @@
 //! Fireable trait — the fire contract for all effects.
 
 use bevy::prelude::*;
+use rand_chacha::ChaCha8Rng;
 
 /// The contract for executing an effect on an entity.
 ///
@@ -14,7 +15,8 @@ pub trait Fireable {
     /// - `source`: The chip or definition name that originated this effect.
     /// - `world`: Exclusive world access for reading/writing components,
     ///   spawning entities, and sending messages.
-    fn fire(&self, entity: Entity, source: &str, world: &mut World);
+    /// - `rng`: Ephemeral per-fire RNG seeded by `fire_dispatch`.
+    fn fire(&self, entity: Entity, source: &str, world: &mut World, rng: &mut ChaCha8Rng);
 
     /// Register runtime systems, components, or resources for this effect.
     ///

@@ -10,7 +10,13 @@ use crate::{effect_v3::traits::Fireable, prelude::*};
 pub struct DieConfig {}
 
 impl Fireable for DieConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         // Mark entity as Dead — the death pipeline will process it
         if world.get_entity(entity).is_ok() && world.get::<Dead>(entity).is_none() {
             world.entity_mut(entity).insert(Dead);
@@ -21,6 +27,8 @@ impl Fireable for DieConfig {
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::effect_v3::traits::Fireable;
@@ -29,8 +37,9 @@ mod tests {
     fn fire_inserts_dead_on_living_entity() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        DieConfig {}.fire(entity, "test_source", &mut world);
+        DieConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             world.get::<Dead>(entity).is_some(),
@@ -42,8 +51,9 @@ mod tests {
     fn fire_inserts_dead_without_removing_other_components() {
         let mut world = World::new();
         let entity = world.spawn(Hp::new(5.0)).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        DieConfig {}.fire(entity, "test_source", &mut world);
+        DieConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             world.get::<Dead>(entity).is_some(),
@@ -59,8 +69,9 @@ mod tests {
     fn fire_on_already_dead_entity_is_idempotent() {
         let mut world = World::new();
         let entity = world.spawn(Dead).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        DieConfig {}.fire(entity, "test_source", &mut world);
+        DieConfig {}.fire(entity, "test_source", &mut world, &mut rng);
 
         assert!(
             world.get::<Dead>(entity).is_some(),
@@ -73,8 +84,9 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         world.despawn(entity);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         // Should not panic.
-        DieConfig {}.fire(entity, "test_source", &mut world);
+        DieConfig {}.fire(entity, "test_source", &mut world, &mut rng);
     }
 }

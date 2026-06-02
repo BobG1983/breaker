@@ -6,4 +6,4 @@ pub(crate) mod types;
 mod tests;
 
 pub use types::{ActiveProtocols, ProtocolRegistry};
-pub(crate) use types::{ProtocolOffer, UnlockedProtocols, protocol_active};
+pub(crate) use types::{ProtocolOffer, ProtocolOfferingCount, UnlockedProtocols, protocol_active};

@@ -4,6 +4,7 @@
 //! `Without<Dead>` query.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use super::helpers::*;
@@ -27,7 +28,12 @@ fn invulnerable_cell_receives_message_pipeline_zeros_damage() {
         ))
         .id();
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app
@@ -62,7 +68,12 @@ fn dead_cell_excluded_live_cell_receives_message() {
         .id();
     let live = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 150.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

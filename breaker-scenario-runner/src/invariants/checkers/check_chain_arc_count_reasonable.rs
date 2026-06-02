@@ -89,6 +89,7 @@ mod tests {
                     state:           ChainState::Idle,
                     range:           0.0,
                     arc_speed:       0.0,
+                    tick:            0,
                 },
                 CleanupOnExit::<NodeState>::default(),
             ))

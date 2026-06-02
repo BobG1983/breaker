@@ -4,6 +4,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::super::super::{config::PiercingBeamConfig, messages::PiercingBeamEmissionRequested};
 use crate::{bolt::components::BoltBaseDamage, effect_v3::traits::Fireable, prelude::*};
@@ -37,7 +38,12 @@ fn fire_writes_one_piercing_beam_emission_requested_with_correct_geometry() {
         damage_mult: OrderedFloat(1.0),
         width:       OrderedFloat(20.0),
     };
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     // Snapshot immediately — NO `app.update()` between fire and assertions.
     let req_buf = app
@@ -97,7 +103,12 @@ fn fire_with_zero_velocity_falls_back_to_unit_y_direction() {
         damage_mult: OrderedFloat(1.0),
         width:       OrderedFloat(20.0),
     };
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     let req_buf = app
         .world()

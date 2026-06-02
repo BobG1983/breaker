@@ -6,6 +6,7 @@ use rand::Rng;
 use crate::{
     fx::{FadeOut, PunchScale},
     prelude::*,
+    shared::rng::FxRng,
     state::run::{
         components::HighlightPopup, definition::HighlightConfig, messages::HighlightTriggered,
     },
@@ -15,13 +16,13 @@ use crate::{
 ///
 /// Each popup is vertically stacked based on its `spawn_order` (existing popup
 /// count + index within this frame's messages). Horizontal jitter is applied via
-/// the seeded [`GameRng`]. Excess popups beyond `popup_max_visible` are culled
+/// the seeded [`FxRng`]. Excess popups beyond `popup_max_visible` are culled
 /// by despawning the entity with the smallest `FadeOut.timer`.
 pub(crate) fn spawn_highlight_text(
     mut reader: MessageReader<HighlightTriggered>,
     mut commands: Commands,
     config: Res<HighlightConfig>,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<FxRng>,
     existing_popups: Query<(Entity, &FadeOut), With<HighlightPopup>>,
 ) {
     let max_visible = config.popup_max_visible as usize;

@@ -33,7 +33,13 @@ impl Fireable for CircuitBreakerConfig {
         );
     }
 
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get_entity(entity).is_err() {
             return;
         }
@@ -60,6 +66,8 @@ impl Reversible for CircuitBreakerConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::effect_v3::traits::{Fireable, Reversible};
@@ -79,7 +87,8 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
 
-        make_config().fire(entity, "circuit_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        make_config().fire(entity, "circuit_chip", &mut world, &mut rng);
         assert!(world.get::<CircuitBreakerCounter>(entity).is_some());
 
         make_config().reverse_all_by_source(entity, "circuit_chip", &mut world);

@@ -50,6 +50,7 @@ fn scheduling_test_app() -> App {
         .with_effects_pipeline()
         .build();
     app.add_plugins(BoltPlugin);
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app
 }
 

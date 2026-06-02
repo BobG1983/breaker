@@ -1,19 +1,18 @@
 //! Shared test fixtures for Wave 4B `SpawnPhantomConfig` tests.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
-use crate::{
-    bolt::components::{Bolt, ExtraBolt, PhantomBolt, PhantomDamagedCells, PhantomDedupKey},
-    shared::rng::GameRng,
-};
+use crate::bolt::components::{Bolt, ExtraBolt, PhantomBolt, PhantomDamagedCells, PhantomDedupKey};
 
-pub(super) fn world_with_assets() -> World {
+pub(super) fn world_with_assets() -> (World, ChaCha8Rng) {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
     world.init_resource::<Assets<Mesh>>();
     world.init_resource::<Assets<ColorMaterial>>();
-    world
+    let rng = ChaCha8Rng::seed_from_u64(42);
+    (world, rng)
 }
 
 pub(super) fn spawn_source(world: &mut World, pos: Vec2, vel: Vec2) -> Entity {

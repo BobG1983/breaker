@@ -22,7 +22,13 @@ pub struct ChainBoltConfig {
 }
 
 impl Fireable for ChainBoltConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         // Read source state
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
         let vel = world.get::<Velocity2D>(entity).map_or(Vec2::ZERO, |v| v.0);
@@ -59,6 +65,8 @@ impl Fireable for ChainBoltConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
     use rantzsoft_physics2d::constraint::DistanceConstraint;
     use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Velocity2D};
 
@@ -79,11 +87,12 @@ mod tests {
     fn fire_spawns_one_extra_bolt() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(200.0, 300.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let extra_count = world
@@ -97,11 +106,12 @@ mod tests {
     fn spawned_bolt_is_at_source_position() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(80.0, 160.0), Vec2::new(200.0, 300.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let positions: Vec<Vec2> = world
@@ -121,11 +131,12 @@ mod tests {
     fn spawned_bolt_has_negated_velocity() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(200.0, 300.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let velocities: Vec<Vec2> = world
@@ -146,11 +157,12 @@ mod tests {
     fn spawned_bolt_zero_velocity_source_gets_zero_velocity() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::ZERO);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let velocities: Vec<Vec2> = world
@@ -170,11 +182,12 @@ mod tests {
     fn distance_constraint_links_source_and_spawned_bolt() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(200.0, 300.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let spawned_bolt = world
@@ -206,11 +219,12 @@ mod tests {
     fn spawned_bolt_has_bolt_and_extra_bolt_markers() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(200.0, 300.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let both_count = world
@@ -227,11 +241,12 @@ mod tests {
     fn spawned_bolt_has_birthing_component() {
         let mut world = World::new();
         let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(200.0, 300.0));
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = ChainBoltConfig {
             tether_distance: OrderedFloat(120.0),
         };
-        config.fire(source, "chain_bolt", &mut world);
+        config.fire(source, "chain_bolt", &mut world, &mut rng);
         world.flush();
 
         let birthing_count = world

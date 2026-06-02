@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 
 use super::config_impl::*;
 use crate::{
@@ -38,7 +40,8 @@ fn fire_creates_stack_and_pushes_entry() {
         increment: OrderedFloat(0.5),
     };
 
-    config.fire(entity, test_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -65,8 +68,9 @@ fn fire_multiple_times_stacks_entries() {
         increment: OrderedFloat(0.5),
     };
 
-    config.fire(entity, test_source().0.as_ref(), &mut world);
-    config.fire(entity, test_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
+    config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
     let stack = world
         .get::<EffectStack<RampingDamageConfig>>(entity)
@@ -83,7 +87,8 @@ fn reverse_removes_matching_entry() {
         increment: OrderedFloat(0.5),
     };
 
-    config.fire(entity, test_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
     config.reverse(entity, test_source().0.as_ref(), &mut world);
 
     let stack = world
@@ -110,18 +115,24 @@ fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others(
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
     RampingDamageConfig {
         increment: OrderedFloat(0.25),
     }
-    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
+    .fire(
+        entity,
+        feedback_loop_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     RampingDamageConfig {
         increment: OrderedFloat(1.0),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
     // Manually set accumulator to a non-zero value.
     world
@@ -157,14 +168,15 @@ fn reverse_all_by_source_removes_accumulator_when_stack_becomes_empty() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
     RampingDamageConfig {
         increment: OrderedFloat(1.0),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
     world
         .entity_mut(entity)
@@ -204,10 +216,11 @@ fn fire_inserts_accumulator_if_absent() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
     let acc = world.get::<RampingDamageAccumulator>(entity);
     assert!(acc.is_some(), "fire should insert RampingDamageAccumulator");
@@ -224,10 +237,11 @@ fn fire_does_not_overwrite_existing_accumulator() {
     let entity = world.spawn_empty().id();
 
     // Fire once to create the stack + accumulator.
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
     // Manually set accumulator to non-zero to simulate gameplay usage.
     world
@@ -238,7 +252,12 @@ fn fire_does_not_overwrite_existing_accumulator() {
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
+    .fire(
+        entity,
+        feedback_loop_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
 
     let acc = world.get::<RampingDamageAccumulator>(entity).unwrap();
     assert_eq!(
@@ -264,10 +283,11 @@ fn reverse_with_single_entry_removes_accumulator() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
     // Manually set accumulator to non-zero.
     world
@@ -322,14 +342,20 @@ fn reverse_with_non_empty_stack_keeps_accumulator() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
     RampingDamageConfig {
         increment: OrderedFloat(0.25),
     }
-    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
+    .fire(
+        entity,
+        feedback_loop_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
 
     // Set accumulator to 1.5.
     world
@@ -364,14 +390,20 @@ fn reverse_with_non_empty_stack_keeps_zero_accumulator() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, amp_source().0.as_ref(), &mut world);
+    .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
     RampingDamageConfig {
         increment: OrderedFloat(0.25),
     }
-    .fire(entity, feedback_loop_source().0.as_ref(), &mut world);
+    .fire(
+        entity,
+        feedback_loop_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
 
     // Accumulator is already 0.0 from fire.
     RampingDamageConfig {

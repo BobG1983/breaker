@@ -21,7 +21,13 @@ pub struct PiercingBeamConfig {
 }
 
 impl Fireable for PiercingBeamConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let origin = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
         let direction = world
             .get::<Velocity2D>(entity)

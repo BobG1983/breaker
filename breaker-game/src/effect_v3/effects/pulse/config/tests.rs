@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::config_impl::*;
@@ -285,7 +287,12 @@ fn tick_pulse_snapshots_single_entry_damage_boost_stack() {
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(emitter, "amp", app.world_mut());
+    .fire(
+        emitter,
+        "amp",
+        app.world_mut(),
+        &mut ChaCha8Rng::seed_from_u64(0),
+    );
 
     tick(&mut app);
 
@@ -336,11 +343,21 @@ fn tick_pulse_snapshots_two_entry_damage_boost_stack_as_product() {
     DamageBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(emitter, "amp_a", app.world_mut());
+    .fire(
+        emitter,
+        "amp_a",
+        app.world_mut(),
+        &mut ChaCha8Rng::seed_from_u64(0),
+    );
     DamageBoostConfig {
         multiplier: OrderedFloat(3.0),
     }
-    .fire(emitter, "amp_b", app.world_mut());
+    .fire(
+        emitter,
+        "amp_b",
+        app.world_mut(),
+        &mut ChaCha8Rng::seed_from_u64(0),
+    );
 
     tick(&mut app);
 
@@ -412,7 +429,12 @@ fn tick_pulse_propagates_some_source_chip_onto_spawned_ring() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
-    make_config().fire(emitter, storm_source().0.as_ref(), app.world_mut());
+    make_config().fire(
+        emitter,
+        storm_source().0.as_ref(),
+        app.world_mut(),
+        &mut ChaCha8Rng::seed_from_u64(0),
+    );
     force_fire_on_next_tick(&mut app, emitter);
 
     tick(&mut app);
@@ -442,7 +464,12 @@ fn tick_pulse_propagates_none_source_chip_for_empty_fire_source() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
-    make_config().fire(emitter, "", app.world_mut());
+    make_config().fire(
+        emitter,
+        "",
+        app.world_mut(),
+        &mut ChaCha8Rng::seed_from_u64(0),
+    );
     force_fire_on_next_tick(&mut app, emitter);
 
     tick(&mut app);
@@ -475,7 +502,12 @@ fn tick_pulse_resnapshots_bolt_base_damage_between_ticks_when_it_changes() {
         .spawn((BoltBaseDamage(10.0), Position2D(Vec2::ZERO)))
         .id();
 
-    make_config().fire(emitter, storm_source().0.as_ref(), app.world_mut());
+    make_config().fire(
+        emitter,
+        storm_source().0.as_ref(),
+        app.world_mut(),
+        &mut ChaCha8Rng::seed_from_u64(0),
+    );
     force_fire_on_next_tick(&mut app, emitter);
 
     tick(&mut app);
@@ -662,7 +694,8 @@ fn reverse_all_by_source_removes_pulse_emitter_via_default_delegation() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
 
-    make_config().fire(entity, storm_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(entity, storm_source().0.as_ref(), &mut world, &mut rng);
     assert!(
         world
             .get::<crate::effect_v3::effects::pulse::components::PulseEmitter>(entity)
@@ -704,7 +737,13 @@ fn tick_pulse_via_fire_fires_exactly_one_ring_per_tick_when_dt_exceeds_interval(
         speed:           OrderedFloat(200.0),
         interval:        OrderedFloat(0.25),
     };
-    config.fire(emitter, storm_source().0.as_ref(), app.world_mut());
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(
+        emitter,
+        storm_source().0.as_ref(),
+        app.world_mut(),
+        &mut rng,
+    );
 
     // Force timer to 0.25 so dt = 1.0 (4*interval) tries to "burst".
     app.world_mut()
@@ -747,7 +786,8 @@ fn fire_on_despawned_entity_is_a_no_op() {
     let entity = world.spawn_empty().id();
     world.despawn(entity);
 
-    make_config().fire(entity, storm_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(entity, storm_source().0.as_ref(), &mut world, &mut rng);
 
     assert!(
         world.get_entity(entity).is_err(),

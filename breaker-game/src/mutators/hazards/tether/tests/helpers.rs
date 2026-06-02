@@ -1,7 +1,7 @@
 //! Shared test fixtures for Tether hazard tests.
 //!
 //! State-hierarchy apps (driven and not-yet-driven into `NodeState::Playing`),
-//! cell-row / cell-grid spawn helpers, link-pair builders, a seeded `GameRng`
+//! cell-row / cell-grid spawn helpers, link-pair builders, a seeded `HazardRng`
 //! installer, a fixed-step ticker, and `ActiveHazards` / `TetherConfig`
 //! installers.
 
@@ -18,6 +18,7 @@ use crate::{
         resources::ActiveHazards,
     },
     prelude::*,
+    shared::rng::HazardRng,
 };
 
 // ── App builders ────────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ use crate::{
 /// Default builder: state hierarchy NOT yet in `Playing`, `ActiveHazards`,
 /// `DamageDealt<Cell>` message registered, `wire` wired.
 ///
-/// Tests seed `GameRng`, add Tether stacks, install `TetherConfig`, spawn
+/// Tests seed `HazardRng`, add Tether stacks, install `TetherConfig`, spawn
 /// cells, then drive the state into `NodeState::Playing` to fire `OnEnter`.
 pub(super) fn build_establish_tether_app(seed: u64) -> App {
     let mut app = TestAppBuilder::new()
@@ -34,12 +35,12 @@ pub(super) fn build_establish_tether_app(seed: u64) -> App {
         .with_message::<DamageDealt<Cell>>()
         .build();
     app.world_mut()
-        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(seed)));
+        .insert_resource(HazardRng(ChaCha8Rng::seed_from_u64(seed)));
     wire(&mut app);
     app
 }
 
-/// Same as `build_establish_tether_app` but without the seeded `GameRng`.
+/// Same as `build_establish_tether_app` but without the seeded `HazardRng`.
 pub(super) fn build_establish_tether_app_no_rng() -> App {
     let mut app = TestAppBuilder::new()
         .with_state_hierarchy()
@@ -51,7 +52,7 @@ pub(super) fn build_establish_tether_app_no_rng() -> App {
 }
 
 /// State-hierarchy app driven into `NodeState::Playing` with `ActiveHazards`,
-/// canonical `TetherConfig`, 1 Tether stack, seeded `GameRng`, `wire`
+/// canonical `TetherConfig`, 1 Tether stack, seeded `HazardRng`, `wire`
 /// wired, and `MessageCollector<DamageDealt<Cell>>` installed. Intended for
 /// cleanup-system tests that do not need the establish step.
 pub(super) fn build_cleanup_tether_app() -> App {
@@ -62,7 +63,7 @@ pub(super) fn build_cleanup_tether_app() -> App {
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
     app.world_mut()
-        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(42)));
+        .insert_resource(HazardRng(ChaCha8Rng::seed_from_u64(42)));
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
     wire(&mut app);
@@ -78,7 +79,7 @@ pub(super) fn build_cleanup_tether_app_not_playing() -> App {
         .with_message::<DamageDealt<Cell>>()
         .build();
     app.world_mut()
-        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(42)));
+        .insert_resource(HazardRng(ChaCha8Rng::seed_from_u64(42)));
     install_tether_config(&mut app, canonical_tether_config());
     add_tether_stacks(&mut app, 1);
     wire(&mut app);

@@ -17,7 +17,13 @@ pub struct DamageBoostConfig {
 }
 
 impl Fireable for DamageBoostConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get::<DamageBoostStack>(entity).is_none() {
             world.entity_mut(entity).insert(DamageBoostStack::default());
         }
@@ -53,6 +59,8 @@ impl Reversible for DamageBoostConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -92,8 +100,9 @@ mod tests {
         let config = DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, amp_source().0.as_ref(), &mut world);
+        config.fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world
             .get::<DamageBoostStack>(entity)
@@ -108,15 +117,16 @@ mod tests {
         // source must append to the existing stack, not insert a new component.
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, loop_source().0.as_ref(), &mut world);
+        .fire(entity, loop_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!((stack.aggregate_persistent(None) - 3.0).abs() <= f32::EPSILON);
@@ -131,9 +141,10 @@ mod tests {
         let config = DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
         assert!((stack.aggregate_persistent(None) - 4.0).abs() < 1e-5);
@@ -148,9 +159,10 @@ mod tests {
         let config = DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         for _ in 0..5 {
-            config.fire(entity, test_source().0.as_ref(), &mut world);
+            config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
         }
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
@@ -166,8 +178,9 @@ mod tests {
         let config = DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, amp_source().0.as_ref(), &mut world);
+        config.fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
         config.reverse(entity, amp_source().0.as_ref(), &mut world);
 
         let stack = world.get::<DamageBoostStack>(entity).unwrap();
@@ -185,19 +198,20 @@ mod tests {
         // regardless of multiplier.
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(4.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
         // Reverse with a config whose multiplier (2.0) matches only one of
         // the three entries by value — but because reverse is now
@@ -218,15 +232,16 @@ mod tests {
         // source, assert the other source's entry is untouched.
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, loop_source().0.as_ref(), &mut world);
+        .fire(entity, loop_source().0.as_ref(), &mut world, &mut rng);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
@@ -276,19 +291,20 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "feedback_loop", &mut world);
+        .fire(entity, "feedback_loop", &mut world, &mut rng);
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
@@ -305,11 +321,12 @@ mod tests {
         // was never fired is a no-op — aggregate unchanged.
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, amp_source().0.as_ref(), &mut world);
+        .fire(entity, amp_source().0.as_ref(), &mut world, &mut rng);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
@@ -344,33 +361,35 @@ mod tests {
         // by-config-value semantic to `reverse`.
         let mut world_a = World::new();
         let entity_a = world_a.spawn_empty().id();
+        let mut rng_a = ChaCha8Rng::seed_from_u64(42);
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_a, amp_source().0.as_ref(), &mut world_a);
+        .fire(entity_a, amp_source().0.as_ref(), &mut world_a, &mut rng_a);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity_a, amp_source().0.as_ref(), &mut world_a);
+        .fire(entity_a, amp_source().0.as_ref(), &mut world_a, &mut rng_a);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_a, boom_source().0.as_ref(), &mut world_a);
+        .fire(entity_a, boom_source().0.as_ref(), &mut world_a, &mut rng_a);
 
         let mut world_b = World::new();
         let entity_b = world_b.spawn_empty().id();
+        let mut rng_b = ChaCha8Rng::seed_from_u64(42);
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_b, amp_source().0.as_ref(), &mut world_b);
+        .fire(entity_b, amp_source().0.as_ref(), &mut world_b, &mut rng_b);
         DamageBoostConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity_b, amp_source().0.as_ref(), &mut world_b);
+        .fire(entity_b, amp_source().0.as_ref(), &mut world_b, &mut rng_b);
         DamageBoostConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_b, boom_source().0.as_ref(), &mut world_b);
+        .fire(entity_b, boom_source().0.as_ref(), &mut world_b, &mut rng_b);
 
         DamageBoostConfig {
             multiplier: OrderedFloat(2.0),

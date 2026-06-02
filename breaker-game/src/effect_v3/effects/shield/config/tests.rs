@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use rantzsoft_stateflow::CleanupOnExit;
@@ -48,7 +50,8 @@ fn shield_fire_resets_existing_shield_duration() {
         ShieldReflectionCost(0.5),
     ));
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     // There should still be exactly 1 shield.
@@ -77,7 +80,8 @@ fn shield_fire_resets_nearly_expired_shield() {
         ShieldReflectionCost(0.5),
     ));
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let shields: Vec<&ShieldDuration> = world
@@ -98,7 +102,8 @@ fn shield_fire_spawns_new_when_none_exists() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let shields: Vec<(&ShieldOwner, &ShieldDuration, &ShieldReflectionCost)> = world
@@ -135,7 +140,8 @@ fn shield_fire_does_not_reset_another_owners_shield() {
         ShieldReflectionCost(0.5),
     ));
 
-    make_config().fire(owner_a, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner_a, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let shields: Vec<(&ShieldOwner, &ShieldDuration)> = world
@@ -175,7 +181,8 @@ fn shield_fire_spawns_wall_marker_and_bundle() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -217,7 +224,8 @@ fn shield_fire_places_markers_on_single_entity() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let count: usize = world
@@ -238,7 +246,8 @@ fn shield_fire_carries_shield_specific_markers() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -291,7 +300,8 @@ fn shield_fire_with_empty_source_sets_chip_none() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, "", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, "", &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -316,7 +326,8 @@ fn shield_fire_positions_entity_at_default_floor() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -373,7 +384,8 @@ fn shield_fire_positions_entity_at_custom_floor() {
     });
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -418,11 +430,12 @@ fn shield_fire_twice_resets_in_place_single_entity() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     ShieldConfig {
         duration:        OrderedFloat(1.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner, aegis_source().0.as_ref(), &mut world);
+    .fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     // Capture the entity after the first fire().
@@ -443,7 +456,7 @@ fn shield_fire_twice_resets_in_place_single_entity() {
         duration:        OrderedFloat(5.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner, aegis_source().0.as_ref(), &mut world);
+    .fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let shields: Vec<(Entity, &ShieldDuration)> = world
@@ -475,7 +488,8 @@ fn shield_fire_resets_zero_duration_shield() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     // Overwrite duration to exactly 0.0 to drive the edge case.
@@ -492,7 +506,7 @@ fn shield_fire_resets_zero_duration_shield() {
     world.get_mut::<ShieldDuration>(existing).unwrap().0 = 0.0;
 
     // Second fire() — should still reset in place.
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let shields: Vec<(Entity, &ShieldDuration)> = world
@@ -522,11 +536,12 @@ fn shield_multi_owner_produces_two_entities_both_with_wall_bundle() {
     let owner_b = world.spawn_empty().id();
 
     // B fires first.
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     ShieldConfig {
         duration:        OrderedFloat(2.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner_b, aegis_source().0.as_ref(), &mut world);
+    .fire(owner_b, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     // A fires.
@@ -534,7 +549,7 @@ fn shield_multi_owner_produces_two_entities_both_with_wall_bundle() {
         duration:        OrderedFloat(5.0),
         reflection_cost: OrderedFloat(0.5),
     }
-    .fire(owner_a, aegis_source().0.as_ref(), &mut world);
+    .fire(owner_a, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let shields: Vec<(Entity, &ShieldOwner, &ShieldDuration)> = world
@@ -589,7 +604,8 @@ fn shield_reverse_despawns_all_owned_walls() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     // Pre-condition: the spawned shield must be a real wall entity (part of
@@ -624,9 +640,10 @@ fn shield_reverse_does_not_affect_other_owner() {
     let owner_a = world.spawn_empty().id();
     let owner_b = world.spawn_empty().id();
 
-    make_config().fire(owner_a, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner_a, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
-    make_config().fire(owner_b, aegis_source().0.as_ref(), &mut world);
+    make_config().fire(owner_b, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     make_config().reverse(owner_a, "", &mut world);
@@ -668,7 +685,8 @@ fn reverse_all_by_source_despawns_shield_walls_via_default_delegation() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    make_config().fire(owner, aegis_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    make_config().fire(owner, aegis_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let count_before = world

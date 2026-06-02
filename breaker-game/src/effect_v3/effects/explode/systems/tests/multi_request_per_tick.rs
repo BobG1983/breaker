@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{super::super::config::ExplodeConfig, helpers::*};
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -32,8 +33,18 @@ fn two_independent_fires_produce_two_emission_sets_no_request_dropped() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config_a.fire(source_a, "chip-a", app.world_mut());
-    config_b.fire(source_b, "chip-b", app.world_mut());
+    config_a.fire(
+        source_a,
+        "chip-a",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
+    config_b.fire(
+        source_b,
+        "chip-b",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app
@@ -82,8 +93,18 @@ fn cell_inside_both_sources_receives_one_message_per_source() {
         range:  OrderedFloat(100.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source_a, "chip-a", app.world_mut());
-    config.fire(source_b, "chip-b", app.world_mut());
+    config.fire(
+        source_a,
+        "chip-a",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
+    config.fire(
+        source_b,
+        "chip-b",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

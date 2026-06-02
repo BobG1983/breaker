@@ -21,7 +21,13 @@ pub struct RampingDamageConfig {
 }
 
 impl Fireable for RampingDamageConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let has_stack = world.get::<EffectStack<Self>>(entity).is_some();
         if !has_stack {
             world

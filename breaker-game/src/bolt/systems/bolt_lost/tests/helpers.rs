@@ -4,6 +4,7 @@ use rantzsoft_dmg::{RantzDmgAppExt, RantzDmgPlugin};
 use crate::{
     bolt::{definition::BoltDefinition, messages::BoltLost, systems::bolt_lost::system::bolt_lost},
     prelude::*,
+    shared::rng::BoltRng,
 };
 
 pub(super) fn make_default_bolt_definition() -> BoltDefinition {
@@ -26,7 +27,7 @@ pub(super) fn make_default_bolt_definition() -> BoltDefinition {
 pub(super) fn test_app() -> App {
     let mut app = TestAppBuilder::new()
         .with_playfield()
-        .with_resource::<GameRng>()
+        .with_resource::<BoltRng>()
         .with_message::<BoltLost>()
         .with_system(FixedUpdate, bolt_lost)
         .build();

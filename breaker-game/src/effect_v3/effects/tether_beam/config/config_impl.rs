@@ -14,7 +14,7 @@ use super::super::components::{TetherBeamDamage, TetherBeamSource, TetherBeamWid
 use crate::{
     bolt::components::{Bolt, ExtraBolt},
     effect_v3::{components::EffectSourceChip, traits::Fireable},
-    shared::{birthing::Birthing, rng::GameRng},
+    shared::birthing::Birthing,
     state::types::NodeState,
 };
 
@@ -41,9 +41,15 @@ pub struct TetherBeamConfig {
 }
 
 impl Fireable for TetherBeamConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         match self.mode {
-            TetherMode::SpawnBolt => self.fire_spawn(entity, source, world),
+            TetherMode::SpawnBolt => self.fire_spawn(entity, source, world, rng),
             TetherMode::Chain => self.fire_chain(entity, source, world),
         }
     }
@@ -66,21 +72,21 @@ impl Fireable for TetherBeamConfig {
 
 impl TetherBeamConfig {
     /// Spawn a new bolt and connect it to the source with a tether beam.
-    fn fire_spawn(&self, entity: Entity, source: &str, world: &mut World) {
-        // Phase 1: Generate random angle (mutable borrow of GameRng)
-        let angle: f32 = {
-            let mut rng = world.resource_mut::<GameRng>();
-            rng.0.random_range(-FRAC_PI_2..=FRAC_PI_2)
-        };
+    fn fire_spawn(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
+        let angle: f32 = rng.random_range(-FRAC_PI_2..=FRAC_PI_2);
 
-        // Phase 2: Read source state
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
         let base_speed = world.get::<BaseSpeed>(entity).map_or(400.0, |s| s.0);
 
         let vel = Vec2::new(base_speed * angle.sin(), base_speed * angle.cos());
         let birthing = Birthing::new(Scale2D { x: 8.0, y: 8.0 }, CollisionLayers::default());
 
-        // Phase 3: Spawn new bolt
         let new_bolt = world
             .spawn((Bolt, ExtraBolt, Position2D(pos), Velocity2D(vel), birthing))
             .id();

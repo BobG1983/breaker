@@ -3,6 +3,7 @@
 //! `None`.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 
 use super::helpers::*;
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -17,7 +18,12 @@ fn builder_produced_source_propagates_unchanged_to_every_message() {
 
     let source_str = piercing_beam_chip_source_str();
     let expected = piercing_beam_chip_source();
-    make_config().fire(source, &source_str, app.world_mut());
+    make_config().fire(
+        source,
+        &source_str,
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app
@@ -40,7 +46,12 @@ fn empty_source_string_propagates_as_none_on_every_message() {
     let _c1 = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
     let _c2 = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 150.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

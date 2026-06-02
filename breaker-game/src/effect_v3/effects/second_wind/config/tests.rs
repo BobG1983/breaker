@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_physics2d::{aabb::Aabb2D, collision_layers::CollisionLayers};
 use rantzsoft_spatial2d::components::{Position2D, Scale2D};
 use rantzsoft_stateflow::CleanupOnExit;
@@ -32,7 +34,8 @@ fn second_wind_fire_spawns_wall_marker_and_bundle() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -74,7 +77,8 @@ fn second_wind_fire_places_markers_on_single_entity() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     // Exactly one entity should simultaneously carry Wall AND SecondWindWall.
@@ -96,7 +100,8 @@ fn second_wind_fire_carries_second_wind_markers() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -131,7 +136,8 @@ fn second_wind_fire_with_empty_source_sets_chip_none() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, "", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, "", &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -156,7 +162,8 @@ fn second_wind_fire_positions_entity_at_default_floor() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -213,7 +220,8 @@ fn second_wind_fire_positions_entity_at_custom_floor() {
     });
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entity = world
@@ -258,9 +266,10 @@ fn second_wind_fire_twice_spawns_two_walls() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let walls: Vec<(Entity, &SecondWindOwner)> = world
@@ -293,9 +302,10 @@ fn second_wind_fire_twice_both_have_full_wall_bundle() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let entities: Vec<Entity> = world
@@ -330,9 +340,20 @@ fn second_wind_reverse_despawns_owners_walls_only() {
     let owner_a = world.spawn_empty().id();
     let owner_b = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner_a, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(
+        owner_a,
+        last_stand_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
-    SecondWindConfig {}.fire(owner_b, last_stand_source().0.as_ref(), &mut world);
+    SecondWindConfig {}.fire(
+        owner_b,
+        last_stand_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     // Capture owner_a's wall entity ID so we can assert it is fully despawned
@@ -383,7 +404,13 @@ fn second_wind_reverse_on_owner_with_no_walls_is_noop() {
     let owner_a = world.spawn_empty().id();
     let owner_c = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner_a, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(
+        owner_a,
+        last_stand_source().0.as_ref(),
+        &mut world,
+        &mut rng,
+    );
     world.flush();
 
     // Must not panic.
@@ -412,7 +439,8 @@ fn reverse_all_by_source_despawns_walls_via_default_delegation() {
     world.insert_resource(PlayfieldConfig::default());
     let owner = world.spawn_empty().id();
 
-    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    SecondWindConfig {}.fire(owner, last_stand_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let count_before = world

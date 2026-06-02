@@ -6,7 +6,7 @@
 //! - [`TetherConfig`] — per-run tuning (stack-scaled damage + coverage percents).
 //! - [`TetherLink`] — component marker on linked cells, pointing at the partner.
 //! - [`establish_tether_links`] — `OnEnter`(`Playing`) pair selection via shared
-//!   `GameRng` with mutual-exclusion matching over adjacency pairs.
+//!   `HazardRng` with mutual-exclusion matching over adjacency pairs.
 //! - [`cleanup_broken_tether_links`] — `FixedUpdate`, removes dangling links
 //!   whose partner despawned or was `Dead`-marked.
 //! - [`tether_emit_partner`] — `FixedUpdate` in `DmgSystems::PostApplyDamage`, reads
@@ -26,6 +26,7 @@ use crate::{
         resources::{ActiveHazards, hazard_active},
     },
     prelude::*,
+    shared::rng::HazardRng,
 };
 
 /// Module-level cap on Tether link coverage — 100% means every eligible pair
@@ -184,14 +185,14 @@ type LiveCellPositions<'w, 's> =
 /// `apply_damage::<Cell>` runs. Inert pairs are an accepted game-feel
 /// trade-off for uniform pipeline-owned filtering.
 ///
-/// Determinism comes from the shared [`GameRng`]: two identical runs with the
+/// Determinism comes from the shared [`HazardRng`]: two identical runs with the
 /// same seed produce identical link sets. Harness-safe — early-returns if
-/// [`TetherConfig`] or `GameRng` is absent.
+/// [`TetherConfig`] or `HazardRng` is absent.
 pub(crate) fn establish_tether_links(
     active: Res<ActiveHazards>,
     config: Option<Res<TetherConfig>>,
     cells: LiveCellPositions,
-    rng: Option<ResMut<GameRng>>,
+    rng: Option<ResMut<HazardRng>>,
     mut commands: Commands,
 ) {
     let Some(config) = config else { return };
@@ -226,7 +227,7 @@ pub(crate) fn establish_tether_links(
     let raw = (coverage_pct / 100.0) * total as f32;
     let target_count = (raw.round() as usize).min(total);
 
-    // Shuffle via the shared GameRng (deterministic under a fixed seed).
+    // Shuffle via the shared HazardRng (deterministic under a fixed seed).
     pairs.shuffle(&mut rng.0);
 
     // Mutual-exclusion matching: walk shuffled pairs left-to-right; each cell

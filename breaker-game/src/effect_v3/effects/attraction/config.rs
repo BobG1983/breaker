@@ -22,7 +22,13 @@ pub struct AttractionConfig {
 }
 
 impl Fireable for AttractionConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get_entity(entity).is_err() {
             return;
         }
@@ -77,6 +83,8 @@ impl Reversible for AttractionConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::effect_v3::{
@@ -91,13 +99,14 @@ mod tests {
     fn fire_creates_active_attractions_with_correct_fields() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
             force:           OrderedFloat(100.0),
             max_force:       Some(OrderedFloat(200.0)),
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
 
         let active = world.get::<ActiveAttractions>(entity).unwrap();
         assert_eq!(active.0.len(), 1);
@@ -111,19 +120,20 @@ mod tests {
     fn fire_appends_to_existing_active_attractions() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
             force:           OrderedFloat(100.0),
             max_force:       None,
         }
-        .fire(entity, "magnet_a", &mut world);
+        .fire(entity, "magnet_a", &mut world, &mut rng);
         AttractionConfig {
             attraction_type: AttractionType::Breaker,
             force:           OrderedFloat(50.0),
             max_force:       Some(OrderedFloat(75.0)),
         }
-        .fire(entity, "magnet_b", &mut world);
+        .fire(entity, "magnet_b", &mut world, &mut rng);
 
         let active = world.get::<ActiveAttractions>(entity).unwrap();
         assert_eq!(active.0.len(), 2);
@@ -136,13 +146,14 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         world.despawn(entity);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
             force:           OrderedFloat(100.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
         // No panic.
     }
 
@@ -152,19 +163,20 @@ mod tests {
     fn reverse_removes_first_matching_entry_by_source_and_type() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
             force:           OrderedFloat(100.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
         AttractionConfig {
             attraction_type: AttractionType::Breaker,
             force:           OrderedFloat(50.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
@@ -198,25 +210,26 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_from_matching_source() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
             force:           OrderedFloat(100.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
         AttractionConfig {
             attraction_type: AttractionType::Wall,
             force:           OrderedFloat(50.0),
             max_force:       Some(OrderedFloat(200.0)),
         }
-        .fire(entity, "gravity_chip", &mut world);
+        .fire(entity, "gravity_chip", &mut world, &mut rng);
         AttractionConfig {
             attraction_type: AttractionType::Breaker,
             force:           OrderedFloat(75.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
@@ -250,19 +263,20 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_when_all_share_same_source() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,
             force:           OrderedFloat(100.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
         AttractionConfig {
             attraction_type: AttractionType::Breaker,
             force:           OrderedFloat(75.0),
             max_force:       None,
         }
-        .fire(entity, "magnet", &mut world);
+        .fire(entity, "magnet", &mut world, &mut rng);
 
         AttractionConfig {
             attraction_type: AttractionType::Cell,

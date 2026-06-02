@@ -6,9 +6,12 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 
 use super::*;
-use crate::mutators::hazards::{
-    definition::{HazardDefinition, HazardKind, HazardTuning},
-    resources::{ActiveHazards, HazardOffers, HazardRegistry},
+use crate::{
+    mutators::hazards::{
+        definition::{HazardDefinition, HazardKind, HazardTuning},
+        resources::{ActiveHazards, HazardOffers, HazardRegistry},
+    },
+    shared::rng::HazardRng,
 };
 
 // Local duplication of `hazard/definition.rs::tests::tuning_variants_*` —
@@ -194,7 +197,7 @@ fn test_app_with(
     TestAppBuilder::new()
         .insert_resource(registry)
         .insert_resource(active)
-        .insert_resource(GameRng::from_seed(seed))
+        .insert_resource(HazardRng::from_seed(seed))
         .insert_resource(offers)
         .with_system(Update, generate_hazard_offerings)
         .build()
@@ -486,7 +489,7 @@ fn hazard_offers_is_present_after_system_runs_without_prior_insertion() {
     let mut app = TestAppBuilder::new()
         .insert_resource(make_full_registry())
         .insert_resource(ActiveHazards::default())
-        .insert_resource(GameRng::from_seed(11))
+        .insert_resource(HazardRng::from_seed(11))
         .with_system(Update, generate_hazard_offerings)
         .build();
     app.update();
@@ -510,4 +513,129 @@ fn hazard_offers_present_after_run_with_default_pre_inserted() {
 
     let offers = app.world().resource::<HazardOffers>();
     assert_eq!(offers.0.len(), 3);
+}
+
+// ── Group E B19: generate_hazard_offerings reads HazardRng (NOT GameRng) ──
+
+#[test]
+fn generate_hazard_offerings_reads_hazard_rng_not_game_rng() {
+    use rand::{Rng, SeedableRng};
+    use rand_chacha::ChaCha8Rng;
+
+    const SENTINEL: u64 = 0xDEAD_BEEF_CAFE_1234;
+
+    let mut app = test_app_with(
+        make_full_registry(),
+        ActiveHazards::default(),
+        42,
+        HazardOffers::default(),
+    );
+    // Also insert GameRng at SENTINEL — must remain untouched.
+    app.world_mut()
+        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(SENTINEL)));
+
+    app.update();
+
+    // System runs without panic; produces 3 offers.
+    let offers = app.world().resource::<HazardOffers>();
+    assert_eq!(
+        offers.0.len(),
+        3,
+        "generate_hazard_offerings must resolve HazardRng and produce 3 offers"
+    );
+    for def in &offers.0 {
+        assert!(
+            HazardKind::ALL.contains(&def.kind()),
+            "each offered kind must be in HazardKind::ALL, got {:?}",
+            def.kind()
+        );
+    }
+
+    // GameRng stream must be unchanged.
+    let world_draw: u64 = app.world_mut().resource_mut::<GameRng>().0.random();
+    let sentinel_draw: u64 = ChaCha8Rng::seed_from_u64(SENTINEL).random();
+    assert_eq!(
+        world_draw, sentinel_draw,
+        "generate_hazard_offerings must NOT advance GameRng (stream was touched)"
+    );
+}
+
+// ── Group E B20: same HazardRng seed produces same 3-offer set ────────────
+
+#[test]
+fn generate_hazard_offerings_is_deterministic_for_same_hazard_rng_seed() {
+    let mut app_a = test_app_with(
+        make_full_registry(),
+        ActiveHazards::default(),
+        7,
+        HazardOffers::default(),
+    );
+    let mut app_b = test_app_with(
+        make_full_registry(),
+        ActiveHazards::default(),
+        7,
+        HazardOffers::default(),
+    );
+
+    app_a.update();
+    app_b.update();
+
+    let kinds_a: Vec<HazardKind> = app_a
+        .world()
+        .resource::<HazardOffers>()
+        .0
+        .iter()
+        .map(HazardDefinition::kind)
+        .collect();
+    let kinds_b: Vec<HazardKind> = app_b
+        .world()
+        .resource::<HazardOffers>()
+        .0
+        .iter()
+        .map(HazardDefinition::kind)
+        .collect();
+
+    assert_eq!(
+        kinds_a, kinds_b,
+        "same HazardRng seed must produce element-wise identical HazardOffers"
+    );
+}
+
+#[test]
+fn generate_hazard_offerings_seed_0_and_seed_11_produce_different_offer_orders() {
+    let mut app_0 = test_app_with(
+        make_full_registry(),
+        ActiveHazards::default(),
+        0,
+        HazardOffers::default(),
+    );
+    let mut app_11 = test_app_with(
+        make_full_registry(),
+        ActiveHazards::default(),
+        11,
+        HazardOffers::default(),
+    );
+
+    app_0.update();
+    app_11.update();
+
+    let kinds_0: Vec<HazardKind> = app_0
+        .world()
+        .resource::<HazardOffers>()
+        .0
+        .iter()
+        .map(HazardDefinition::kind)
+        .collect();
+    let kinds_11: Vec<HazardKind> = app_11
+        .world()
+        .resource::<HazardOffers>()
+        .0
+        .iter()
+        .map(HazardDefinition::kind)
+        .collect();
+
+    assert_ne!(
+        kinds_0, kinds_11,
+        "HazardRng seed 0 and seed 11 must produce different offer orderings"
+    );
 }

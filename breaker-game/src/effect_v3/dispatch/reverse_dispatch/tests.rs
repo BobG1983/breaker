@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_spatial2d::components::{Position2D, Velocity2D};
 
 use super::system::*;
@@ -20,7 +22,7 @@ use crate::{
         traits::Fireable,
         types::{AttractionType, ReversibleEffectType},
     },
-    shared::{PlayfieldConfig, rng::GameRng},
+    shared::PlayfieldConfig,
 };
 
 #[test]
@@ -32,7 +34,8 @@ fn reverse_dispatch_speed_boost_removes_from_stack() {
     };
 
     // Fire first so there's something to reverse.
-    config.fire(entity, "test_chip", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(entity, "test_chip", &mut world, &mut rng);
     assert_eq!(
         world
             .get::<EffectStack<SpeedBoostConfig>>(entity)
@@ -54,15 +57,16 @@ fn reverse_dispatch_speed_boost_removes_from_stack() {
 fn reverse_all_by_source_dispatch_routes_speed_boost() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
 
     SpeedBoostConfig {
         multiplier: OrderedFloat(1.5),
     }
-    .fire(entity, "test_chip", &mut world);
+    .fire(entity, "test_chip", &mut world, &mut rng);
     SpeedBoostConfig {
         multiplier: OrderedFloat(2.0),
     }
-    .fire(entity, "test_chip", &mut world);
+    .fire(entity, "test_chip", &mut world, &mut rng);
 
     let effect = ReversibleEffectType::SpeedBoost(SpeedBoostConfig {
         multiplier: OrderedFloat(1.5),
@@ -80,15 +84,16 @@ fn reverse_all_by_source_dispatch_routes_speed_boost() {
 fn reverse_all_by_source_dispatch_routes_ramping_damage_with_accumulator_cleanup() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
 
     RampingDamageConfig {
         increment: OrderedFloat(0.5),
     }
-    .fire(entity, "test_chip", &mut world);
+    .fire(entity, "test_chip", &mut world, &mut rng);
     RampingDamageConfig {
         increment: OrderedFloat(1.0),
     }
-    .fire(entity, "test_chip", &mut world);
+    .fire(entity, "test_chip", &mut world, &mut rng);
 
     world
         .entity_mut(entity)
@@ -113,19 +118,20 @@ fn reverse_all_by_source_dispatch_routes_ramping_damage_with_accumulator_cleanup
 fn reverse_all_by_source_dispatch_routes_attraction() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
 
     AttractionConfig {
         attraction_type: AttractionType::Cell,
         force:           OrderedFloat(100.0),
         max_force:       None,
     }
-    .fire(entity, "test_chip", &mut world);
+    .fire(entity, "test_chip", &mut world, &mut rng);
     AttractionConfig {
         attraction_type: AttractionType::Wall,
         force:           OrderedFloat(50.0),
         max_force:       None,
     }
-    .fire(entity, "test_chip", &mut world);
+    .fire(entity, "test_chip", &mut world, &mut rng);
 
     let effect = ReversibleEffectType::Attraction(AttractionConfig {
         attraction_type: AttractionType::Cell,
@@ -142,8 +148,9 @@ fn reverse_all_by_source_dispatch_routes_attraction() {
 fn reverse_all_by_source_dispatch_routes_flash_step_via_default() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-    FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+    FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
     assert!(world.get::<FlashStepActive>(entity).is_some());
 
     let effect = ReversibleEffectType::FlashStep(FlashStepConfig {});
@@ -159,17 +166,18 @@ fn reverse_all_by_source_dispatch_routes_flash_step_via_default() {
 fn reverse_all_by_source_dispatch_routes_anchor_with_parameterized_source() {
     let mut world = World::new();
     let entity = world.spawn_empty().id();
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
 
     AnchorConfig {
         bump_force_multiplier:     OrderedFloat(2.0),
         perfect_window_multiplier: OrderedFloat(1.5),
         plant_delay:               OrderedFloat(0.5),
     }
-    .fire(entity, "dispatch_chip", &mut world);
+    .fire(entity, "dispatch_chip", &mut world, &mut rng);
     world.entity_mut(entity).insert(AnchorPlanted);
 
-    PiercingConfig { charges: 1 }.fire(entity, "dispatch_chip", &mut world);
-    PiercingConfig { charges: 2 }.fire(entity, "dispatch_chip", &mut world);
+    PiercingConfig { charges: 1 }.fire(entity, "dispatch_chip", &mut world, &mut rng);
+    PiercingConfig { charges: 2 }.fire(entity, "dispatch_chip", &mut world, &mut rng);
 
     let effect = ReversibleEffectType::Anchor(AnchorConfig {
         bump_force_multiplier:     OrderedFloat(2.0),
@@ -255,7 +263,6 @@ fn all_reversible_effect_types() -> Vec<ReversibleEffectType> {
 #[test]
 fn reverse_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
     world.insert_resource(PlayfieldConfig::default());
     assert_eq!(
         all_reversible_effect_types().len(),
@@ -293,7 +300,6 @@ fn reverse_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
 #[test]
 fn fire_reversible_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
     world.insert_resource(PlayfieldConfig::default());
 
     for effect in all_reversible_effect_types() {
@@ -312,7 +318,6 @@ fn fire_reversible_dispatch_does_not_panic_for_any_reversible_effect_type_varian
 #[test]
 fn reverse_all_by_source_dispatch_does_not_panic_for_any_reversible_effect_type_variant() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
     world.insert_resource(PlayfieldConfig::default());
 
     // Loop 1: fire twice, then reverse_all_by_source for each variant.

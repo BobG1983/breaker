@@ -2,10 +2,11 @@
 
 use bevy::prelude::*;
 use rand::Rng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_defaults::GameConfig;
 use serde::Deserialize;
 
-use crate::prelude::*;
+use crate::{prelude::*, shared::rng::FxRng};
 
 /// Visual style for a node transition.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,9 +72,9 @@ impl Default for TransitionDefaults {
 pub(crate) fn spawn_transition_out(
     mut commands: Commands,
     config: Res<TransitionConfig>,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<FxRng>,
 ) {
-    let style = pick_style(&mut rng);
+    let style = pick_style(&mut rng.0);
     let duration = config.out_duration;
     let color = overlay_color(&config, style, TransitionDirection::Out);
 
@@ -99,9 +100,9 @@ pub(crate) fn spawn_transition_out(
 pub(crate) fn spawn_transition_in(
     mut commands: Commands,
     config: Res<TransitionConfig>,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<FxRng>,
 ) {
-    let style = pick_style(&mut rng);
+    let style = pick_style(&mut rng.0);
     let duration = config.in_duration;
     let color = overlay_color(&config, style, TransitionDirection::In);
 
@@ -174,9 +175,9 @@ pub(crate) fn cleanup_transition(
     }
 }
 
-/// Picks a random [`TransitionStyle`] from the game RNG.
-fn pick_style(rng: &mut ResMut<GameRng>) -> TransitionStyle {
-    if rng.0.random_range(0..2) == 0 {
+/// Picks a random [`TransitionStyle`] from the FX RNG.
+fn pick_style(rng: &mut ChaCha8Rng) -> TransitionStyle {
+    if rng.random_range(0..2) == 0 {
         TransitionStyle::Flash
     } else {
         TransitionStyle::Sweep

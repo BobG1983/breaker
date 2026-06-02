@@ -153,6 +153,7 @@ pub(super) fn apply_spawn_extra_chain_arcs(count: usize, commands: &mut Commands
                 state:           ChainState::Idle,
                 range:           0.0,
                 arc_speed:       0.0,
+                tick:            0,
             },
             CleanupOnExit::<NodeState>::default(),
         ));

@@ -30,6 +30,7 @@ mod tests {
         chips::definition::Rarity,
         effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
         prelude::{SourceId, SourceIdExt},
+        shared::rng::{EffectBaseSeed, EffectEventCounter},
     };
 
     /// Builder-format `SourceId` for a generic test chip — used as the
@@ -126,5 +127,58 @@ mod tests {
 
         let stack = world.get::<EffectStack<SpeedBoostConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
+    }
+
+    // ── B6 — FireEffectCommand increments EffectEventCounter ─────────────────
+
+    #[test]
+    fn fire_effect_command_increments_effect_event_counter_exactly_once() {
+        // B6: applying one FireEffectCommand must increment EffectEventCounter by 1.
+        let mut world = World::new();
+        world.insert_resource(EffectBaseSeed(0));
+        world.insert_resource(EffectEventCounter(0));
+        let entity = world.spawn_empty().id();
+
+        FireEffectCommand {
+            entity,
+            effect: EffectType::SpeedBoost(SpeedBoostConfig {
+                multiplier: OrderedFloat(1.5),
+            }),
+            source: test_chip_source().0.into_owned(),
+        }
+        .apply(&mut world);
+
+        assert_eq!(
+            world.resource::<EffectEventCounter>().0,
+            1,
+            "EffectEventCounter must be exactly 1 after one FireEffectCommand::apply"
+        );
+    }
+
+    #[test]
+    fn fire_effect_command_three_commands_increment_counter_to_three() {
+        // B6 edge case: applying 3 FireEffectCommands must increment counter to 3,
+        // each with distinct derived seed (counter 0, 1, 2 before each increment).
+        let mut world = World::new();
+        world.insert_resource(EffectBaseSeed(0));
+        world.insert_resource(EffectEventCounter(0));
+        let entity = world.spawn_empty().id();
+
+        for _ in 0..3 {
+            FireEffectCommand {
+                entity,
+                effect: EffectType::SpeedBoost(SpeedBoostConfig {
+                    multiplier: OrderedFloat(1.5),
+                }),
+                source: test_chip_source().0.into_owned(),
+            }
+            .apply(&mut world);
+        }
+
+        assert_eq!(
+            world.resource::<EffectEventCounter>().0,
+            3,
+            "EffectEventCounter must be exactly 3 after three FireEffectCommand::apply calls"
+        );
     }
 }

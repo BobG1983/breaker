@@ -1,9 +1,16 @@
+//! Deterministic node-sequence generation from the difficulty curve.
+//!
+//! Runs `OnExit(MenuState::Main)` under `RunStartSystems::GenerateSequence`,
+//! ordered after `RunStartSystems::CaptureSeed`. Draws from `NodeSequenceRng`
+//! seeded from `derive_seed_named(run_seed, "node_sequence")`.
+
 use bevy::prelude::*;
 use rand::{Rng, seq::SliceRandom};
 use rand_chacha::ChaCha8Rng;
 
 use crate::{
     prelude::*,
+    shared::rng::{NodeSequenceRng, derive_seed_named},
     state::run::resources::{DifficultyCurve, NodeAssignment, NodeSequence},
 };
 
@@ -78,12 +85,18 @@ pub(super) fn generate_node_sequence(
 
 /// ECS system wrapper — generates the node sequence at run start.
 ///
-/// Runs on `OnExit(GameState::MainMenu)`, after `reset_run_state` reseeds the RNG.
+/// Reseeds [`NodeSequenceRng`] from
+/// `derive_seed_named(run_stats.seed, "node_sequence")` so the produced
+/// sequence is deterministic for a given `RunSeed`. Runs in
+/// `OnExit(MenuState::Main)` under `RunStartSystems::GenerateSequence`,
+/// AFTER `capture_run_seed` has populated `RunStats.seed`.
 pub(crate) fn generate_node_sequence_system(
     curve: Res<DifficultyCurve>,
-    mut rng: ResMut<GameRng>,
+    run_stats: Res<RunStats>,
+    mut rng: ResMut<NodeSequenceRng>,
     mut commands: Commands,
 ) {
+    *rng = NodeSequenceRng::from_seed(derive_seed_named(run_stats.seed, "node_sequence"));
     let sequence = generate_node_sequence(&curve, &mut rng.0);
     commands.insert_resource(sequence);
 }

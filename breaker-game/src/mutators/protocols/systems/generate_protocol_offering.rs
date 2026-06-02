@@ -14,6 +14,7 @@ use crate::{
         resources::{ActiveProtocols, ProtocolOffer, ProtocolRegistry, UnlockedProtocols},
     },
     prelude::*,
+    shared::rng::ProtocolRng,
 };
 
 /// Bundled parameters for [`generate_protocol_offering`].
@@ -33,7 +34,7 @@ pub(crate) struct ProtocolOfferingParams<'w, 's> {
     /// Kinds the player has unlocked for offering.
     unlocked: Res<'w, UnlockedProtocols>,
     /// Run-seeded RNG used for the uniform random pick.
-    rng:      ResMut<'w, GameRng>,
+    rng:      ResMut<'w, ProtocolRng>,
 }
 
 /// Generate a protocol offering at chip-select entry.

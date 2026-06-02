@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 
 use super::super::{super::system::*, helpers::*};
 use crate::{
@@ -355,10 +357,11 @@ fn shape_d_disarm_does_not_reverse_owner_when_owner_is_not_participant() {
     // simulating an unrelated code path that happened to push an entry
     // with this source name. The owner was NEVER a fired participant,
     // so this must survive disarm.
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     SpeedBoostConfig {
         multiplier: OrderedFloat(1.5),
     }
-    .fire(owner, "chip_redirect:armed", &mut world);
+    .fire(owner, "chip_redirect:armed", &mut world, &mut rng);
 
     // Precondition: owner has 1 entry, bolt has 1 entry
     assert_eq!(

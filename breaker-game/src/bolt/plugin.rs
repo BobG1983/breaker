@@ -16,9 +16,10 @@ use crate::{
     breaker::BreakerSystems,
     effect_v3::EffectV3Systems,
     prelude::*,
+    shared::rng::BoltRng,
     state::run::node::{
         sets::NodeSystems,
-        systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts, reset_bolt},
+        systems::{apply_node_scale_to_bolt, apply_node_scale_to_late_bolts},
     },
 };
 
@@ -29,7 +30,7 @@ pub struct BoltPlugin;
 
 impl Plugin for BoltPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<GameRng>()
+        app.init_resource::<BoltRng>()
             .add_message::<BoltSpawned>()
             .add_message::<BoltImpactBreaker>()
             .add_message::<BoltImpactCell>()
@@ -38,12 +39,7 @@ impl Plugin for BoltPlugin {
             .add_message::<ApplyBoltForce>()
             .add_systems(
                 OnEnter(NodeState::Loading),
-                (
-                    apply_node_scale_to_bolt.after(NodeSystems::Spawn),
-                    reset_bolt
-                        .after(BreakerSystems::Reset)
-                        .in_set(BoltSystems::Reset),
-                ),
+                apply_node_scale_to_bolt.after(NodeSystems::Spawn),
             )
             .add_systems(OnEnter(NodeState::AnimateIn), begin_node_birthing)
             .add_systems(

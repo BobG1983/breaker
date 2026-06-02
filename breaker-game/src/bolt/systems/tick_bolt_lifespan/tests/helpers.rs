@@ -77,6 +77,7 @@ pub(super) fn bolt_plugin_wiring_app() -> App {
         .with_effects_pipeline()
         .build();
     app.add_plugins(BoltPlugin);
+    app.init_resource::<crate::shared::rng::BoltRng>();
     attach_message_capture::<DespawnEntity>(&mut app);
     app
 }

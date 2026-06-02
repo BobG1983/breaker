@@ -2,7 +2,7 @@
 //!
 //! Fires `OnEnter(NodeState::Playing)` behind `hazard_active(Tether)`.
 //! Pins mutual-exclusion matching, adjacency-radius inclusivity, determinism
-//! under shared `GameRng`, harness-safety when resources are absent, and
+//! under shared `HazardRng`, harness-safety when resources are absent, and
 //! run-condition / filter behavior.
 //!
 //! Tests are grouped by behavior topic across sibling files:

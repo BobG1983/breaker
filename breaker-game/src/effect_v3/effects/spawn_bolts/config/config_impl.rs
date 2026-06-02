@@ -25,7 +25,13 @@ pub struct SpawnBoltsConfig {
 }
 
 impl Fireable for SpawnBoltsConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if self.count == 0 {
             return;
         }

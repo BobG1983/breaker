@@ -26,7 +26,13 @@ pub struct AnchorConfig {
 }
 
 impl Fireable for AnchorConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get_entity(entity).is_err() {
             return;
         }
@@ -91,6 +97,8 @@ impl Reversible for AnchorConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -138,8 +146,9 @@ mod tests {
     fn reverse_all_by_source_removes_anchor_active_timer_and_planted() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(entity, anchor_source().0.as_ref(), &mut world);
+        make_config().fire(entity, anchor_source().0.as_ref(), &mut world, &mut rng);
         // AnchorPlanted must be manually inserted because fire() does not insert
         // it — the tick system inserts it when the plant delay expires.
         world.entity_mut(entity).insert(AnchorPlanted);
@@ -164,16 +173,22 @@ mod tests {
     fn reverse_all_by_source_removes_all_piercing_entries_from_source() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         // Fire anchor.
         let anchor = anchor_source();
-        make_config().fire(entity, anchor.0.as_ref(), &mut world);
+        make_config().fire(entity, anchor.0.as_ref(), &mut world, &mut rng);
         world.entity_mut(entity).insert(AnchorPlanted);
 
         // Manually set up piercing stack with entries from multiple sources.
-        PiercingConfig { charges: 1 }.fire(entity, anchor.0.as_ref(), &mut world);
-        PiercingConfig { charges: 3 }.fire(entity, splinter_source().0.as_ref(), &mut world);
-        PiercingConfig { charges: 2 }.fire(entity, anchor.0.as_ref(), &mut world);
+        PiercingConfig { charges: 1 }.fire(entity, anchor.0.as_ref(), &mut world, &mut rng);
+        PiercingConfig { charges: 3 }.fire(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
+        PiercingConfig { charges: 2 }.fire(entity, anchor.0.as_ref(), &mut world, &mut rng);
 
         make_config().reverse_all_by_source(entity, anchor.0.as_ref(), &mut world);
 
@@ -192,14 +207,20 @@ mod tests {
     fn reverse_all_by_source_uses_passed_source_not_hardcoded() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let my_anchor = anchor_uncommon_source();
-        make_config().fire(entity, my_anchor.0.as_ref(), &mut world);
+        make_config().fire(entity, my_anchor.0.as_ref(), &mut world, &mut rng);
         world.entity_mut(entity).insert(AnchorPlanted);
 
-        PiercingConfig { charges: 1 }.fire(entity, my_anchor.0.as_ref(), &mut world);
-        PiercingConfig { charges: 3 }.fire(entity, my_anchor.0.as_ref(), &mut world);
-        PiercingConfig { charges: 2 }.fire(entity, splinter_source().0.as_ref(), &mut world);
+        PiercingConfig { charges: 1 }.fire(entity, my_anchor.0.as_ref(), &mut world, &mut rng);
+        PiercingConfig { charges: 3 }.fire(entity, my_anchor.0.as_ref(), &mut world, &mut rng);
+        PiercingConfig { charges: 2 }.fire(
+            entity,
+            splinter_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         make_config().reverse_all_by_source(entity, my_anchor.0.as_ref(), &mut world);
 
@@ -227,8 +248,9 @@ mod tests {
     fn reverse_all_by_source_removes_markers_even_when_piercing_stack_absent() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(entity, "anchor_piercing", &mut world);
+        make_config().fire(entity, "anchor_piercing", &mut world, &mut rng);
         world.entity_mut(entity).insert(AnchorPlanted);
         // No EffectStack<PiercingConfig> on entity.
 

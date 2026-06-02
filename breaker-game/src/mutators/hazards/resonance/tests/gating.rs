@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 use rantzsoft_spatial2d::components::Position2D;
 
 use super::{
@@ -200,7 +201,12 @@ fn h4_tick_slows_gated_off_when_hazard_inactive() {
         let cfg = SpeedBoostConfig {
             multiplier: OrderedFloat(0.5),
         };
-        cfg.fire(breaker, "hazard:resonance:wave:hold", app.world_mut());
+        cfg.fire(
+            breaker,
+            "hazard:resonance:wave:hold",
+            app.world_mut(),
+            &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+        );
     }
 
     tick_with_dt(&mut app, Duration::from_secs_f32(1.0));

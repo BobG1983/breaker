@@ -31,7 +31,7 @@ use crate::{
         resources::ActiveHazards,
     },
     prelude::{Destroyed, *},
-    shared::test_utils::collector::attach_message_capture,
+    shared::{rng::HazardRng, test_utils::collector::attach_message_capture},
 };
 
 /// Default builder: state hierarchy driven into `NodeState::Playing`,
@@ -163,11 +163,11 @@ pub(super) fn activate_now(app: &mut App, tuning: &HazardTuning) {
     queue.apply(app.world_mut());
 }
 
-/// Seeds `GameRng` with a `ChaCha8Rng::seed_from_u64(seed)`. Used by
-/// Group H (synergy with Drift, whose `drift_update_wind` reads `GameRng`).
-pub(super) fn insert_seeded_rng(app: &mut App, seed: u64) {
+/// Seeds `HazardRng` with a `ChaCha8Rng::seed_from_u64(seed)`. Used by
+/// Group H (synergy with Drift, whose `drift_update_wind` reads `HazardRng`).
+pub(super) fn insert_seeded_hazard_rng(app: &mut App, seed: u64) {
     app.world_mut()
-        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(seed)));
+        .insert_resource(HazardRng(ChaCha8Rng::seed_from_u64(seed)));
 }
 
 /// Wires the bare system pair `(gravity_well_pull, apply_bolt_forces)` in

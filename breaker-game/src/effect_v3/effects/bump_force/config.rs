@@ -20,7 +20,13 @@ pub struct BumpForceConfig {
 }
 
 impl Fireable for BumpForceConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let has_stack = world.get::<EffectStack<Self>>(entity).is_some();
         if !has_stack {
             world
@@ -63,6 +69,8 @@ impl PassiveEffect for BumpForceConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -92,8 +100,9 @@ mod tests {
         let config = BumpForceConfig {
             multiplier: OrderedFloat(1.25),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<BumpForceConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 1);
@@ -108,9 +117,10 @@ mod tests {
         let config = BumpForceConfig {
             multiplier: OrderedFloat(1.25),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let bump_force = SourceId::chip("BumpForce").rarity(Rarity::Common).build();
-        config.fire(entity, bump_force.0.as_ref(), &mut world);
+        config.fire(entity, bump_force.0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<BumpForceConfig>>(entity).unwrap();
         let entries: Vec<_> = stack.iter().collect();
@@ -125,9 +135,10 @@ mod tests {
         let config = BumpForceConfig {
             multiplier: OrderedFloat(1.25),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<EffectStack<BumpForceConfig>>(entity).unwrap();
         assert_eq!(stack.len(), 2);
@@ -141,8 +152,9 @@ mod tests {
         let config = BumpForceConfig {
             multiplier: OrderedFloat(1.25),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
         config.reverse(entity, test_source().0.as_ref(), &mut world);
 
         let stack = world.get::<EffectStack<BumpForceConfig>>(entity).unwrap();
@@ -166,19 +178,20 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         BumpForceConfig {
             multiplier: OrderedFloat(1.25),
         }
-        .fire(entity, augment_source().0.as_ref(), &mut world);
+        .fire(entity, augment_source().0.as_ref(), &mut world, &mut rng);
         BumpForceConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, "other", &mut world);
+        .fire(entity, "other", &mut world, &mut rng);
         BumpForceConfig {
             multiplier: OrderedFloat(1.25),
         }
-        .fire(entity, augment_source().0.as_ref(), &mut world);
+        .fire(entity, augment_source().0.as_ref(), &mut world, &mut rng);
 
         BumpForceConfig {
             multiplier: OrderedFloat(1.25),

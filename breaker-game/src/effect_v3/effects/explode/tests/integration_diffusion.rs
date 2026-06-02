@@ -16,6 +16,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 use rantzsoft_spatial2d::components::{GlobalPosition2D, Spatial2D};
 
 use crate::{
@@ -93,7 +94,12 @@ fn diffusion_reduces_explode_primary_in_same_tick_then_ring_lands_on_neighbor() 
         range:  OrderedFloat(20.0),
         damage: OrderedFloat(100.0),
     };
-    config.fire(bolt, "explode-chip", app.world_mut());
+    config.fire(
+        bolt,
+        "explode-chip",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     // Tick 1: explode consumer emits in EmitDamage; diffusion_reduce_primary
     // halves c0's primary in MutateDamage; ApplyDamage lands 50.0 on c0;
@@ -139,8 +145,18 @@ fn two_explode_sources_same_tick_diffusion_runs_per_primary() {
 
     let source_a = SourceId::chip("Explode-A").rarity(Rarity::Rare).build();
     let source_b = SourceId::chip("Explode-B").rarity(Rarity::Rare).build();
-    config.fire(bolt_a, &source_a.0.clone(), app.world_mut());
-    config.fire(bolt_b, &source_b.0.clone(), app.world_mut());
+    config.fire(
+        bolt_a,
+        &source_a.0.clone(),
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
+    config.fire(
+        bolt_b,
+        &source_b.0.clone(),
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     tick(&mut app);
     tick(&mut app);

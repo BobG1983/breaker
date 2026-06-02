@@ -11,10 +11,11 @@ use bevy::prelude::*;
 use super::{
     super::system::{DriftConfig, DriftWind, drift_update_wind},
     helpers::{
-        canonical_config, insert_rng, install_drift_config, install_drift_wind, test_app_playing,
-        tick_with_dt, wire_update_wind_only,
+        canonical_config, insert_hazard_rng, install_drift_config, install_drift_wind,
+        test_app_playing, tick_with_dt, wire_update_wind_only,
     },
 };
+use crate::shared::rng::{GameRng, HazardRng};
 
 // ── Behavior 11 — timer expiry → unit vector + timer = period_secs ───────
 
@@ -22,7 +23,7 @@ use super::{
 fn wind_rolls_new_direction_when_timer_expires() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, drift_update_wind);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     app.world_mut().insert_resource(DriftConfig {
         force:           100.0,
         period_secs:     8.0,
@@ -55,7 +56,7 @@ fn wind_reset_is_unconditional_on_prior_timer_overshoot() {
     // NOT an add (`+=`).
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     install_drift_wind(
         &mut app,
@@ -81,7 +82,7 @@ fn wind_reset_is_unconditional_on_prior_timer_overshoot() {
 fn wind_direction_stays_constant_within_interval() {
     let mut app = test_app_playing();
     app.add_systems(FixedUpdate, drift_update_wind);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     app.world_mut().insert_resource(DriftConfig {
         force:           100.0,
         period_secs:     8.0,
@@ -106,7 +107,7 @@ fn wind_timer_decrement_accumulates_across_consecutive_ticks() {
     // timer ≈ 3.8.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(&mut app, canonical_config());
     let initial = Vec2::new(0.5, 0.5).normalize();
     install_drift_wind(
@@ -131,7 +132,7 @@ fn wind_timer_decrement_accumulates_across_consecutive_ticks() {
 fn seeded_rng_produces_deterministic_first_roll() {
     let mut app_a = test_app_playing();
     wire_update_wind_only(&mut app_a);
-    insert_rng(&mut app_a, 42);
+    insert_hazard_rng(&mut app_a, 42);
     install_drift_config(&mut app_a, canonical_config());
     install_drift_wind(
         &mut app_a,
@@ -143,7 +144,7 @@ fn seeded_rng_produces_deterministic_first_roll() {
 
     let mut app_b = test_app_playing();
     wire_update_wind_only(&mut app_b);
-    insert_rng(&mut app_b, 42);
+    insert_hazard_rng(&mut app_b, 42);
     install_drift_config(&mut app_b, canonical_config());
     install_drift_wind(
         &mut app_b,
@@ -169,7 +170,7 @@ fn different_seed_produces_different_direction() {
     // Edge: a seed shift moves the angle noticeably.
     let mut app_a = test_app_playing();
     wire_update_wind_only(&mut app_a);
-    insert_rng(&mut app_a, 42);
+    insert_hazard_rng(&mut app_a, 42);
     install_drift_config(&mut app_a, canonical_config());
     install_drift_wind(
         &mut app_a,
@@ -181,7 +182,7 @@ fn different_seed_produces_different_direction() {
 
     let mut app_b = test_app_playing();
     wire_update_wind_only(&mut app_b);
-    insert_rng(&mut app_b, 43);
+    insert_hazard_rng(&mut app_b, 43);
     install_drift_config(&mut app_b, canonical_config());
     install_drift_wind(
         &mut app_b,
@@ -208,7 +209,7 @@ fn different_seed_produces_different_direction() {
 fn seeded_rng_deterministic_across_three_consecutive_rolls() {
     let mut app_a = test_app_playing();
     wire_update_wind_only(&mut app_a);
-    insert_rng(&mut app_a, 42);
+    insert_hazard_rng(&mut app_a, 42);
     install_drift_config(
         &mut app_a,
         DriftConfig {
@@ -227,7 +228,7 @@ fn seeded_rng_deterministic_across_three_consecutive_rolls() {
 
     let mut app_b = test_app_playing();
     wire_update_wind_only(&mut app_b);
-    insert_rng(&mut app_b, 42);
+    insert_hazard_rng(&mut app_b, 42);
     install_drift_config(
         &mut app_b,
         DriftConfig {
@@ -262,7 +263,7 @@ fn seeded_rng_deterministic_across_three_consecutive_rolls() {
 fn direction_is_unit_vector_across_five_consecutive_rolls() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 7);
+    insert_hazard_rng(&mut app, 7);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -306,7 +307,7 @@ fn direction_is_unit_vector_across_five_consecutive_rolls() {
 fn missing_drift_config_is_noop() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_wind(
         &mut app,
         DriftWind {
@@ -332,7 +333,7 @@ fn missing_drift_config_is_noop_across_two_ticks() {
     // Edge: second tick still leaves state unchanged.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_wind(
         &mut app,
         DriftWind {
@@ -356,7 +357,7 @@ fn missing_drift_wind_is_noop() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
     install_drift_config(&mut app, canonical_config());
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     // No `DriftWind` inserted.
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
@@ -372,7 +373,7 @@ fn missing_drift_wind_is_noop_across_two_ticks() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
     install_drift_config(&mut app, canonical_config());
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
@@ -380,10 +381,10 @@ fn missing_drift_wind_is_noop_across_two_ticks() {
     assert!(app.world().get_resource::<DriftWind>().is_none());
 }
 
-// ── Behavior 18 — missing GameRng → no-op, no panic ──────────────────────
+// ── Behavior 18 / B24 — missing HazardRng → no-op, no panic ─────────────
 
 #[test]
-fn missing_game_rng_is_noop() {
+fn missing_hazard_rng_is_noop() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
     install_drift_config(&mut app, canonical_config());
@@ -394,7 +395,7 @@ fn missing_game_rng_is_noop() {
             timer:     0.0,
         },
     );
-    // No `GameRng` inserted.
+    // No `HazardRng` inserted.
 
     tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
 
@@ -402,12 +403,12 @@ fn missing_game_rng_is_noop() {
     assert_eq!(
         wind.timer.to_bits(),
         0.0_f32.to_bits(),
-        "timer must be bitwise unchanged when RNG is missing"
+        "timer must be bitwise unchanged when HazardRng is missing"
     );
 }
 
 #[test]
-fn missing_game_rng_is_noop_across_two_ticks() {
+fn missing_hazard_rng_is_noop_across_two_ticks() {
     // Edge: second tick leaves direction == Vec2::X and timer bitwise 0.0.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
@@ -434,7 +435,7 @@ fn missing_game_rng_is_noop_across_two_ticks() {
 fn multiple_consecutive_timer_expiries_reset_cleanly() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -471,7 +472,7 @@ fn four_consecutive_expiries_at_larger_dt_reset_cleanly() {
     // Edge: 4 ticks at dt=0.7s, period=0.5s — every tick resets to 0.5.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -504,7 +505,7 @@ fn four_consecutive_expiries_at_larger_dt_reset_cleanly() {
 fn big_dt_overshoot_sets_timer_to_period_no_carry_forward() {
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -538,7 +539,7 @@ fn dt_equal_to_prior_timer_plus_period_still_resets_unconditionally() {
     // rolls, resets to 2.0. Pins unconditional reset.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -570,7 +571,7 @@ fn negative_period_secs_causes_per_tick_reroll() {
     // test — the production code intentionally does not validate the input.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -603,7 +604,7 @@ fn negative_period_secs_rerolls_again_on_second_tick() {
     // Edge: second tick decrements -1.0 to -1.1, re-rolls, resets to -1.0.
     let mut app = test_app_playing();
     wire_update_wind_only(&mut app);
-    insert_rng(&mut app, 42);
+    insert_hazard_rng(&mut app, 42);
     install_drift_config(
         &mut app,
         DriftConfig {
@@ -628,4 +629,130 @@ fn negative_period_secs_rerolls_again_on_second_tick() {
     let wind = app.world().resource::<DriftWind>();
     assert!((wind.timer - (-1.0)).abs() < 1e-5);
     assert!((wind.direction.length() - 1.0).abs() < 1e-5);
+}
+
+// ── Group E B23: drift_update_wind reads HazardRng (NOT GameRng) ──────────
+
+#[test]
+fn drift_update_wind_reads_hazard_rng_not_game_rng() {
+    use rand::{Rng, SeedableRng};
+    use rand_chacha::ChaCha8Rng;
+
+    const SENTINEL: u64 = 0xDEAD_BEEF_CAFE_1234;
+
+    let mut app = test_app_playing();
+    wire_update_wind_only(&mut app);
+    install_drift_config(&mut app, canonical_config());
+    install_drift_wind(
+        &mut app,
+        DriftWind {
+            direction: Vec2::X,
+            timer:     0.0,
+        },
+    );
+    insert_hazard_rng(&mut app, 42);
+    // Also insert GameRng at SENTINEL — must remain untouched.
+    app.world_mut()
+        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(SENTINEL)));
+
+    tick_with_dt(&mut app, Duration::from_secs_f32(0.1));
+
+    // Wind direction changed (system ran with HazardRng), timer reset to period.
+    let wind = app.world().resource::<DriftWind>();
+    assert!(
+        (wind.direction - Vec2::X).length() > 1e-4 || wind.direction != Vec2::X,
+        "drift_update_wind must roll a new direction using HazardRng"
+    );
+    assert!(
+        (wind.timer - canonical_config().period_secs).abs() < 1e-5,
+        "timer must reset to period_secs after wind roll"
+    );
+
+    // GameRng stream must be unchanged.
+    let world_draw: u64 = app.world_mut().resource_mut::<GameRng>().0.random();
+    let sentinel_draw: u64 = ChaCha8Rng::seed_from_u64(SENTINEL).random();
+    assert_eq!(
+        world_draw, sentinel_draw,
+        "drift_update_wind must NOT advance GameRng (stream was touched)"
+    );
+}
+
+// ── Group E B25: same HazardRng seed produces same wind direction ──────────
+
+#[test]
+fn drift_update_wind_is_deterministic_for_same_hazard_rng_seed() {
+    let mut app_a = test_app_playing();
+    wire_update_wind_only(&mut app_a);
+    install_drift_config(&mut app_a, canonical_config());
+    install_drift_wind(
+        &mut app_a,
+        DriftWind {
+            direction: Vec2::X,
+            timer:     0.0,
+        },
+    );
+    insert_hazard_rng(&mut app_a, 13);
+
+    let mut app_b = test_app_playing();
+    wire_update_wind_only(&mut app_b);
+    install_drift_config(&mut app_b, canonical_config());
+    install_drift_wind(
+        &mut app_b,
+        DriftWind {
+            direction: Vec2::X,
+            timer:     0.0,
+        },
+    );
+    insert_hazard_rng(&mut app_b, 13);
+
+    tick_with_dt(&mut app_a, Duration::from_secs_f32(0.1));
+    tick_with_dt(&mut app_b, Duration::from_secs_f32(0.1));
+
+    let dir_a = app_a.world().resource::<DriftWind>().direction;
+    let dir_b = app_b.world().resource::<DriftWind>().direction;
+
+    assert!(
+        (dir_a - dir_b).length() < f32::EPSILON,
+        "same HazardRng seed must produce identical wind directions across independent apps"
+    );
+}
+
+#[test]
+fn drift_update_wind_seed_0_and_seed_13_produce_different_wind_directions() {
+    let mut app_0 = test_app_playing();
+    wire_update_wind_only(&mut app_0);
+    install_drift_config(&mut app_0, canonical_config());
+    install_drift_wind(
+        &mut app_0,
+        DriftWind {
+            direction: Vec2::X,
+            timer:     0.0,
+        },
+    );
+    insert_hazard_rng(&mut app_0, 0);
+
+    let mut app_13 = test_app_playing();
+    wire_update_wind_only(&mut app_13);
+    install_drift_config(&mut app_13, canonical_config());
+    install_drift_wind(
+        &mut app_13,
+        DriftWind {
+            direction: Vec2::X,
+            timer:     0.0,
+        },
+    );
+    insert_hazard_rng(&mut app_13, 13);
+
+    tick_with_dt(&mut app_0, Duration::from_secs_f32(0.1));
+    tick_with_dt(&mut app_13, Duration::from_secs_f32(0.1));
+
+    let dir_0 = app_0.world().resource::<DriftWind>().direction;
+    let dir_13 = app_13.world().resource::<DriftWind>().direction;
+
+    assert!(
+        (dir_0 - dir_13).length() > 0.01,
+        "HazardRng seed 0 and seed 13 must produce different wind directions; \
+         diff={:.6}",
+        (dir_0 - dir_13).length()
+    );
 }

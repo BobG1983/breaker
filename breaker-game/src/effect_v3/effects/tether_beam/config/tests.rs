@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_spatial2d::components::{BaseSpeed, Position2D, Velocity2D};
 
 use super::config_impl::*;
@@ -12,7 +14,7 @@ use crate::{
         traits::Fireable,
     },
     prelude::{SourceId, SourceIdExt},
-    shared::{birthing::Birthing, rng::GameRng},
+    shared::birthing::Birthing,
 };
 
 /// Builder-format `SourceId` for the canonical "Coil" chip used across these
@@ -31,7 +33,7 @@ fn spawn_source(world: &mut World, pos: Vec2, vel: Vec2) -> Entity {
 #[test]
 fn fire_spawns_tether_beam_source_entity() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -39,7 +41,7 @@ fn fire_spawns_tether_beam_source_entity() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let beam_count = world
@@ -55,7 +57,7 @@ fn fire_spawns_tether_beam_source_entity() {
 #[test]
 fn tether_beam_source_references_source_as_bolt_a() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -63,7 +65,7 @@ fn tether_beam_source_references_source_as_bolt_a() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let beams: Vec<&TetherBeamSource> = world.query::<&TetherBeamSource>().iter(&world).collect();
@@ -77,7 +79,7 @@ fn tether_beam_source_references_source_as_bolt_a() {
 #[test]
 fn chain_false_spawns_new_bolt_and_connects_beam() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -85,7 +87,7 @@ fn chain_false_spawns_new_bolt_and_connects_beam() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     // A new ExtraBolt should exist
@@ -111,7 +113,7 @@ fn chain_false_spawns_new_bolt_and_connects_beam() {
 #[test]
 fn tether_beam_damage_equals_damage_mult_directly() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -119,7 +121,7 @@ fn tether_beam_damage_equals_damage_mult_directly() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let damages: Vec<f32> = world
@@ -138,7 +140,7 @@ fn tether_beam_damage_equals_damage_mult_directly() {
 #[test]
 fn tether_beam_source_entity_is_not_a_bolt() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -146,7 +148,7 @@ fn tether_beam_source_entity_is_not_a_bolt() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let beam_bolts = world
@@ -162,7 +164,7 @@ fn tether_beam_source_entity_is_not_a_bolt() {
 #[test]
 fn chain_false_spawned_bolt_has_birthing_component() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -170,7 +172,7 @@ fn chain_false_spawned_bolt_has_birthing_component() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let birthing_count = world
@@ -188,7 +190,7 @@ fn chain_false_spawned_bolt_has_birthing_component() {
 #[test]
 fn fire_spawn_with_non_empty_source_attaches_chip_some() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -196,7 +198,7 @@ fn fire_spawn_with_non_empty_source_attaches_chip_some() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let chips: Vec<Option<SourceId>> = world
@@ -221,7 +223,7 @@ fn fire_spawn_with_non_empty_source_attaches_chip_some() {
 #[test]
 fn fire_spawn_with_empty_source_attaches_chip_none() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -229,7 +231,7 @@ fn fire_spawn_with_empty_source_attaches_chip_none() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "", &mut world);
+    config.fire(source, "", &mut world, &mut rng);
     world.flush();
 
     let chips: Vec<Option<SourceId>> = world
@@ -247,7 +249,7 @@ fn fire_spawn_with_empty_source_attaches_chip_none() {
 #[test]
 fn fire_chain_with_non_empty_source_attaches_chip_some() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
     let _other = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
 
@@ -256,7 +258,7 @@ fn fire_chain_with_non_empty_source_attaches_chip_some() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let chips: Vec<Option<SourceId>> = world
@@ -271,7 +273,7 @@ fn fire_chain_with_non_empty_source_attaches_chip_some() {
 #[test]
 fn fire_chain_with_empty_source_attaches_chip_none() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
     let _other = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
 
@@ -280,7 +282,7 @@ fn fire_chain_with_empty_source_attaches_chip_none() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "", &mut world);
+    config.fire(source, "", &mut world, &mut rng);
     world.flush();
 
     let chips: Vec<Option<SourceId>> = world
@@ -297,7 +299,7 @@ fn fire_chain_with_empty_source_attaches_chip_none() {
 #[test]
 fn fire_chain_picks_nearest_other_bolt_by_squared_distance() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
     let nearest_bolt_entity = spawn_source(&mut world, Vec2::new(10.0, 0.0), Vec2::new(0.0, 400.0));
     let _mid = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
@@ -308,7 +310,7 @@ fn fire_chain_picks_nearest_other_bolt_by_squared_distance() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let beams: Vec<TetherBeamSource> = world
@@ -327,7 +329,7 @@ fn fire_chain_picks_nearest_other_bolt_by_squared_distance() {
 #[test]
 fn fire_chain_with_only_source_bolt_is_noop() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -335,7 +337,7 @@ fn fire_chain_with_only_source_bolt_is_noop() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let beam_count = world.query::<&TetherBeamSource>().iter(&world).count();
@@ -357,7 +359,7 @@ fn fire_chain_with_only_source_bolt_is_noop() {
 #[test]
 fn fire_chain_with_two_equidistant_bolts_spawns_exactly_one_beam() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
     let right_bolt = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
     let left_bolt = spawn_source(&mut world, Vec2::new(-50.0, 0.0), Vec2::new(0.0, 400.0));
@@ -367,7 +369,7 @@ fn fire_chain_with_two_equidistant_bolts_spawns_exactly_one_beam() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let beams: Vec<TetherBeamSource> = world
@@ -390,7 +392,7 @@ fn fire_chain_with_two_equidistant_bolts_spawns_exactly_one_beam() {
 #[test]
 fn fire_spawn_stamps_tether_beam_width_from_config() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -398,7 +400,7 @@ fn fire_spawn_stamps_tether_beam_width_from_config() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(7.25),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let widths: Vec<f32> = world
@@ -433,7 +435,7 @@ fn fire_spawn_stamps_tether_beam_width_from_config() {
 #[test]
 fn fire_chain_stamps_tether_beam_width_from_config() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
     let _other = spawn_source(&mut world, Vec2::new(50.0, 0.0), Vec2::new(0.0, 400.0));
 
@@ -442,7 +444,7 @@ fn fire_chain_stamps_tether_beam_width_from_config() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(12.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let widths: Vec<f32> = world
@@ -463,7 +465,7 @@ fn fire_chain_stamps_tether_beam_width_from_config() {
 #[test]
 fn fire_chain_noop_does_not_spawn_tether_beam_width() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(0.0, 0.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -471,7 +473,7 @@ fn fire_chain_noop_does_not_spawn_tether_beam_width() {
         mode:        TetherMode::Chain,
         width:       OrderedFloat(12.0),
     };
-    config.fire(source, coil_source().0.as_ref(), &mut world);
+    config.fire(source, coil_source().0.as_ref(), &mut world, &mut rng);
     world.flush();
 
     let width_count = world
@@ -489,7 +491,7 @@ fn fire_chain_noop_does_not_spawn_tether_beam_width() {
 #[test]
 fn fire_spawn_with_width_zero_stamps_zero_verbatim() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -497,7 +499,7 @@ fn fire_spawn_with_width_zero_stamps_zero_verbatim() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(0.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let widths: Vec<f32> = world
@@ -518,7 +520,7 @@ fn fire_spawn_with_width_zero_stamps_zero_verbatim() {
 #[test]
 fn fire_spawn_with_width_large_stamps_verbatim() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
 
     let config = TetherBeamConfig {
@@ -526,7 +528,7 @@ fn fire_spawn_with_width_large_stamps_verbatim() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(1000.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     let widths: Vec<f32> = world
@@ -550,7 +552,7 @@ fn fire_spawn_with_width_large_stamps_verbatim() {
 #[test]
 fn fire_spawn_falls_back_to_origin_when_position2d_absent() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     // Source has Bolt + BaseSpeed + Velocity2D but NO Position2D.
     let source = world
         .spawn((Bolt, Velocity2D(Vec2::new(0.0, 400.0)), BaseSpeed(400.0)))
@@ -561,7 +563,7 @@ fn fire_spawn_falls_back_to_origin_when_position2d_absent() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     // Spawned ExtraBolt should be at origin (Vec2::ZERO) because source
@@ -586,7 +588,7 @@ fn fire_spawn_falls_back_to_origin_when_position2d_absent() {
 #[test]
 fn fire_spawn_falls_back_to_default_speed_when_base_speed_absent() {
     let mut world = World::new();
-    world.insert_resource(GameRng::from_seed(42));
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
     // Source has Bolt + Position2D + Velocity2D but NO BaseSpeed.
     let source = world
         .spawn((
@@ -601,7 +603,7 @@ fn fire_spawn_falls_back_to_default_speed_when_base_speed_absent() {
         mode:        TetherMode::SpawnBolt,
         width:       OrderedFloat(10.0),
     };
-    config.fire(source, "tether_beam", &mut world);
+    config.fire(source, "tether_beam", &mut world, &mut rng);
     world.flush();
 
     // The spawned ExtraBolt's velocity magnitude should equal the default
@@ -617,5 +619,121 @@ fn fire_spawn_falls_back_to_default_speed_when_base_speed_absent() {
         "missing BaseSpeed on source must fall back to 400.0, got velocity {:?} (mag {})",
         velocities[0],
         velocities[0].length(),
+    );
+}
+
+// ── B10 — explicit angle determinism from &mut ChaCha8Rng ─────────────────
+
+// B10: the bolt angle is determined by the passed &mut ChaCha8Rng, not
+// a shared GameRng resource.
+#[test]
+fn fire_spawn_angle_is_determined_by_passed_rng() {
+    // Two identical ChaCha8Rng instances seeded at 42 must produce the same angle.
+    let mut world_a = World::new();
+    let source_a = spawn_source(&mut world_a, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+    let config_a = TetherBeamConfig {
+        damage_mult: OrderedFloat(1.5),
+        mode:        TetherMode::SpawnBolt,
+        width:       OrderedFloat(10.0),
+    };
+    let mut rng_a = ChaCha8Rng::seed_from_u64(42);
+    config_a.fire(source_a, "test", &mut world_a, &mut rng_a);
+    world_a.flush();
+
+    let mut world_b = World::new();
+    let source_b = spawn_source(&mut world_b, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+    let config_b = TetherBeamConfig {
+        damage_mult: OrderedFloat(1.5),
+        mode:        TetherMode::SpawnBolt,
+        width:       OrderedFloat(10.0),
+    };
+    let mut rng_b = ChaCha8Rng::seed_from_u64(42);
+    config_b.fire(source_b, "test", &mut world_b, &mut rng_b);
+    world_b.flush();
+
+    let vel_a = world_a
+        .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+        .iter(&world_a)
+        .next()
+        .expect("ExtraBolt must exist in world_a")
+        .0;
+    let vel_b = world_b
+        .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+        .iter(&world_b)
+        .next()
+        .expect("ExtraBolt must exist in world_b")
+        .0;
+
+    assert!(
+        (vel_a - vel_b).length() < 1e-5,
+        "same RNG seed must produce same velocity; got {vel_a:?} vs {vel_b:?}"
+    );
+
+    // Different seed must produce different velocity.
+    let mut world_c = World::new();
+    let source_c = spawn_source(&mut world_c, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+    let config_c = TetherBeamConfig {
+        damage_mult: OrderedFloat(1.5),
+        mode:        TetherMode::SpawnBolt,
+        width:       OrderedFloat(10.0),
+    };
+    let mut rng_c = ChaCha8Rng::seed_from_u64(43);
+    config_c.fire(source_c, "test", &mut world_c, &mut rng_c);
+    world_c.flush();
+
+    let vel_c = world_c
+        .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+        .iter(&world_c)
+        .next()
+        .expect("ExtraBolt must exist in world_c")
+        .0;
+
+    assert!(
+        (vel_a - vel_c).length() > 1e-5,
+        "different RNG seeds must produce different velocities; got {vel_a:?} and {vel_c:?}"
+    );
+}
+
+// B19: harness migration — spawning via ChaCha8Rng::seed_from_u64(42) produces the
+// same entity structure as the original GameRng::from_seed(42) did (same underlying
+// ChaCha8Rng seeded identically → identical first random_range draw).
+#[test]
+fn tether_beam_harness_migration_matches_original_game_rng_outcome() {
+    // Under the new signature, ChaCha8Rng::seed_from_u64(42) is identical to
+    // what GameRng::from_seed(42) internally wrapped. The first draw for angle
+    // produces the same f32 value. This test pins the post-fire entity structure.
+    let mut world = World::new();
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let source = spawn_source(&mut world, Vec2::new(100.0, 200.0), Vec2::new(0.0, 400.0));
+
+    let config = TetherBeamConfig {
+        damage_mult: OrderedFloat(1.5),
+        mode:        TetherMode::SpawnBolt,
+        width:       OrderedFloat(10.0),
+    };
+    config.fire(source, "tether_beam", &mut world, &mut rng);
+    world.flush();
+
+    // Must spawn exactly 1 TetherBeamSource and 1 ExtraBolt.
+    let beam_count = world.query::<&TetherBeamSource>().iter(&world).count();
+    assert_eq!(beam_count, 1, "must spawn 1 TetherBeamSource");
+
+    let extra_bolt_count = world
+        .query_filtered::<Entity, With<ExtraBolt>>()
+        .iter(&world)
+        .count();
+    assert_eq!(extra_bolt_count, 1, "must spawn 1 ExtraBolt");
+
+    // The bolt's velocity magnitude must equal source BaseSpeed (400.0).
+    let vel = world
+        .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+        .iter(&world)
+        .next()
+        .expect("ExtraBolt must have Velocity2D")
+        .0;
+    assert!(
+        (vel.length() - 400.0).abs() < 1e-3,
+        "spawned bolt velocity magnitude must equal BaseSpeed 400.0, got {}",
+        vel.length()
     );
 }

@@ -20,7 +20,13 @@ pub struct EntropyConfig {
 }
 
 impl Fireable for EntropyConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get_entity(entity).is_err() {
             return;
         }
@@ -57,6 +63,8 @@ impl Reversible for EntropyConfig {
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::effect_v3::traits::{Fireable, Reversible};
@@ -104,8 +112,9 @@ mod tests {
     fn reverse_all_by_source_removes_counter_via_default_delegation() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config().fire(entity, "entropy_chip", &mut world);
+        make_config().fire(entity, "entropy_chip", &mut world, &mut rng);
         assert!(world.get::<EntropyCounter>(entity).is_some());
 
         make_config().reverse_all_by_source(entity, "entropy_chip", &mut world);
@@ -124,9 +133,10 @@ mod tests {
     fn fire_inserts_counter_with_correct_values() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = make_config_with_pool(3, vec![shockwave_entry()]);
-        config.fire(entity, "entropy_chip", &mut world);
+        config.fire(entity, "entropy_chip", &mut world, &mut rng);
 
         let counter = world
             .get::<EntropyCounter>(entity)
@@ -143,9 +153,10 @@ mod tests {
     fn fire_inserts_counter_with_empty_pool() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         let config = make_config_with_pool(5, vec![]);
-        config.fire(entity, "entropy_chip", &mut world);
+        config.fire(entity, "entropy_chip", &mut world, &mut rng);
 
         let counter = world
             .get::<EntropyCounter>(entity)
@@ -171,7 +182,8 @@ mod tests {
 
         // Fire a new config with different values
         let new_config = make_config_with_pool(5, vec![speed_boost_entry()]);
-        new_config.fire(entity, "entropy_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        new_config.fire(entity, "entropy_chip", &mut world, &mut rng);
 
         let counter = world
             .get::<EntropyCounter>(entity)
@@ -190,13 +202,14 @@ mod tests {
         let entity = world.spawn_empty().id();
 
         let config = make_config_with_pool(3, vec![shockwave_entry()]);
-        config.fire(entity, "entropy_chip", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(entity, "entropy_chip", &mut world, &mut rng);
 
         // Manually increment count to simulate usage
         world.get_mut::<EntropyCounter>(entity).unwrap().count = 2;
 
         // Fire again — should reset count to 0
-        config.fire(entity, "entropy_chip", &mut world);
+        config.fire(entity, "entropy_chip", &mut world, &mut rng);
 
         let counter = world.get::<EntropyCounter>(entity).unwrap();
         assert_eq!(
@@ -214,8 +227,9 @@ mod tests {
         world.despawn(entity);
 
         let config = make_config_with_pool(3, vec![shockwave_entry()]);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
         // Should not panic
-        config.fire(entity, "entropy_chip", &mut world);
+        config.fire(entity, "entropy_chip", &mut world, &mut rng);
     }
 
     // ── Behavior 4: reverse() removes EntropyCounter ──
@@ -272,7 +286,8 @@ mod tests {
         let entity = world.spawn_empty().id();
 
         let config = make_config_with_pool(3, vec![shockwave_entry()]);
-        config.fire(entity, "src", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        config.fire(entity, "src", &mut world, &mut rng);
         assert!(
             world.get::<EntropyCounter>(entity).is_some(),
             "EntropyCounter should exist after fire()"
@@ -291,10 +306,11 @@ mod tests {
         let entity = world.spawn_empty().id();
 
         let config = make_config_with_pool(3, vec![shockwave_entry()]);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, "src", &mut world);
+        config.fire(entity, "src", &mut world, &mut rng);
         config.reverse(entity, "src", &mut world);
-        config.fire(entity, "src", &mut world);
+        config.fire(entity, "src", &mut world, &mut rng);
 
         let counter = world
             .get::<EntropyCounter>(entity)

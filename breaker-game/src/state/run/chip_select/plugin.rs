@@ -8,17 +8,18 @@ use super::{
     messages::ChipOfferSkipped,
     sets::ChipSelectSystems,
     systems::{
-        generate_chip_offerings, handle_chip_input, spawn_chip_select, tick_chip_timer,
-        update_chip_display,
+        generate_chip_offerings, handle_chip_input, reseed_chip_rng, spawn_chip_select,
+        tick_chip_select_count, tick_chip_timer, update_chip_display,
     },
 };
-use crate::{prelude::*, state::cleanup::cleanup_entities};
+use crate::{prelude::*, shared::rng::ChipSelectCount, state::cleanup::cleanup_entities};
 
 /// Plugin for the between-node chip selection screen.
 pub(crate) struct ChipSelectPlugin;
 
 impl Plugin for ChipSelectPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<ChipSelectCount>();
         app.add_message::<ChipOfferSkipped>();
 
         // ChipSelectState routes — chip selection lifecycle
@@ -47,9 +48,11 @@ impl Plugin for ChipSelectPlugin {
         app.add_systems(
             OnEnter(ChipSelectState::Selecting),
             (
+                reseed_chip_rng.in_set(ChipSelectSystems::ReseedRng),
                 generate_chip_offerings.in_set(ChipSelectSystems::GenerateOfferings),
                 ApplyDeferred,
                 spawn_chip_select.in_set(ChipSelectSystems::SpawnScreen),
+                tick_chip_select_count.in_set(ChipSelectSystems::TickCount),
             )
                 .chain(),
         )

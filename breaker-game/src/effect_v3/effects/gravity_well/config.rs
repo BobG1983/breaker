@@ -26,7 +26,13 @@ pub struct GravityWellConfig {
 }
 
 impl Fireable for GravityWellConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         let pos = world.get::<Position2D>(entity).map_or(Vec2::ZERO, |p| p.0);
 
         let chip = EffectSourceChip::from_source_str(source);
@@ -84,6 +90,8 @@ impl Fireable for GravityWellConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
     use rantzsoft_spatial2d::components::Position2D;
 
     use super::*;
@@ -104,8 +112,9 @@ mod tests {
     fn gravity_well_first_fire_spawns_with_spawn_order_zero() {
         let mut world = World::new();
         let owner = world.spawn(Position2D(Vec2::new(10.0, 20.0))).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config(5).fire(owner, "gravity", &mut world);
+        make_config(5).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
 
         let wells: Vec<&GravityWellSpawnOrder> = world
@@ -153,7 +162,8 @@ mod tests {
             .id();
 
         // Fire with max=2 — should evict well_1 (lowest spawn order 0), NOT well_2.
-        make_config(2).fire(owner, "gravity", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        make_config(2).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
 
         // well_1 (spawn order 0) should be despawned — it's the oldest by spawn order.
@@ -188,12 +198,13 @@ mod tests {
     fn gravity_well_spawn_order_increments_across_fires() {
         let mut world = World::new();
         let owner = world.spawn(Position2D(Vec2::new(10.0, 20.0))).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config(5).fire(owner, "gravity", &mut world);
+        make_config(5).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
-        make_config(5).fire(owner, "gravity", &mut world);
+        make_config(5).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
-        make_config(5).fire(owner, "gravity", &mut world);
+        make_config(5).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
 
         let mut spawn_orders: Vec<u32> = world
@@ -215,12 +226,13 @@ mod tests {
     fn gravity_well_max_one_evicts_on_each_fire() {
         let mut world = World::new();
         let owner = world.spawn(Position2D(Vec2::new(10.0, 20.0))).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        make_config(1).fire(owner, "gravity", &mut world);
+        make_config(1).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
-        make_config(1).fire(owner, "gravity", &mut world);
+        make_config(1).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
-        make_config(1).fire(owner, "gravity", &mut world);
+        make_config(1).fire(owner, "gravity", &mut world, &mut rng);
         world.flush();
 
         let spawn_orders: Vec<u32> = world
@@ -255,7 +267,8 @@ mod tests {
             .id();
 
         // A fires with max=1 — this is A's first well, so no eviction.
-        make_config(1).fire(owner_a, "gravity", &mut world);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
+        make_config(1).fire(owner_a, "gravity", &mut world, &mut rng);
         world.flush();
 
         // B's well should be untouched.

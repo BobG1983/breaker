@@ -6,6 +6,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{super::super::config::ExplodeConfig, helpers::*};
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -21,7 +22,12 @@ fn dealer_despawned_after_fire_before_consumer_tick_no_panic() {
         damage: OrderedFloat(10.0),
     };
     let dealer_entity = source;
-    config.fire(source, "chip-source", app.world_mut());
+    config.fire(
+        source,
+        "chip-source",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     // Despawn the dealer AFTER fire() but BEFORE the consumer tick.
     app.world_mut().despawn(source);
     tick(&mut app);
@@ -66,7 +72,12 @@ fn dealer_despawned_before_fire_falls_back_to_zero_position_no_panic() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     // No panic. The cell at (20, 0) is in range from fallback (0, 0).

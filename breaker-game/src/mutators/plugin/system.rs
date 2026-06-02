@@ -27,12 +27,18 @@ use crate::{
             fission::FissionCounter,
             greed::GreedStacks,
             messages::ProtocolSelected,
-            resources::{ActiveProtocols, ProtocolOffer, UnlockedProtocols, protocol_active},
+            resources::{
+                ActiveProtocols, ProtocolOffer, ProtocolOfferingCount, UnlockedProtocols,
+                protocol_active,
+            },
             siphon::SiphonStreak,
-            systems::{dispatch_protocol_selection, generate_protocol_offering},
+            systems::{
+                dispatch_protocol_selection, generate_protocol_offering, reseed_protocol_rng,
+            },
         },
     },
     prelude::*,
+    shared::rng::ProtocolRng,
     state::run::{chip_select::sets::ChipSelectSystems, hazard_select::sets::HazardSelectSystems},
 };
 
@@ -65,15 +71,25 @@ fn wire_protocols(app: &mut App) {
     app.init_resource::<ActiveProtocols>()
         .init_resource::<UnlockedProtocols>()
         .init_resource::<ProtocolOffer>()
+        .init_resource::<ProtocolOfferingCount>()
+        .init_resource::<ProtocolRng>()
         .init_resource::<GreedStacks>()
         .init_resource::<SiphonStreak>()
         .init_resource::<FissionCounter>()
         .add_message::<ProtocolSelected>()
         .add_systems(
             OnEnter(ChipSelectState::Selecting),
-            (generate_protocol_offering, ApplyDeferred)
+            reseed_protocol_rng
+                .in_set(ChipSelectSystems::Reseed)
+                .before(ChipSelectSystems::GenerateOfferings),
+        )
+        .add_systems(
+            OnEnter(ChipSelectState::Selecting),
+            (
+                generate_protocol_offering.in_set(ChipSelectSystems::GenerateOfferings),
+                ApplyDeferred,
+            )
                 .chain()
-                .after(ChipSelectSystems::GenerateOfferings)
                 .before(ChipSelectSystems::SpawnScreen),
         )
         .add_systems(

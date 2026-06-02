@@ -4,6 +4,7 @@ use std::{marker::PhantomData, time::Duration};
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::super::system::{
     ResonanceActiveSlows, ResonanceConfig, ResonanceSlowEntry, ResonanceTracker, ResonanceWave,
@@ -221,5 +222,10 @@ pub(super) fn seed_active_slow(app: &mut App, breaker: Entity, source: &str, rem
     let config = SpeedBoostConfig {
         multiplier: OrderedFloat(0.5),
     };
-    config.fire(breaker, &source_s, app.world_mut());
+    config.fire(
+        breaker,
+        &source_s,
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 }

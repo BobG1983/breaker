@@ -21,6 +21,8 @@ pub struct ChainLightningChain {
     pub arc_speed:       f32,
     /// Position the chain originated from.
     pub source_pos:      Vec2,
+    /// Tick counter incremented each fixed update (stub field — writer-code populates).
+    pub tick:            u64,
 }
 
 /// Visual arc entity traveling between chain lightning targets.

@@ -11,7 +11,13 @@ use crate::effect_v3::traits::{Fireable, Reversible};
 pub struct FlashStepConfig {}
 
 impl Fireable for FlashStepConfig {
-    fn fire(&self, entity: Entity, _source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        _source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get_entity(entity).is_ok() {
             world.entity_mut(entity).insert(FlashStepActive);
         }
@@ -29,6 +35,8 @@ impl Reversible for FlashStepConfig {
 #[cfg(test)]
 mod tests {
     use bevy::prelude::*;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::effect_v3::{
@@ -40,8 +48,9 @@ mod tests {
     fn reverse_all_by_source_removes_flash_step_active_via_default_delegation() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
         assert!(world.get::<FlashStepActive>(entity).is_some());
 
         FlashStepConfig {}.reverse_all_by_source(entity, "dash_chip", &mut world);
@@ -60,8 +69,9 @@ mod tests {
     fn fire_inserts_flash_step_active_on_entity() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
 
         assert!(
             world.get::<FlashStepActive>(entity).is_some(),
@@ -73,8 +83,9 @@ mod tests {
     fn fire_on_entity_already_with_flash_step_active_is_idempotent() {
         let mut world = World::new();
         let entity = world.spawn(FlashStepActive).id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
 
         assert!(
             world.get::<FlashStepActive>(entity).is_some(),
@@ -87,9 +98,10 @@ mod tests {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
         world.despawn(entity);
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         // Should not panic.
-        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
     }
 
     // ── reverse tests ─────────────────────────────────────────────────────
@@ -98,8 +110,9 @@ mod tests {
     fn reverse_removes_flash_step_active_from_entity() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
         FlashStepConfig {}.reverse(entity, "dash_chip", &mut world);
 
         assert!(
@@ -131,8 +144,9 @@ mod tests {
     fn fire_then_reverse_round_trips_cleanly() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        FlashStepConfig {}.fire(entity, "dash_chip", &mut world);
+        FlashStepConfig {}.fire(entity, "dash_chip", &mut world, &mut rng);
         assert!(world.get::<FlashStepActive>(entity).is_some());
 
         FlashStepConfig {}.reverse(entity, "dash_chip", &mut world);

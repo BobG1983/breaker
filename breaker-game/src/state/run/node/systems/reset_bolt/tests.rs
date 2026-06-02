@@ -1,4 +1,5 @@
 use bevy::{ecs::world::CommandQueue, prelude::*};
+use rand::Rng;
 use rantzsoft_spatial2d::components::PreviousPosition;
 
 use super::*;
@@ -10,9 +11,14 @@ use crate::{
     },
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     prelude::*,
-    shared::GameDrawLayer,
+    shared::{
+        GameDrawLayer,
+        rng::{BoltRng, GameRng, derive_seed, derive_seed_named},
+    },
     state::run::NodeOutcome,
 };
+
+const SENTINEL: u64 = 0xDEAD_BEEF_CAFE_1234;
 
 fn make_default_bolt_definition() -> BoltDefinition {
     BoltDefinition {
@@ -35,7 +41,7 @@ fn test_app() -> App {
     TestAppBuilder::new()
         .with_message::<crate::bolt::messages::BoltSpawned>()
         .with_resource::<NodeOutcome>()
-        .with_resource::<GameRng>()
+        .with_resource::<BoltRng>()
         .with_system(Update, reset_bolt)
         .build()
 }
@@ -749,4 +755,341 @@ fn reset_bolt_runs_without_bolt_config_resource() {
 
     // Should not panic if BoltConfig is no longer a system parameter
     app.update();
+}
+
+// ── Group D (Behavior 10) — reset_bolt uses BoltRng ──────────────────────────
+
+// Behavior 10: reset_bolt reads ResMut<BoltRng> — harness has only BoltRng
+#[test]
+fn reset_bolt_uses_bolt_rng_not_game_rng_on_subsequent_node() {
+    // test_app() now registers BoltRng instead of GameRng.
+    // If reset_bolt still names GameRng, the app panics here.
+    let mut app = test_app();
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
+    spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+    spawn_breaker(&mut app, 0.0, -250.0);
+
+    app.update();
+
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .expect("bolt should exist after reset");
+
+    assert!(
+        (vel.0.length() - 720.0).abs() < 2.0,
+        "bolt speed should be ~720.0, got {}",
+        vel.0.length()
+    );
+    assert!(vel.0.y > 0.0, "bolt should launch upward");
+}
+
+// Behavior 10 edge case: BoltRng AND GameRng present — system must NOT advance GameRng
+#[test]
+fn reset_bolt_does_not_advance_game_rng_on_subsequent_node() {
+    let mut app = test_app();
+    app.insert_resource(GameRng::from_seed(SENTINEL));
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
+    spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+    spawn_breaker(&mut app, 0.0, -250.0);
+
+    app.update();
+
+    // Sentinel: bolt launched upward proves system ran
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(vel.0.y > 0.0, "bolt launched — system executed");
+
+    let actual: u64 = app.world_mut().resource_mut::<GameRng>().0.random();
+    let expected: u64 = GameRng::from_seed(SENTINEL).0.random();
+    assert_eq!(
+        actual, expected,
+        "reset_bolt must NOT advance GameRng on subsequent-node path"
+    );
+}
+
+// ── Group D (Behavior 11) ─────────────────────────────────────────────────────
+
+// Behavior 11: same BoltRng seed yields same subsequent-node launch angle
+#[test]
+fn reset_bolt_same_seed_produces_identical_velocity_subsequent_node() {
+    let seed = 0xFEED_BEEF_u64;
+
+    let vel_a = {
+        let mut app = test_app();
+        app.insert_resource(BoltRng::from_seed(seed));
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
+        spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+        spawn_breaker(&mut app, 0.0, -250.0);
+        app.update();
+        *app.world_mut()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap()
+    };
+
+    let vel_b = {
+        let mut app = test_app();
+        app.insert_resource(BoltRng::from_seed(seed));
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
+        spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+        spawn_breaker(&mut app, 0.0, -250.0);
+        app.update();
+        *app.world_mut()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap()
+    };
+
+    assert!(
+        (vel_a.0.x - vel_b.0.x).abs() < f32::EPSILON,
+        "reset_bolt vx must be identical for same seed: a={}, b={}",
+        vel_a.0.x,
+        vel_b.0.x
+    );
+    assert!(
+        (vel_a.0.y - vel_b.0.y).abs() < f32::EPSILON,
+        "reset_bolt vy must be identical for same seed: a={}, b={}",
+        vel_a.0.y,
+        vel_b.0.y
+    );
+}
+
+// Behavior 11 edge case: seed 0 vs seed 99 must produce different angles
+#[test]
+fn reset_bolt_different_seeds_produce_different_velocity_subsequent_node() {
+    let launch_vel = |seed: u64| -> Velocity2D {
+        let mut app = test_app();
+        app.insert_resource(BoltRng::from_seed(seed));
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 2;
+        spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+        spawn_breaker(&mut app, 0.0, -250.0);
+        app.update();
+        *app.world_mut()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap()
+    };
+
+    let vel_0 = launch_vel(0);
+    let vel_99 = launch_vel(99);
+    let diff_x = (vel_0.0.x - vel_99.0.x).abs();
+    let diff_y = (vel_0.0.y - vel_99.0.y).abs();
+    assert!(
+        diff_x > 0.01 || diff_y > 0.01,
+        "seeds 0 and 99 must produce different velocities (diff_x={diff_x:.4}, diff_y={diff_y:.4})"
+    );
+}
+
+// ── Group D (Behavior 12) ─────────────────────────────────────────────────────
+
+// Behavior 12: reset_bolt does NOT draw from BoltRng on node_index == 0
+#[test]
+fn reset_bolt_does_not_advance_bolt_rng_on_node_zero() {
+    let mut app = test_app();
+    app.insert_resource(BoltRng::from_seed(42));
+    // node_index defaults to 0
+    spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::new(300.0, 400.0)));
+    spawn_breaker(&mut app, 0.0, -250.0);
+
+    app.update();
+
+    let vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<Bolt>>()
+        .iter(app.world())
+        .next()
+        .unwrap();
+    assert!(
+        vel.0 == Vec2::ZERO,
+        "velocity should be zero on node 0, got {:?}",
+        vel.0
+    );
+
+    let actual: u64 = app.world_mut().resource_mut::<BoltRng>().0.random();
+    let fresh_first: u64 = BoltRng::from_seed(42).0.random();
+    assert_eq!(
+        actual, fresh_first,
+        "BoltRng must NOT advance on node_index=0 (serving branch)"
+    );
+}
+
+// Behavior 12 edge case: two bolts on node 0 — both get BoltServing, BoltRng un-advanced
+#[test]
+fn reset_bolt_does_not_advance_bolt_rng_on_node_zero_with_two_bolts() {
+    let mut app = test_app();
+    app.insert_resource(BoltRng::from_seed(42));
+    // Spawn two primary bolts
+    spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::new(300.0, 400.0)));
+    spawn_bolt_entity(
+        &mut app,
+        Vec2::new(50.0, 0.0),
+        Velocity2D(Vec2::new(-300.0, 400.0)),
+    );
+    spawn_breaker(&mut app, 0.0, -250.0);
+
+    app.update();
+
+    // Both bolts should have zero velocity and BoltServing
+    let bolt_count = app
+        .world_mut()
+        .query_filtered::<Entity, (With<Bolt>, With<BoltServing>)>()
+        .iter(app.world())
+        .count();
+    assert_eq!(
+        bolt_count, 2,
+        "both bolts should have BoltServing on node 0"
+    );
+
+    let actual: u64 = app.world_mut().resource_mut::<BoltRng>().0.random();
+    let fresh_first: u64 = BoltRng::from_seed(42).0.random();
+    assert_eq!(
+        actual, fresh_first,
+        "BoltRng must NOT advance when two bolts reset on node_index=0"
+    );
+}
+
+// ── Group D (Behavior 13) ─────────────────────────────────────────────────────
+
+// Behavior 13: reset_bolt draws from BoltRng exactly once per non-extra bolt on subsequent nodes
+#[test]
+fn reset_bolt_advances_bolt_rng_once_per_non_extra_bolt_on_subsequent_node() {
+    let mut app = test_app();
+    app.insert_resource(BoltRng::from_seed(42));
+    app.world_mut().resource_mut::<NodeOutcome>().node_index = 3;
+
+    let def = make_default_bolt_definition();
+
+    // Two primary bolts
+    spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+    spawn_bolt_entity(&mut app, Vec2::new(10.0, 0.0), Velocity2D(Vec2::ZERO));
+
+    // One extra bolt (should be skipped by the query)
+    let world = app.world_mut();
+    let mut queue = CommandQueue::default();
+    {
+        let mut commands = Commands::new(&mut queue, world);
+        Bolt::builder()
+            .at_position(Vec2::new(20.0, 0.0))
+            .definition(&def)
+            .with_velocity(Velocity2D(Vec2::new(100.0, 200.0)))
+            .extra()
+            .headless()
+            .spawn(&mut commands);
+    }
+    queue.apply(world);
+
+    spawn_breaker(&mut app, 0.0, -250.0);
+    app.update();
+
+    // The extra bolt's velocity should be unchanged (skipped by Without<ExtraBolt> filter)
+    let extra_vel = app
+        .world_mut()
+        .query_filtered::<&Velocity2D, With<ExtraBolt>>()
+        .iter(app.world())
+        .next()
+        .expect("extra bolt should still exist");
+    assert!(
+        (extra_vel.0.x - 100.0).abs() < f32::EPSILON,
+        "extra bolt vx should be unchanged at 100.0, got {}",
+        extra_vel.0.x
+    );
+
+    // BoltRng should have advanced exactly twice (once per primary bolt).
+    // random_range::<f32> in rand 0.9.4 calls next_u32() once per call.
+    // 2 bolts × 1 draw each = 2 u32 draws total.
+    let mut reference = BoltRng::from_seed(42);
+    let _: u32 = reference.0.random(); // bolt 1 (the only draw)
+    let _: u32 = reference.0.random(); // bolt 2 (the only draw)
+    let expected_next: u64 = reference.0.random();
+
+    let actual_next: u64 = app.world_mut().resource_mut::<BoltRng>().0.random();
+    assert_eq!(
+        actual_next, expected_next,
+        "BoltRng should have advanced exactly twice (1 u32 draw per primary bolt), \
+         so the next u64 draw should equal the second u64 of a fresh BoltRng::from_seed(42)"
+    );
+}
+
+// ── Group F (Behavior 16) — reset_bolt determinism via production seed formula ─
+
+// Behavior 16: reset_bolt with production formula seed produces stable velocity
+#[test]
+fn reset_bolt_with_production_bolt_rng_seed_is_deterministic() {
+    let bolt_rng_seed = derive_seed_named(derive_seed(42, 1u64), "bolt");
+
+    let vel_a = {
+        let mut app = test_app();
+        app.insert_resource(BoltRng::from_seed(bolt_rng_seed));
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
+        spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+        spawn_breaker(&mut app, 0.0, -250.0);
+        app.update();
+        *app.world_mut()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap()
+    };
+
+    let vel_b = {
+        let mut app = test_app();
+        app.insert_resource(BoltRng::from_seed(bolt_rng_seed));
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = 1;
+        spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+        spawn_breaker(&mut app, 0.0, -250.0);
+        app.update();
+        *app.world_mut()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap()
+    };
+
+    assert!(
+        (vel_a.0.x - vel_b.0.x).abs() < f32::EPSILON,
+        "reset_bolt with production formula seed must be deterministic (vx mismatch)"
+    );
+    assert!(
+        (vel_a.0.y - vel_b.0.y).abs() < f32::EPSILON,
+        "reset_bolt with production formula seed must be deterministic (vy mismatch)"
+    );
+}
+
+// Behavior 16 edge case: different node_index yields different velocity
+#[test]
+fn reset_bolt_different_node_index_yields_different_velocity_with_production_seed() {
+    let vel_for_node = |node_index: u32| -> Velocity2D {
+        let bolt_rng_seed = derive_seed_named(derive_seed(42, u64::from(node_index)), "bolt");
+        let mut app = test_app();
+        app.insert_resource(BoltRng::from_seed(bolt_rng_seed));
+        app.world_mut().resource_mut::<NodeOutcome>().node_index = node_index;
+        spawn_bolt_entity(&mut app, Vec2::ZERO, Velocity2D(Vec2::ZERO));
+        spawn_breaker(&mut app, 0.0, -250.0);
+        app.update();
+        *app.world_mut()
+            .query_filtered::<&Velocity2D, With<Bolt>>()
+            .iter(app.world())
+            .next()
+            .unwrap()
+    };
+
+    let vel_1 = vel_for_node(1);
+    let vel_2 = vel_for_node(2);
+    let diff_x = (vel_1.0.x - vel_2.0.x).abs();
+    let diff_y = (vel_1.0.y - vel_2.0.y).abs();
+    assert!(
+        diff_x > 0.01 || diff_y > 0.01,
+        "node_index=1 and node_index=2 must produce different velocities with production formula \
+         (diff_x={diff_x:.4}, diff_y={diff_y:.4})"
+    );
 }

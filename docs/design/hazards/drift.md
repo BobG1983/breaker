@@ -39,7 +39,7 @@ The two systems are chained and registered together via `.chain().before(BoltSys
 ### `drift_update_wind`
 - **Schedule**: `FixedUpdate`.
 - **run_if**: `hazard_active(HazardKind::Drift)` + `in_state(NodeState::Playing)` (from chained tuple).
-- **Behavior**: `DriftWind.timer -= delta_secs`. If `timer <= 0`: picks a new unit vector via seeded `GameRng`; resets `timer = config.period_secs`.
+- **Behavior**: `DriftWind.timer -= delta_secs`. If `timer <= 0`: picks a new unit vector via seeded `HazardRng`; resets `timer = config.period_secs`.
 - **Ordering**: Before `drift_apply_force` (enforced by `.chain()`).
 
 ### `drift_apply_force`
@@ -68,7 +68,7 @@ Linear: `force = config.force + config.per_level_force * (stack - 1)`.
 
 ## Cross-Domain Dependencies
 - **bolt**: Consumes `ApplyBoltForce` via `apply_bolt_forces` in `BoltSystems::ApplyForces`. Owns force-aggregation + `Velocity2D` write.
-- **shared**: Reads `Time`. Uses seeded `GameRng` for deterministic direction changes.
+- **shared**: Reads `Time`. Uses seeded `HazardRng` for deterministic direction changes.
 
 ## Expected Behaviors (for test specs)
 
@@ -81,7 +81,7 @@ Linear: `force = config.force + config.per_level_force * (stack - 1)`.
 ## Edge Cases
 - **Drift + Gravity Surge**: both emit `ApplyBoltForce`. Bolt-domain consumer sums forces. Player compensates for both.
 - **Cleanup**: `DriftConfig` + `DriftWind` removed at run end.
-- **Direction RNG**: seeded `GameRng` — deterministic from run seed for replay.
+- **Direction RNG**: seeded `HazardRng` — deterministic from run seed for replay.
 - **`period_secs` is stack-independent**: only force magnitude scales. Keeps mechanic readable.
 - **Zero bolts**: no messages emitted.
 - **Multi-bolt**: all bolts receive the same wind force; divergence emerges from existing velocities.

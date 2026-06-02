@@ -24,7 +24,13 @@ pub struct ShieldConfig {
 }
 
 impl Fireable for ShieldConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         // Check for existing shield with same owner — reset duration instead of spawning.
         let existing: Option<Entity> = world
             .query_filtered::<(Entity, &ShieldOwner), With<ShieldWall>>()

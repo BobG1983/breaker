@@ -1,13 +1,14 @@
 //! Entropy engine systems — reset counter on node start and tick bump counting.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 use super::super::components::EntropyCounter;
 use crate::{
     breaker::messages::BumpPerformed,
     effect_v3::{commands::EffectCommandsExt, components::EffectSourceChip, types::EffectType},
-    shared::rng::GameRng,
+    shared::rng::{EffectBaseSeed, derive_seed, derive_seed_named},
 };
 
 /// Resets all `EntropyCounter` components to zero at the start of each node.
@@ -22,14 +23,16 @@ pub fn reset_entropy_counter(mut query: Query<&mut EntropyCounter>) {
 ///
 /// For each bump: increments count (capped at `max_effects`), then queues
 /// N deferred fires where N = current count, each selected from the
-/// weighted pool via `GameRng`. Fires are queued through
-/// `commands.fire_effect`, which runs during the next command flush.
+/// weighted pool via ephemeral per-fire RNG derived from `EffectBaseSeed`
+/// and `EffectEventCounter`. Fires are queued through `commands.fire_effect`,
+/// which runs during the next command flush.
 pub fn tick_entropy_engine(
     mut commands: Commands,
     mut counters: Query<(Entity, &mut EntropyCounter, Option<&EffectSourceChip>)>,
     mut bumps: MessageReader<BumpPerformed>,
-    mut rng: ResMut<GameRng>,
+    effect_base: Option<Res<EffectBaseSeed>>,
 ) {
+    let base = effect_base.map_or(0u64, |r| r.0);
     let bump_count = bumps.read().count();
     if bump_count == 0 {
         return;
@@ -59,8 +62,13 @@ pub fn tick_entropy_engine(
             }
 
             for _ in 0..counter.count {
+                let per_entity_seed = derive_seed(
+                    derive_seed_named(base, "entropy_engine"),
+                    u64::from(entity.index().index()) ^ u64::from(counter.count),
+                );
+                let mut local_rng = ChaCha8Rng::seed_from_u64(per_entity_seed);
                 if let Some(effect_type) =
-                    pick_weighted_effect(&counter.pool, &mut rng.0, total_weight)
+                    pick_weighted_effect(&counter.pool, &mut local_rng, total_weight)
                 {
                     commands.fire_effect(entity, effect_type, source.clone());
                 }

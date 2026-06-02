@@ -44,6 +44,7 @@ pub(super) fn build_debt_collector_app() -> App {
         .with_message::<BoltLost>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.world_mut()
         .insert_resource(canonical_debt_collector_config());
     wire(&mut app);
@@ -63,6 +64,7 @@ pub(super) fn build_debt_collector_app_no_config() -> App {
         .with_message::<BoltLost>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     wire(&mut app);
     app
 }

@@ -56,6 +56,7 @@ pub(super) fn build_reckless_dash_app() -> App {
         .with_message_capture::<BoltLost>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
     wire(&mut app);
@@ -76,6 +77,7 @@ pub(super) fn build_reckless_dash_app_no_config() -> App {
         .with_message_capture::<BoltLost>()
         .with_message_capture::<DamageDealt<Cell>>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     wire(&mut app);
     app
 }
@@ -290,6 +292,7 @@ pub(super) fn build_reckless_dash_transition_app() -> App {
         .with_message::<BoltLost>()
         .with_message::<ReduceNodeTimer>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
 
@@ -319,6 +322,7 @@ pub(super) fn build_reckless_dash_transition_app_no_config() -> App {
         .with_message::<BoltLost>()
         .with_message::<ReduceNodeTimer>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
 
     app.configure_sets(
         FixedUpdate,
@@ -350,6 +354,7 @@ pub(super) fn build_reckless_dash_e2e_app() -> App {
         .with_message::<ReduceNodeTimer>()
         .with_message_capture::<ReduceNodeTimer>()
         .build();
+    app.init_resource::<crate::shared::rng::BoltRng>();
     app.world_mut()
         .insert_resource(canonical_reckless_dash_config());
 

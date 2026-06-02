@@ -7,7 +7,7 @@ use super::{super::system::bolt_lost, helpers::*};
 use crate::{
     bolt::{components::ExtraBolt, messages::BoltLost},
     prelude::*,
-    shared::GameDrawLayer,
+    shared::{GameDrawLayer, rng::BoltRng},
 };
 
 fn spawn_bolt_in_app(app: &mut App, build_fn: impl FnOnce(&mut Commands) -> Entity) -> Entity {
@@ -173,7 +173,7 @@ fn extra_bolt_writes_kill_yourself_bolt_instead_of_despawning() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
+        .init_resource::<BoltRng>()
         .add_message::<BoltLost>()
         .add_message::<KillYourself<Bolt>>()
         .init_resource::<CapturedKillYourselfBolt>()
@@ -228,7 +228,7 @@ fn extra_bolt_two_in_one_tick_write_two_kill_yourself_bolt_messages() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
+        .init_resource::<BoltRng>()
         .add_message::<BoltLost>()
         .add_message::<KillYourself<Bolt>>()
         .init_resource::<CapturedKillYourselfBolt>()
@@ -295,7 +295,7 @@ fn extra_bolt_writes_bolt_lost_and_kill_yourself_same_tick_same_entity() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
+        .init_resource::<BoltRng>()
         .add_message::<BoltLost>()
         .add_message::<KillYourself<Bolt>>()
         .init_resource::<CapturedBoltLost>()
@@ -362,7 +362,7 @@ fn baseline_bolt_does_not_write_kill_yourself_bolt() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
+        .init_resource::<BoltRng>()
         .add_message::<BoltLost>()
         .add_message::<KillYourself<Bolt>>()
         .init_resource::<CapturedKillYourselfBolt>()
@@ -414,7 +414,7 @@ fn baseline_bolt_still_sends_bolt_lost_message() {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .init_resource::<PlayfieldConfig>()
-        .init_resource::<GameRng>()
+        .init_resource::<BoltRng>()
         .add_message::<BoltLost>()
         // `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a plain
         // SystemParam, so the message type MUST be registered even though

@@ -16,6 +16,7 @@ use crate::{
     bolt::components::Bolt,
     mutators::hazards::{definition::HazardKind, resources::ActiveHazards},
     prelude::*,
+    shared::rng::HazardRng,
 };
 
 /// Default builder: state hierarchy driven into `NodeState::Playing`,
@@ -42,10 +43,10 @@ pub(super) fn spawn_bolt(app: &mut App, velocity: Vec2) -> Entity {
     app.world_mut().spawn((Bolt, Velocity2D(velocity))).id()
 }
 
-/// Seeds `GameRng` with a `ChaCha8Rng::seed_from_u64(seed)`.
-pub(super) fn insert_rng(app: &mut App, seed: u64) {
+/// Seeds `HazardRng` with a `ChaCha8Rng::seed_from_u64(seed)`.
+pub(super) fn insert_hazard_rng(app: &mut App, seed: u64) {
     app.world_mut()
-        .insert_resource(GameRng(ChaCha8Rng::seed_from_u64(seed)));
+        .insert_resource(HazardRng(ChaCha8Rng::seed_from_u64(seed)));
 }
 
 /// Sets the `Time<Fixed>` timestep to `dt`, accumulates one overstep of

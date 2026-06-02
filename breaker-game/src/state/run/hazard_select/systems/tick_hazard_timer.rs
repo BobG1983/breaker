@@ -11,6 +11,7 @@ use rantzsoft_stateflow::ChangeState;
 use crate::{
     mutators::hazards::{messages::HazardSelected, resources::HazardOffers},
     prelude::*,
+    shared::rng::HazardRng,
     state::run::hazard_select::resources::HazardSelectTimer,
 };
 
@@ -19,14 +20,14 @@ use crate::{
 /// On expiry:
 ///  - `timer.remaining` is clamped to 0.0.
 ///  - If `HazardOffers` is present and non-empty, a random offer is picked
-///    using `GameRng` and a single `HazardSelected` is emitted.
+///    using `HazardRng` and a single `HazardSelected` is emitted.
 ///  - Exactly one `ChangeState<HazardSelectState>` is always emitted so the
 ///    state machine advances even when there is nothing to pick.
 pub(crate) fn tick_hazard_timer(
     time: Res<Time>,
     mut timer: ResMut<HazardSelectTimer>,
     offers: Option<Res<HazardOffers>>,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<HazardRng>,
     mut hazard_writer: MessageWriter<HazardSelected>,
     mut state_writer: MessageWriter<ChangeState<HazardSelectState>>,
 ) {

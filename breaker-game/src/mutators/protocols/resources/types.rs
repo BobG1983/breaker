@@ -196,6 +196,15 @@ pub(crate) struct ProtocolOffer(
     pub(crate) Option<ProtocolDefinition>,
 );
 
+// ── ProtocolOfferingCount ───────────────────────────────────────────────
+
+/// Monotonically-incrementing counter of protocol offering visits within a
+/// run. Zeroed by `reset_run_state` at run start. Used by
+/// `reseed_protocol_rng` as the per-visit discriminator so each chip-select
+/// visit draws from a distinct RNG stream.
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ProtocolOfferingCount(pub(crate) u32);
+
 // ── protocol_active() ───────────────────────────────────────────────────
 
 /// Run condition closure: passes when `kind` is in [`ActiveProtocols`].

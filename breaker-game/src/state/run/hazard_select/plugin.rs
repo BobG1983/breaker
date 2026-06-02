@@ -7,17 +7,19 @@ use super::{
     HazardSelectScreen,
     sets::HazardSelectSystems,
     systems::{
-        generate_hazard_offerings, handle_hazard_input, spawn_hazard_select, tick_hazard_timer,
-        update_hazard_display,
+        generate_hazard_offerings, handle_hazard_input, reseed_hazard_rng, spawn_hazard_select,
+        tick_hazard_timer, update_hazard_display,
     },
 };
-use crate::{prelude::*, state::cleanup::cleanup_entities};
+use crate::{prelude::*, shared::rng::HazardRng, state::cleanup::cleanup_entities};
 
 /// Plugin for the tier-9+ hazard selection screen.
 pub(crate) struct HazardSelectPlugin;
 
 impl Plugin for HazardSelectPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<HazardRng>();
+
         // HazardSelectState routes — hazard selection lifecycle
         app.add_route(
             Route::from(HazardSelectState::Loading)
@@ -44,6 +46,7 @@ impl Plugin for HazardSelectPlugin {
         app.add_systems(
             OnEnter(HazardSelectState::Selecting),
             (
+                reseed_hazard_rng.in_set(HazardSelectSystems::Reseed),
                 generate_hazard_offerings.in_set(HazardSelectSystems::GenerateOfferings),
                 ApplyDeferred,
                 spawn_hazard_select.in_set(HazardSelectSystems::SpawnScreen),

@@ -4,6 +4,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{super::super::config::ExplodeConfig, helpers::*};
 use crate::{effect_v3::traits::Fireable, prelude::*};
@@ -22,7 +23,12 @@ fn builder_produced_source_propagates_unchanged_to_every_emitted_message() {
     };
     let source_str = explode_chip_source_str();
     let expected = explode_chip_source();
-    config.fire(source, &source_str, app.world_mut());
+    config.fire(
+        source,
+        &source_str,
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app
@@ -53,7 +59,12 @@ fn empty_source_string_propagates_as_none_on_every_emitted_message() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

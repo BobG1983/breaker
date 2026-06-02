@@ -1,10 +1,15 @@
 //! Chain lightning systems — tick arc propagation.
 
 use bevy::prelude::*;
-use rand::Rng;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 
 use super::super::components::*;
-use crate::{effect_v3::components::EffectSourceChip, prelude::*};
+use crate::{
+    effect_v3::components::EffectSourceChip,
+    prelude::*,
+    shared::rng::{EffectBaseSeed, derive_seed, derive_seed_named},
+};
 
 /// Alive cell lookup — entity + position, excludes dead cells.
 type AliveCellQuery<'w, 's> =
@@ -17,9 +22,10 @@ pub(crate) fn tick_chain_lightning(
     mut damage_writer: MessageWriter<DamageDealt<Cell>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut rng: ResMut<GameRng>,
+    effect_base: Option<Res<EffectBaseSeed>>,
 ) {
     let dt = time.delta_secs();
+    let base = effect_base.map_or(0u64, |r| r.0);
 
     for (chain_entity, mut chain, chip) in &mut chain_query {
         match chain.state.clone() {
@@ -41,7 +47,13 @@ pub(crate) fn tick_chain_lightning(
                 let selected = if candidates.len() <= 1 {
                     candidates.first().copied()
                 } else {
-                    let idx = rng.0.random_range(0..candidates.len());
+                    let chain_tick_seed = derive_seed_named(base, "chain_tick");
+                    let per_tick_seed = derive_seed(
+                        chain_tick_seed,
+                        u64::from(chain_entity.index().index()) ^ chain.tick,
+                    );
+                    let mut local_rng = ChaCha8Rng::seed_from_u64(per_tick_seed);
+                    let idx = local_rng.random_range(0..candidates.len());
                     Some(candidates[idx])
                 };
 
@@ -104,5 +116,7 @@ pub(crate) fn tick_chain_lightning(
                 }
             }
         }
+
+        chain.tick = chain.tick.wrapping_add(1);
     }
 }

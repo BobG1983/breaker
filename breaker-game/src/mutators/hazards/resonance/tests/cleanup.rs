@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 use rantzsoft_stateflow::cleanup_on_exit;
 
 use super::{
@@ -130,12 +131,27 @@ fn i3_teardown_reverses_active_slows_preserves_non_resonance() {
     // Seed two resonance-sourced stack entries plus one non-resonance.
     let multiplier = OrderedFloat(0.5);
     let cfg = SpeedBoostConfig { multiplier };
-    cfg.fire(breaker, "hazard:resonance:wave:11", app.world_mut());
-    cfg.fire(breaker, "hazard:resonance:wave:22", app.world_mut());
+    cfg.fire(
+        breaker,
+        "hazard:resonance:wave:11",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
+    cfg.fire(
+        breaker,
+        "hazard:resonance:wave:22",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     let chip_cfg = SpeedBoostConfig {
         multiplier: OrderedFloat(1.2),
     };
-    chip_cfg.fire(breaker, "chip:overclock", app.world_mut());
+    chip_cfg.fire(
+        breaker,
+        "chip:overclock",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
 
     // Seed slows map.
     {

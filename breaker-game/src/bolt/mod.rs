@@ -22,3 +22,6 @@ pub use sets::BoltSystems;
 
 #[cfg(test)]
 pub(crate) mod test_utils;
+
+#[cfg(test)]
+mod plugin_tests;

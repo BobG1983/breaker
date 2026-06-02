@@ -5,6 +5,7 @@
 
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
 
 use super::{
     super::super::{config::ExplodeConfig, messages::ExplodeEmissionRequested},
@@ -26,7 +27,12 @@ fn empty_quadtree_no_panic_zero_damage_one_request() {
 
     // Snapshot request count BEFORE the tick — fire() must write one even
     // with zero cells.
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     let req_buf = app.world().resource::<Messages<ExplodeEmissionRequested>>();
     let request_count = req_buf.iter_current_update_messages().count();
     assert_eq!(
@@ -57,7 +63,12 @@ fn dead_only_cells_yield_zero_damage_no_panic() {
         range:  OrderedFloat(50.0),
         damage: OrderedFloat(10.0),
     };
-    config.fire(source, "", app.world_mut());
+    config.fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let collector = app

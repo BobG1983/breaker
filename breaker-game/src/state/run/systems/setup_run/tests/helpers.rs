@@ -7,6 +7,7 @@ use crate::{
         resources::SelectedBreaker,
     },
     prelude::*,
+    shared::rng::BoltRng,
     state::run::{NodeOutcome, systems::setup_run::system::setup_run},
 };
 
@@ -49,7 +50,7 @@ pub(super) fn test_app() -> App {
         .with_resource::<NodeOutcome>()
         .with_resource::<Assets<Mesh>>()
         .with_resource::<Assets<ColorMaterial>>()
-        .with_resource::<GameRng>()
+        .with_resource::<BoltRng>()
         .with_resource::<PlayfieldConfig>()
         .insert_resource(breaker_registry)
         .insert_resource(bolt_registry)

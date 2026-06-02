@@ -9,6 +9,8 @@ use bevy::prelude::*;
 /// Ordering anchors exposed by the hazard-select domain.
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum HazardSelectSystems {
+    /// Tags `reseed_hazard_rng` — must run before `GenerateOfferings`.
+    Reseed,
     /// Tags `generate_hazard_offerings`.
     GenerateOfferings,
     /// Tags `spawn_hazard_select`.

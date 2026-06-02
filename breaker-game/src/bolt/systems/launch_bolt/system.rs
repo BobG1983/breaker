@@ -9,6 +9,7 @@ use crate::{
     effect_v3::{effects::SpeedBoostConfig, stacking::EffectStack},
     input::resources::GameAction,
     prelude::*,
+    shared::rng::BoltRng,
 };
 
 /// Query for serving bolts eligible for launch.
@@ -32,7 +33,7 @@ type LaunchQuery<'w, 's> = Query<
 pub(crate) fn launch_bolt(
     actions: Res<InputActions>,
     mut commands: Commands,
-    mut rng: ResMut<GameRng>,
+    mut rng: ResMut<BoltRng>,
     mut query: LaunchQuery,
 ) {
     if !actions.active(GameAction::Bump) {

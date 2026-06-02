@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use ordered_float::OrderedFloat;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
 use rantzsoft_spatial2d::components::BaseSpeed;
 
 use super::config_impl::SpawnBoltsConfig;
@@ -30,7 +32,8 @@ fn fire_spawns_count_bolts_with_extra_bolt_marker() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let extra_count = world
@@ -50,7 +53,8 @@ fn fire_count_zero_spawns_no_entities() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let extra_count = world
@@ -70,7 +74,8 @@ fn spawned_bolts_are_at_source_position() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let positions: Vec<Vec2> = world
@@ -97,7 +102,8 @@ fn spawned_bolts_have_nonzero_velocity() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let velocities: Vec<Vec2> = world
@@ -124,7 +130,8 @@ fn spawned_bolts_have_lifespan_when_configured() {
         lifespan: Some(OrderedFloat(3.5)),
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let lifespans: Vec<f32> = world
@@ -151,7 +158,8 @@ fn spawned_bolts_have_no_lifespan_when_none() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let lifespan_count = world
@@ -194,7 +202,8 @@ fn inherit_true_copies_primary_bolt_bound_effects() {
         lifespan: None,
         inherit:  true,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let inherited: Vec<&BoundEffects> = world
@@ -231,7 +240,8 @@ fn inherit_false_does_not_copy_bound_effects() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let inherited_count = world
@@ -254,7 +264,8 @@ fn spawned_bolts_have_bolt_and_extra_bolt_markers() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let bolt_extras: Vec<Entity> = world
@@ -284,7 +295,8 @@ fn count_one_spawns_bolt_straight_up_with_zero_x_velocity() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let velocities: Vec<Vec2> = world
@@ -320,7 +332,8 @@ fn count_two_spawns_symmetric_pair_around_vertical() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let mut velocities: Vec<Vec2> = world
@@ -361,7 +374,8 @@ fn spawned_bolts_have_birthing_component() {
         lifespan: None,
         inherit:  false,
     };
-    config.fire(source, "splinter", &mut world);
+    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    config.fire(source, "splinter", &mut world, &mut rng);
     world.flush();
 
     let birthing_count = world

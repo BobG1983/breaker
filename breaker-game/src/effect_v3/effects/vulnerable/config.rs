@@ -17,7 +17,13 @@ pub struct VulnerableConfig {
 }
 
 impl Fireable for VulnerableConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get::<VulnerableStack>(entity).is_none() {
             world.entity_mut(entity).insert(VulnerableStack::default());
         }
@@ -53,6 +59,8 @@ impl Reversible for VulnerableConfig {
 mod tests {
     use bevy::prelude::*;
     use ordered_float::OrderedFloat;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
 
     use super::*;
     use crate::{
@@ -89,8 +97,9 @@ mod tests {
         let config = VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, decay_source().0.as_ref(), &mut world);
+        config.fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world
             .get::<VulnerableStack>(entity)
@@ -104,15 +113,21 @@ mod tests {
         // Edge case for Behavior 8.
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, decay_source().0.as_ref(), &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, vulnerable_again_source().0.as_ref(), &mut world);
+        .fire(
+            entity,
+            vulnerable_again_source().0.as_ref(),
+            &mut world,
+            &mut rng,
+        );
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!((stack.aggregate_persistent(None) - 3.0).abs() <= f32::EPSILON);
@@ -127,9 +142,10 @@ mod tests {
         let config = VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, test_source().0.as_ref(), &mut world);
-        config.fire(entity, test_source().0.as_ref(), &mut world);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
+        config.fire(entity, test_source().0.as_ref(), &mut world, &mut rng);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
         assert!((stack.aggregate_persistent(None) - 2.25).abs() < 1e-5);
@@ -144,8 +160,9 @@ mod tests {
         let config = VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         };
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
-        config.fire(entity, decay_source().0.as_ref(), &mut world);
+        config.fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
         config.reverse(entity, decay_source().0.as_ref(), &mut world);
 
         let stack = world.get::<VulnerableStack>(entity).unwrap();
@@ -160,19 +177,20 @@ mod tests {
         // NEW regression-lock for the semantic change.
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, decay_source().0.as_ref(), &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, decay_source().0.as_ref(), &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
         VulnerableConfig {
             multiplier: OrderedFloat(3.0),
         }
-        .fire(entity, decay_source().0.as_ref(), &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
@@ -205,19 +223,20 @@ mod tests {
     fn reverse_all_by_source_removes_all_entries_from_matching_source_leaves_others() {
         let mut world = World::new();
         let entity = world.spawn_empty().id();
+        let mut rng = ChaCha8Rng::seed_from_u64(42);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity, decay_source().0.as_ref(), &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
         VulnerableConfig {
             multiplier: OrderedFloat(0.5),
         }
-        .fire(entity, "shield_effect", &mut world);
+        .fire(entity, "shield_effect", &mut world, &mut rng);
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity, decay_source().0.as_ref(), &mut world);
+        .fire(entity, decay_source().0.as_ref(), &mut world, &mut rng);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
@@ -249,33 +268,55 @@ mod tests {
     fn reverse_equals_reverse_all_by_source_after_w3() {
         let mut world_a = World::new();
         let entity_a = world_a.spawn_empty().id();
+        let mut rng_a = ChaCha8Rng::seed_from_u64(42);
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_a, decay_source().0.as_ref(), &mut world_a);
+        .fire(
+            entity_a,
+            decay_source().0.as_ref(),
+            &mut world_a,
+            &mut rng_a,
+        );
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_a, decay_source().0.as_ref(), &mut world_a);
+        .fire(
+            entity_a,
+            decay_source().0.as_ref(),
+            &mut world_a,
+            &mut rng_a,
+        );
         VulnerableConfig {
             multiplier: OrderedFloat(0.5),
         }
-        .fire(entity_a, "shield_effect", &mut world_a);
+        .fire(entity_a, "shield_effect", &mut world_a, &mut rng_a);
 
         let mut world_b = World::new();
         let entity_b = world_b.spawn_empty().id();
+        let mut rng_b = ChaCha8Rng::seed_from_u64(42);
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),
         }
-        .fire(entity_b, decay_source().0.as_ref(), &mut world_b);
+        .fire(
+            entity_b,
+            decay_source().0.as_ref(),
+            &mut world_b,
+            &mut rng_b,
+        );
         VulnerableConfig {
             multiplier: OrderedFloat(2.0),
         }
-        .fire(entity_b, decay_source().0.as_ref(), &mut world_b);
+        .fire(
+            entity_b,
+            decay_source().0.as_ref(),
+            &mut world_b,
+            &mut rng_b,
+        );
         VulnerableConfig {
             multiplier: OrderedFloat(0.5),
         }
-        .fire(entity_b, "shield_effect", &mut world_b);
+        .fire(entity_b, "shield_effect", &mut world_b, &mut rng_b);
 
         VulnerableConfig {
             multiplier: OrderedFloat(1.5),

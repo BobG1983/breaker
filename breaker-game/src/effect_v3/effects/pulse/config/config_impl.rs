@@ -26,7 +26,13 @@ pub struct PulseConfig {
 }
 
 impl Fireable for PulseConfig {
-    fn fire(&self, entity: Entity, source: &str, world: &mut World) {
+    fn fire(
+        &self,
+        entity: Entity,
+        source: &str,
+        world: &mut World,
+        _rng: &mut rand_chacha::ChaCha8Rng,
+    ) {
         if world.get_entity(entity).is_err() {
             return;
         }

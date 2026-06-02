@@ -4,6 +4,7 @@
 //! behavior is 20.0.
 
 use bevy::prelude::*;
+use rand::SeedableRng;
 
 use super::helpers::*;
 use crate::{
@@ -28,7 +29,12 @@ fn boost_aggregate_two_produces_final_delta_twenty_not_forty() {
         .id();
     let cell = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let hp = app.world().get::<Hp>(cell).expect("Hp").current;
@@ -53,7 +59,12 @@ fn boost_aggregate_two_with_single_cell_pins_exactly_eighty_hp() {
         .id();
     let cell = spawn_cell_with_hp(&mut app, Vec2::new(0.0, 50.0), 100.0);
 
-    make_config().fire(source, "", app.world_mut());
+    make_config().fire(
+        source,
+        "",
+        app.world_mut(),
+        &mut rand_chacha::ChaCha8Rng::seed_from_u64(0),
+    );
     tick(&mut app);
 
     let hp = app.world().get::<Hp>(cell).expect("Hp").current;

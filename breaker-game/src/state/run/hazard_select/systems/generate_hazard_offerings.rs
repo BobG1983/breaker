@@ -9,6 +9,7 @@ use crate::{
         resources::{HazardOffers, HazardRegistry},
     },
     prelude::*,
+    shared::rng::HazardRng,
 };
 
 /// Bundled parameters for hazard offering generation.
@@ -19,7 +20,7 @@ pub(crate) struct HazardOfferingParams<'w, 's> {
     /// Registry holding every hazard definition keyed by kind.
     registry: Res<'w, HazardRegistry>,
     /// Run-seeded RNG used for the shuffle.
-    rng:      ResMut<'w, GameRng>,
+    rng:      ResMut<'w, HazardRng>,
 }
 
 /// Generates hazard offerings by shuffling the registry and taking up to 3.

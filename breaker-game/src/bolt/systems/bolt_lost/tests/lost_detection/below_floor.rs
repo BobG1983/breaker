@@ -5,7 +5,7 @@ use super::super::helpers::*;
 use crate::{
     bolt::{messages::BoltLost, systems::bolt_lost::system::bolt_lost},
     prelude::*,
-    shared::GameDrawLayer,
+    shared::{GameDrawLayer, rng::BoltRng},
 };
 
 #[test]
@@ -130,7 +130,7 @@ fn bolt_without_entity_scale_in_lost_detection_is_backward_compatible() {
 fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
     let mut app = TestAppBuilder::new()
         .with_playfield()
-        .with_resource::<GameRng>()
+        .with_resource::<BoltRng>()
         .with_message::<BoltLost>()
         // Required: `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a
         // plain SystemParam, so the message MUST be registered.
@@ -184,7 +184,7 @@ fn bolt_lost_sends_correct_bolt_and_breaker_entities_for_baseline() {
 fn bolt_lost_sends_correct_entities_when_multiple_bolts_lost_in_same_frame() {
     let mut app = TestAppBuilder::new()
         .with_playfield()
-        .with_resource::<GameRng>()
+        .with_resource::<BoltRng>()
         .with_message::<BoltLost>()
         // Required: `bolt_lost` takes `MessageWriter<KillYourself<Bolt>>` as a
         // plain SystemParam, so the message MUST be registered.
