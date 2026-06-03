@@ -19,7 +19,7 @@ use crate::{
         RunSeed,
         rng::{ChipSelectCount, EffectBaseSeed, derive_seed_named},
     },
-    state::run::resources::{HighlightTracker, NodeOutcome},
+    state::run::resources::{HighlightTracker, NodeOutcome, RunProgress, TierConfig},
 };
 
 /// Per-run inventories cleared on each new run. Grouped by **lifecycle**
@@ -52,6 +52,25 @@ impl RunInventories<'_> {
     }
 }
 
+/// [`SystemParam`] bundle of per-run state resources cleared on every new
+/// run: [`HighlightTracker`], `ResMut<RunProgress>`, and `ResMut<TierConfig>`.
+/// Used by [`reset_run_state`] to reset all three with a single param, keeping
+/// the system within clippy's argument-count threshold.
+#[derive(SystemParam)]
+pub(crate) struct TierProgress<'w> {
+    highlight_tracker: ResMut<'w, HighlightTracker>,
+    run_progress:      ResMut<'w, RunProgress>,
+    tier_config:       ResMut<'w, TierConfig>,
+}
+
+impl TierProgress<'_> {
+    fn reset(&mut self) {
+        *self.highlight_tracker = HighlightTracker::default();
+        *self.run_progress = RunProgress::default();
+        *self.tier_config = TierConfig::default();
+    }
+}
+
 /// Resets [`NodeOutcome`] to defaults, reseeds [`GameRng`], and derives
 /// [`EffectBaseSeed`] from the captured run seed when leaving the main menu
 /// (starting a run). The effect base seed is set once per run; ephemeral
@@ -61,13 +80,13 @@ pub(crate) fn reset_run_state(
     mut rng: ResMut<GameRng>,
     seed: Res<RunSeed>,
     mut stats: ResMut<RunStats>,
-    mut highlight_tracker: ResMut<HighlightTracker>,
     mut effect_base_seed: ResMut<EffectBaseSeed>,
+    mut tier_progress: TierProgress,
     mut inventories: RunInventories,
 ) {
     *run_state = NodeOutcome::default();
     *stats = RunStats::default();
-    *highlight_tracker = HighlightTracker::default();
+    tier_progress.reset();
     inventories.clear_all();
 
     let run_seed_value: u64 = if let Some(s) = seed.0 {

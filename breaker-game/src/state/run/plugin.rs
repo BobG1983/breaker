@@ -25,7 +25,7 @@ use super::{
             track_node_cleared_stats, track_time_elapsed,
         },
     },
-    resources::{DifficultyCurve, HighlightTracker, NodeOutcome},
+    resources::{DifficultyCurve, HighlightTracker, NodeOutcome, RunProgress, TierConfig},
     run_end::systems::detect_most_powerful_evolution,
     systems::{advance_node, hide_gameplay_entities, setup_run, show_gameplay_entities},
 };
@@ -70,6 +70,8 @@ impl Plugin for RunPlugin {
             .init_resource::<RunStats>()
             .init_resource::<HighlightConfig>()
             .init_resource::<HighlightTracker>()
+            .init_resource::<RunProgress>()
+            .init_resource::<TierConfig>()
             .add_plugins(NodePlugin)
             .add_message::<RunLost>()
             .add_message::<HighlightTriggered>()
@@ -247,5 +249,87 @@ mod tests {
             "EffectBaseSeed must be initialized by RunPlugin::build — \
              add .init_resource::<EffectBaseSeed>() to the init block"
         );
+    }
+
+    // ── Wave 1B Behavior 8 — RunPlugin initializes RunProgress during build ──
+
+    // Minimal harness: no prereq resources, no state transitions.
+    // RunPlugin::build calls init_resource — assert immediately, no update() required.
+    #[test]
+    fn run_plugin_inits_run_progress_during_build() {
+        use crate::state::run::resources::RunProgress;
+
+        let mut app = TestAppBuilder::new().with_state_hierarchy().build();
+        app.init_resource::<RoutingTable<NodeState>>();
+        app.init_resource::<NodeLayoutRegistry>();
+        app.add_plugins(RunPlugin);
+
+        let res = app
+            .world()
+            .get_resource::<RunProgress>()
+            .expect("RunProgress must be initialized by RunPlugin::build");
+        assert_eq!(res.tier_index, 0);
+        assert_eq!(res.node_in_tier, 0);
+        assert_eq!(res.total_nodes_cleared, 0);
+    }
+
+    // Behavior 8 edge case: querying after one passive update still returns defaults
+    #[test]
+    fn run_plugin_run_progress_unchanged_after_passive_update() {
+        use crate::state::run::resources::RunProgress;
+
+        let mut app = TestAppBuilder::new().with_state_hierarchy().build();
+        app.init_resource::<RoutingTable<NodeState>>();
+        app.init_resource::<NodeLayoutRegistry>();
+        app.add_plugins(RunPlugin);
+        app.update();
+
+        let res = app
+            .world()
+            .get_resource::<RunProgress>()
+            .expect("RunProgress must remain after passive update");
+        assert_eq!(res.tier_index, 0);
+        assert_eq!(res.node_in_tier, 0);
+        assert_eq!(res.total_nodes_cleared, 0);
+    }
+
+    // ── Wave 1B Behavior 9 — RunPlugin initializes TierConfig during build ──
+
+    #[test]
+    fn run_plugin_inits_tier_config_during_build() {
+        use crate::state::run::resources::TierConfig;
+
+        let mut app = TestAppBuilder::new().with_state_hierarchy().build();
+        app.init_resource::<RoutingTable<NodeState>>();
+        app.init_resource::<NodeLayoutRegistry>();
+        app.add_plugins(RunPlugin);
+
+        let res = app
+            .world()
+            .get_resource::<TierConfig>()
+            .expect("TierConfig must be initialized by RunPlugin::build");
+        assert_eq!(res.tier_index, 0);
+        assert!(res.modifier_pool_handle.is_none());
+        assert!(res.hazard_stack.is_empty());
+    }
+
+    // Behavior 9 edge case: querying after one passive update still returns defaults
+    #[test]
+    fn run_plugin_tier_config_unchanged_after_passive_update() {
+        use crate::state::run::resources::TierConfig;
+
+        let mut app = TestAppBuilder::new().with_state_hierarchy().build();
+        app.init_resource::<RoutingTable<NodeState>>();
+        app.init_resource::<NodeLayoutRegistry>();
+        app.add_plugins(RunPlugin);
+        app.update();
+
+        let res = app
+            .world()
+            .get_resource::<TierConfig>()
+            .expect("TierConfig must remain after passive update");
+        assert_eq!(res.tier_index, 0);
+        assert!(res.modifier_pool_handle.is_none());
+        assert!(res.hazard_stack.is_empty());
     }
 }

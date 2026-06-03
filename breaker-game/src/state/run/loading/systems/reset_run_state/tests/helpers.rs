@@ -5,7 +5,7 @@ use crate::{
     chips::inventory::ChipInventory,
     prelude::*,
     shared::{RunSeed, rng::EffectBaseSeed},
-    state::run::resources::{HighlightTracker, NodeOutcome, NodeResult},
+    state::run::resources::{HighlightTracker, NodeOutcome, NodeResult, RunProgress, TierConfig},
 };
 
 pub(super) fn test_app() -> App {
@@ -28,6 +28,8 @@ pub(super) fn test_app() -> App {
         .with_resource::<crate::mutators::hazards::resources::ActiveHazards>()
         .with_resource::<crate::mutators::protocols::greed::GreedStacks>()
         .with_resource::<crate::mutators::protocols::siphon::SiphonStreak>()
+        .with_resource::<RunProgress>()
+        .with_resource::<TierConfig>()
         .with_system(Update, reset_run_state)
         .build()
 }

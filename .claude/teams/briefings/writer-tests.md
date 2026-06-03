@@ -46,20 +46,34 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 |---|---|---|
 | `planning-reviewer-specs-tests` OR `team-lead` | "Wave N test spec approved at `<path>` — write failing tests, behaviors: <summary>" | Read the spec at `<path>` and referenced files. Write failing tests at the spec's stated location. **When done, send TWO messages** (see Completion handoff below). |
 | `reviewer-tests` | "Test revision: <hint>" | Apply the revision minimally. Keep tests failing (don't add production logic). When done → `SendMessage(to:"reviewer-tests-<same-slot>", "Wave NX tests revised at <paths>")` (re-trigger their re-review). |
-| `runner-cargo` (forwarded by `wave-coordinator` after batched RED gate) | "RED gate compile FAIL: <output>" | Tests must compile. Fix compilation only — do not change assertions. May consult `researcher-rust` for unfamiliar errors. When done → `SendMessage(to:"reviewer-tests-<same-slot>", "Wave NX tests fixed at <paths> — please re-review")` AND `SendMessage(to:"wave-coordinator", "Wave NX RED-gate fix attempt K applied")`. Do NOT message runner-cargo. |
+| `runner-cargo` (forwarded by `wave-coordinator` after batched RED gate) | "RED gate compile FAIL: <output>" | Tests must compile. Fix compilation only — do not change assertions. May consult `researcher-rust` for unfamiliar errors. When done → see **Fix-attempt-done handoff** below. Do NOT message runner-cargo. |
 | `planning-writer-specs-tests` | "spec clarification: <answer>" | Resume writing tests with the answer. |
 | `team-lead` | anything (other than approval/clarification handled above) | Authoritative. |
 | Anyone else | unexpected | Ask before acting. |
 
 ## Completion handoff — STRICT routing
 
-When you finish writing failing tests for a wave, send **exactly these two messages**:
+The coordinator dispatches on **structured event markers**. Lead every completion summary with the marker. Wrong marker (or no marker) = the coordinator can't recognize the event and the wave stalls.
 
-1. `SendMessage(to: "reviewer-tests", summary: "Wave N tests ready", message: "Wave N tests written at <file paths> — please review against spec at .claude/specs/wave<N>-phantom-breaker-tests.md.")` — peer trigger, no orchestrator hop.
+### Initial-tests handoff (first time you write tests for a sub-wave)
 
-2. `SendMessage(to: "team-lead", summary: "Wave N tests written", message: "Wave N tests written at <paths>. reviewer-tests triggered. Awaiting their findings, then RED gate.")` — milestone.
+Send **exactly these two messages**:
 
-Do NOT ask team-lead to launch reviewer-tests for you — you trigger them directly.
+1. `SendMessage(to: "reviewer-tests-<same-slot>", summary: "tests_written Wave NX", message: "tests_written Wave NX — tests at <file paths>; please review against spec at .claude/specs/wave<N><X>-<feature>-tests.md.")` — peer trigger, no orchestrator hop.
+
+2. `SendMessage(to: "team-lead", summary: "tests_written Wave NX", message: "tests_written Wave NX — tests at <paths>. reviewer-tests-<same-slot> triggered. Awaiting their findings, then RED gate.")` — milestone.
+
+### Fix-attempt-done handoff (after a RED gate FAIL → fix loop)
+
+Send **exactly these two messages**:
+
+1. `SendMessage(to: "wave-coordinator", summary: "fix_attempt_done Wave NX attempt K", message: "fix_attempt_done Wave NX attempt K — RED gate fixes applied at <files>. reviewer-tests-<same-slot> re-triggered. Ready for batched RED gate re-run when sibling sub-waves' fixers report done.")` — coordinator re-adds your sub-wave to `writer-tests.completed` and re-dispatches the gate when all fixers report done.
+
+2. `SendMessage(to: "reviewer-tests-<same-slot>", summary: "fix_attempt_done Wave NX attempt K", message: "fix_attempt_done Wave NX attempt K — RED gate fixes applied at <files>; please re-review.")` — re-review trigger.
+
+The literal token `tests_written` or `fix_attempt_done` MUST be the first token of the `summary` field AND repeated at the start of the `message` body. Do not use prose substitutes like "tests ready" / "RED-gate fix applied" / "clippy fix attempt N applied" — they will not be recognized.
+
+Do NOT ask team-lead to launch reviewer-tests for you — you trigger them directly. Do NOT message runner-cargo — the coordinator owns gate dispatch.
 
 ## When to ask
 - Ask `planning-writer-specs-tests` if the spec is ambiguous BEFORE writing.

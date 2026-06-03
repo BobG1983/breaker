@@ -106,7 +106,9 @@ wave-N:
    - If `writer-code.completed == writer-code.dispatched`, dispatch the SINGLE batched GREEN gate to `runner-cargo`. Set `green-gate.dispatched = 1`.
    - Otherwise, idle.
 
-5. **Fix-loop semantics.** A `red_gate_fail` or `green_gate_fail` reverts the affected sub-wave's `completed` entry until the fixer reports done again. Fixers (writer-tests / writer-code) report fix-attempt-done back to YOU; on receipt, re-add the sub-wave to the relevant `completed` set. Re-dispatch the gate ONLY when the full completion set is restored.
+5. **Fix-loop semantics.** A `red_gate_fail` or `green_gate_fail` reverts the affected sub-wave's `completed` entry until the fixer reports done again. Fixers (writer-tests / writer-code) report fix-attempt-done back to YOU as a `fix_attempt_done` event (see the writer briefings — they are required to lead the summary line with this marker). On receipt, re-add the sub-wave to the relevant `completed` set. Re-dispatch the gate ONLY when the full completion set is restored.
+
+   If a fixer sends free-form prose without the `fix_attempt_done` marker, that is a writer-side protocol violation. Reply with a HOLD telling them to re-send with the required marker, and CC team-lead so the writer briefing can be tightened. Do NOT try to guess from prose — the marker is the contract.
 
 6. **Stray / late acknowledgments.** If you receive a `test_spec_approved` (or other phase-done event) for a sub-wave already in `completed`, ignore — do not re-dispatch the next phase. The completion set is monotonic per phase per attempt.
 

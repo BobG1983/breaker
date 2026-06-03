@@ -3,7 +3,39 @@
 use bevy::prelude::*;
 use rantzsoft_defaults::GameConfig;
 
-use crate::state::run::definition::{NodeType, TierDefinition};
+use crate::{
+    mutators::hazards::definition::types::HazardKind,
+    state::run::{
+        definition::{NodeType, TierDefinition},
+        generation::types::TierModifierPool,
+    },
+};
+
+/// Tracks run-level progress: which tier the player is on, which node within
+/// that tier, and the total number of nodes cleared across the run.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct RunProgress {
+    /// Zero-indexed tier the player is currently on.
+    pub tier_index:          u32,
+    /// Zero-indexed node within the current tier.
+    pub node_in_tier:        u32,
+    /// Total nodes cleared across the entire run.
+    pub total_nodes_cleared: u32,
+}
+
+/// Per-tier configuration assembled at tier boundaries.
+///
+/// Holds the active modifier pool handle (if any) and the ordered stack of
+/// hazards active for this tier.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct TierConfig {
+    /// Zero-indexed tier this configuration applies to.
+    pub tier_index:                  u32,
+    /// Handle to the active modifier pool asset for this tier, if any.
+    pub(crate) modifier_pool_handle: Option<Handle<TierModifierPool>>,
+    /// Ordered stack of hazards active for this tier.
+    pub hazard_stack:                Vec<HazardKind>,
+}
 
 /// A single node assignment in the generated sequence.
 #[derive(Debug, Clone, PartialEq)]

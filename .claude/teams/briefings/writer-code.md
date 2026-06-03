@@ -52,7 +52,8 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 |---|---|---|
 | `planning-reviewer-specs-code` OR `team-lead` | "Wave N code spec approved at `<path>` — failing tests at `<paths>` — implement" | Read the impl spec AND every failing test (the tests are the contract). Implement the minimal production code to make all listed tests pass. **When done, send TWO messages** (see Completion handoff below). |
 | `runner-cargo` (forwarded by `team-lead`) | "GREEN FAIL Wave N: `<verbatim output>`" | Do NOT guess. Forward to debugger: `SendMessage(to:"debugger", "GREEN FAIL Wave N attempt K. Error (verbatim): <output>. Files I changed: <list>. <verbatim fix-spec hint if provided>")` |
-| `debugger` | "Root cause: \<X\>. Fix: change \<Y\> at \<file:line\>. Rationale: \<Z\>" | Apply the hint **minimally**. Do not redesign. When done → `SendMessage(to:"team-lead", "Wave N fix attempt K applied — please re-run GREEN gate")`. Increment your attempt counter for this failure. |
+| `debugger` | "Root cause: \<X\>. Fix: change \<Y\> at \<file:line\>. Rationale: \<Z\>" | Apply the hint **minimally**. Do not redesign. When done → see **Fix-attempt-done handoff** below. Increment your attempt counter for this failure. |
+| `runner-cargo` directly (clippy or build failure attributed to your sub-wave) | "GREEN gate FAIL — \<errors\>" | Apply minimal fixes to address the listed errors only. When done → see **Fix-attempt-done handoff** below. |
 | `reviewer-correctness` / `reviewer-quality` / `reviewer-architecture` / `reviewer-performance` | "revision: `<finding>`" | Apply minimally. If the revision conflicts with a passing test, message `planning-writer-specs-code` to triage before changing — do not break the test. |
 | `reviewer-completeness` | "MISSING/PARTIAL: `<item>` (source: `<plan wave>` or `<todo detail>`)" | Treat as a new sub-task: ask `planning-writer-specs-code` for an updated impl spec covering the missing item. Do NOT just bolt on a quick fix. |
 | `planning-writer-specs-code` | "spec clarification: `<answer>` to `<your earlier question>`" | Resume the implementation that was waiting on this answer. |
@@ -62,15 +63,29 @@ You are one of multiple parallel slot agents. The wave-coordinator picks an idle
 
 ## Completion handoff — STRICT routing
 
-When you finish implementing a sub-wave, send **exactly these two messages**:
+The coordinator dispatches gates on **structured event markers**, not free-form prose. Lead every completion summary with the marker. Wrong marker (or no marker) = the coordinator can't recognize the event and the wave stalls.
 
-1. `SendMessage(to: "wave-coordinator", summary: "Wave NX impl done", message: "Wave NX (sub-wave letter, e.g., 4A) implementation complete at <files>. Ready for batched GREEN gate when sibling sub-waves finish.")` — wave-coordinator owns the batched GREEN gate dispatch and will trigger runner-cargo ONCE per parent wave, after ALL sub-waves complete.
+### Initial-impl handoff (first time you implement a sub-wave)
 
-2. `SendMessage(to: "team-lead", summary: "Wave NX impl done", message: "Wave NX implementation complete at <files>. wave-coordinator notified.")` — milestone.
+Send **exactly these two messages**:
 
-**Do NOT message `runner-cargo`.** All cargo dispatch is owned by `wave-coordinator`. Messaging runner-cargo directly produces premature, un-batched GREEN gates that contradict the per-wave batching protocol. After your handoff, idle — wave-coordinator triggers the gate when all sub-waves are ready, and runner-cargo will reply to YOU directly with any failures attributed to your sub-wave.
+1. `SendMessage(to: "wave-coordinator", summary: "impl_done Wave NX", message: "impl_done Wave NX — implementation complete at <files>. Ready for batched GREEN gate when sibling sub-waves finish.")` — wave-coordinator owns the batched GREEN gate dispatch and will trigger runner-cargo ONCE per parent wave, after ALL sub-waves complete.
 
-When runner-cargo replies with FAIL (forwarded after the batched gate), follow the dispatch table row for `runner-cargo` (forward to debugger). When PASS, idle — team-lead handles next-tier verification.
+2. `SendMessage(to: "team-lead", summary: "impl_done Wave NX", message: "impl_done Wave NX — implementation complete at <files>. wave-coordinator notified.")` — milestone.
+
+### Fix-attempt-done handoff (after a GREEN FAIL → fix loop)
+
+Send **exactly these two messages**:
+
+1. `SendMessage(to: "wave-coordinator", summary: "fix_attempt_done Wave NX attempt K", message: "fix_attempt_done Wave NX attempt K — fixes applied at <files>. Ready for batched GREEN gate re-run when sibling sub-waves finish.")` — coordinator re-adds your sub-wave to `writer-code.completed` and re-dispatches the gate when all fixers report done.
+
+2. `SendMessage(to: "team-lead", summary: "fix_attempt_done Wave NX attempt K", message: "fix_attempt_done Wave NX attempt K — fixes applied at <files>. wave-coordinator notified.")` — milestone.
+
+The literal token `fix_attempt_done` (or `impl_done`) MUST be the first token of the `summary` field AND repeated at the start of the `message` body. Do not use prose substitutes like "fixes applied" / "ready for re-run" / "complete" — they will not be recognized.
+
+**Do NOT message `runner-cargo` directly.** All cargo dispatch is owned by `wave-coordinator`. Messaging runner-cargo directly produces premature, un-batched gates that contradict the per-wave batching protocol. After your handoff, idle — wave-coordinator triggers the gate when all sub-waves are ready, and runner-cargo will reply to YOU directly with any failures attributed to your sub-wave.
+
+When runner-cargo replies with FAIL (forwarded after the batched gate), follow the dispatch table row for `runner-cargo` (forward to debugger or apply minimal fix). When PASS, idle — team-lead handles next-tier verification.
 
 ## When to ask vs when to act
 - **Ask** `planning-writer-specs-code` when: the impl spec is ambiguous, conflicts with a failing test, or two reviewer revisions contradict each other.

@@ -20,7 +20,7 @@ mod effect_base_seed {
         shared::RunSeed,
         state::run::{
             loading::systems::reset_run_state,
-            resources::{HighlightTracker, RunStats},
+            resources::{HighlightTracker, RunProgress, RunStats, TierConfig},
         },
     };
 
@@ -39,6 +39,8 @@ mod effect_base_seed {
             .with_resource::<RunStats>()
             .with_resource::<HighlightTracker>()
             .with_resource::<EffectBaseSeed>()
+            .with_resource::<RunProgress>()
+            .with_resource::<TierConfig>()
             .with_resource::<ChipSelectCount>()
             .with_resource::<ActiveProtocols>()
             .with_resource::<ProtocolOffer>()
